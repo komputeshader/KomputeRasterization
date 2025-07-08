@@ -1,14 +1,3 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #include "Common.h"
 #include "Win32Application.h"
 #include "DXSample.h"
@@ -89,7 +78,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 // Main message handler for the sample.
 LRESULT CALLBACK Win32Application::WindowProc(
 	HWND hWnd,
-	UINT message,
+	unsigned int message,
 	WPARAM wParam,
 	LPARAM lParam)
 {
@@ -116,9 +105,9 @@ LRESULT CALLBACK Win32Application::WindowProc(
 
 	case WM_MOUSEMOVE:
 	{
-		UINT x = LOWORD(lParam);
-		UINT y = HIWORD(lParam);
-		if (pSample && static_cast<UINT8>(wParam) == MK_RBUTTON)
+		unsigned int x = LOWORD(lParam);
+		unsigned int y = HIWORD(lParam);
+		if (pSample && static_cast<unsigned char>(wParam) == MK_RBUTTON)
 		{
 			pSample->MouseMove(x, y);
 		}
@@ -133,7 +122,7 @@ LRESULT CALLBACK Win32Application::WindowProc(
 	{
 		if (pSample)
 		{
-			pSample->KeyPressed(static_cast<UINT8>(wParam));
+			pSample->KeyPressed(static_cast<unsigned char>(wParam));
 		}
 		return 0;
 	}

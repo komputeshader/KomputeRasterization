@@ -28,7 +28,7 @@ public:
 	std::vector<VertexNormal> normalsCPU;
 	std::vector<VertexColor> colorsCPU;
 	std::vector<VertexUV> texcoordsCPU;
-	std::vector<UINT> indicesCPU;
+	std::vector<unsigned int> indicesCPU;
 	// mesh is a smallest entity with it's own bounding volume
 	std::vector<MeshMeta> meshesMetaCPU;
 	// unique objects in the scene
@@ -36,11 +36,11 @@ public:
 
 	std::vector<Prefab> prefabs;
 
-	static UINT64 MaxSceneFacesCount;
-	static UINT64 MaxSceneInstancesCount;
-	static UINT64 MaxSceneMeshesMetaCount;
+	static size_t MaxSceneFacesCount;
+	static size_t MaxSceneInstancesCount;
+	static size_t MaxSceneMeshesMetaCount;
 
-	UINT64 totalFacesCount = 0;
+	size_t totalFacesCount = 0;
 	AABB sceneAABB;
 
 	// GPU Resources
@@ -61,8 +61,8 @@ private:
 		const std::string& OBJPath,
 		float translation = 0.0f,
 		float scale = 1.0f,
-		UINT instancesCountX = 1,
-		UINT instancesCountZ = 1);
+		unsigned int instancesCountX = 1,
+		unsigned int instancesCountZ = 1);
 
 	void _createVBResources(ScenesIndices sceneIndex);
 	void _createIBResources(ScenesIndices sceneIndex);

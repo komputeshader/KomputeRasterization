@@ -47,7 +47,7 @@ void FrameStatistics::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 		_queryResult.Get(),
 		0);
 
-	UINT8* result = nullptr;
+	unsigned char* result = nullptr;
 	SUCCESS(_queryResult->Map(
 		0,
 		nullptr,
@@ -62,7 +62,7 @@ void FrameStatistics::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 Profiler::Profiler()
 {
 	D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
-	// each profile is a start and end timestamps (UINT64s)
+	// each profile is a start and end timestamps (size_ts)
 	queryHeapDesc.Count = 2 * MaxQueries;
 	queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
 	SUCCESS(DX::Device->CreateQueryHeap(
@@ -71,8 +71,8 @@ Profiler::Profiler()
 	NAME_D3D12_OBJECT(_queryHeap);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(2 * MaxQueries * sizeof(UINT64));
-	for (UINT frame = 0; frame < DX::FramesCount; frame++)
+	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(2 * MaxQueries * sizeof(size_t));
+	for (int frame = 0; frame < DX::FramesCount; frame++)
 	{
 		SUCCESS(DX::Device->CreateCommittedResource(
 			&prop,
@@ -105,8 +105,8 @@ void Profiler::BeginMeasure(ID3D12GraphicsCommandList* commandList)
 
 void Profiler::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 {
-	UINT cmdListProfileIndex = 0;
-	for (UINT i = 0; i < MaxQueries; i++)
+	unsigned int cmdListProfileIndex = 0;
+	for (unsigned int i = 0; i < MaxQueries; i++)
 	{
 		if (_profiles[i].commandList == commandList)
 		{
@@ -115,7 +115,7 @@ void Profiler::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 		}
 	}
 
-	UINT queryIndex = _profiles[cmdListProfileIndex].queryIndex;
+	unsigned int queryIndex = _profiles[cmdListProfileIndex].queryIndex;
 	commandList->EndQuery(
 		_queryHeap.Get(),
 		D3D12_QUERY_TYPE_TIMESTAMP,
@@ -127,12 +127,12 @@ void Profiler::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 		queryIndex,
 		2,
 		_queryResult[DX::FrameIndex].Get(),
-		queryIndex * sizeof(UINT64));
+		queryIndex * sizeof(size_t));
 }
 
 float Profiler::GetTimeMS(ID3D12CommandQueue* queue)
 {
-	UINT64* result = nullptr;
+	size_t* result = nullptr;
 	SUCCESS(_queryResult[DX::FrameIndex]->Map(
 		0,
 		nullptr,
@@ -140,10 +140,10 @@ float Profiler::GetTimeMS(ID3D12CommandQueue* queue)
 	memcpy(
 		_time,
 		result,
-		2 * MaxQueries * sizeof(UINT64));
+		2 * MaxQueries * sizeof(size_t));
 	_queryResult[DX::FrameIndex]->Unmap(0, nullptr);
 
-	UINT64 GPUFrequency;
+	size_t GPUFrequency;
 	queue->GetTimestampFrequency(&GPUFrequency);
 	float frequency = static_cast<float>(GPUFrequency);
 
@@ -151,7 +151,7 @@ float Profiler::GetTimeMS(ID3D12CommandQueue* queue)
 	// TODO: probably incorrect way to measure frame time due to
 	// possible async execution of command lists
 	float frameTime = 0.0f;
-	for (UINT i = 0; i < _profilesCount; i++)
+	for (unsigned int i = 0; i < _profilesCount; i++)
 	{
 		float delta = static_cast<float>(_time[2 * i + 1] - _time[2 * i]);
 		frameTime += (delta / frequency) * 1000.0f;
@@ -165,7 +165,7 @@ float Profiler::GetTimeMS(ID3D12CommandQueue* queue)
 		_lastFramesIndex = 0;
 	}
 	float avgTime = 0.0f;
-	for (UINT i = 0; i < FrameCountToAverage; i++)
+	for (unsigned int i = 0; i < FrameCountToAverage; i++)
 	{
 		avgTime += _lastFrames[i];
 	}

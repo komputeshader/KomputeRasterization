@@ -14,18 +14,18 @@ class ForwardRenderer : public DXSample
 {
 public:
 
-	ForwardRenderer(UINT width, UINT height, std::wstring name);
+	ForwardRenderer(unsigned int width, unsigned int height, std::wstring name);
 
 	virtual void Initialize();
 	virtual void Update();
 	virtual void Draw();
-	virtual void Resize(UINT width, UINT height, bool minimized);
+	virtual void Resize(unsigned int width, unsigned int height, bool minimized);
 	virtual void Destroy();
 
 	void KeyboardInput();
-	virtual void MouseMove(UINT x, UINT y);
-	virtual void RMBPressed(UINT x, UINT y);
-	virtual void KeyPressed(UINT8 key);
+	virtual void MouseMove(unsigned int x, unsigned int y);
+	virtual void RMBPressed(unsigned int x, unsigned int y);
+	virtual void KeyPressed(unsigned char key);
 
 	void PreparePrevFrameDepth(ID3D12Resource* depth);
 	ID3D12Resource* GetCulledCommands(int frame, int frustum)

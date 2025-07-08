@@ -9,7 +9,7 @@ Descriptors Descriptors::NonSV;
 void Descriptors::Initialize(
 	D3D12_DESCRIPTOR_HEAP_TYPE type,
 	D3D12_DESCRIPTOR_HEAP_FLAGS flags,
-	UINT capacity)
+	unsigned int capacity)
 {
 	_capacity = capacity;
 
@@ -25,7 +25,7 @@ void Descriptors::Initialize(
 	_descriptorSize = DX::Device->GetDescriptorHandleIncrementSize(type);
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE Descriptors::GetCPUHandle(UINT index)
+CD3DX12_CPU_DESCRIPTOR_HANDLE Descriptors::GetCPUHandle(unsigned int index)
 {
 	assert(index < _capacity);
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
@@ -34,7 +34,7 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Descriptors::GetCPUHandle(UINT index)
 		_descriptorSize);
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE Descriptors::GetGPUHandle(UINT index)
+CD3DX12_GPU_DESCRIPTOR_HANDLE Descriptors::GetGPUHandle(unsigned int index)
 {
 	assert(index < _capacity);
 	return CD3DX12_GPU_DESCRIPTOR_HANDLE(

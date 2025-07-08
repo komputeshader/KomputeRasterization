@@ -49,7 +49,7 @@ Culler::Culler()
 	// Allocate a buffer that can be used to reset the UAV counters and
 	// initialize it to 0.
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(UINT));
+	auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(unsigned int));
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,
 		D3D12_HEAP_FLAG_NONE,
@@ -59,14 +59,14 @@ Culler::Culler()
 		IID_PPV_ARGS(&_culledCommandsCounterReset)));
 	NAME_D3D12_OBJECT(_culledCommandsCounterReset);
 
-	UINT8* pMappedCounterReset = nullptr;
+	unsigned char* pMappedCounterReset = nullptr;
 	// We do not intend to read from this resource on the CPU.
 	CD3DX12_RANGE readRange(0, 0);
 	SUCCESS(_culledCommandsCounterReset->Map(
 		0,
 		&readRange,
 		reinterpret_cast<void**>(&pMappedCounterReset)));
-	ZeroMemory(pMappedCounterReset, sizeof(UINT));
+	ZeroMemory(pMappedCounterReset, sizeof(unsigned int));
 	_culledCommandsCounterReset->Unmap(0, nullptr);
 }
 
@@ -140,7 +140,7 @@ void Culler::Cull(
 			0,
 			_culledCommandsCounterReset.Get(),
 			0,
-			sizeof(UINT));
+			sizeof(unsigned int));
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS cbAdress = _cullingCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(CullingCB);
@@ -253,7 +253,7 @@ void Culler::Cull(
 void Culler::_createCullingCounters()
 {
 	// buffers with counters for culling
-	UINT64 bufferSize = Scene::MaxSceneMeshesMetaCount * sizeof(UINT) * MAX_FRUSTUMS_COUNT;
+	size_t bufferSize = Scene::MaxSceneMeshesMetaCount * sizeof(unsigned int) * MAX_FRUSTUMS_COUNT;
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(
 		bufferSize,
@@ -266,7 +266,7 @@ void Culler::_createCullingCounters()
 	UAVDesc.Buffer.CounterOffsetInBytes = 0;
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 	UAVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT;
-	UAVDesc.Buffer.StructureByteStride = sizeof(UINT);
+	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -275,7 +275,7 @@ void Culler::_createCullingCounters()
 	SRVDesc.Buffer.FirstElement = 0;
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 	SRVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT;
-	SRVDesc.Buffer.StructureByteStride = sizeof(UINT);
+	SRVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
 
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,

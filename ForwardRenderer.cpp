@@ -9,8 +9,8 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 ForwardRenderer::ForwardRenderer(
-	UINT width,
-	UINT height,
+	unsigned int width,
+	unsigned int height,
 	std::wstring name) :
 	DXSample(width, height, name)
 {
@@ -132,7 +132,7 @@ void ForwardRenderer::_createFrameResources()
 
 void ForwardRenderer::_createVisibleInstancesBuffer()
 {
-	UINT64 bufferSize = Scene::MaxSceneInstancesCount * sizeof(Instance) * MAX_FRUSTUMS_COUNT;
+	size_t bufferSize = Scene::MaxSceneInstancesCount * sizeof(Instance) * MAX_FRUSTUMS_COUNT;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -489,7 +489,7 @@ void ForwardRenderer::Draw()
 
 	SUCCESS(_swapChain->Present(0, 0));
 
-	const UINT64 currentFenceValue = DX::FenceValues[DX::FrameIndex];
+	const size_t currentFenceValue = DX::FenceValues[DX::FrameIndex];
 	SUCCESS(DX::CommandQueue->Signal(DX::Fence.Get(), currentFenceValue));
 
 	DX::FrameIndex = _swapChain->GetCurrentBackBufferIndex();
@@ -898,8 +898,8 @@ void ForwardRenderer::_destroyGUI()
 }
 
 void ForwardRenderer::Resize(
-	UINT width,
-	UINT height,
+	unsigned int width,
+	unsigned int height,
 	bool minimized)
 {
 
@@ -956,7 +956,7 @@ void ForwardRenderer::KeyboardInput()
 		camera.MoveVertical(-dt);
 	}
 }
-void ForwardRenderer::KeyPressed(UINT8 key)
+void ForwardRenderer::KeyPressed(unsigned char key)
 {
 	// F is 0x46
 	if (key == 0x46)
@@ -965,7 +965,7 @@ void ForwardRenderer::KeyPressed(UINT8 key)
 	}
 }
 
-void ForwardRenderer::MouseMove(UINT x, UINT y)
+void ForwardRenderer::MouseMove(unsigned int x, unsigned int y)
 {
 	float dx = XMConvertToRadians(0.25f * static_cast<float>(static_cast<int>(x) - _lastMousePos.x));
 	float dy = XMConvertToRadians(0.25f * static_cast<float>(static_cast<int>(y) - _lastMousePos.y));
@@ -976,7 +976,7 @@ void ForwardRenderer::MouseMove(UINT x, UINT y)
 	RMBPressed(x, y);
 }
 
-void ForwardRenderer::RMBPressed(UINT x, UINT y)
+void ForwardRenderer::RMBPressed(unsigned int x, unsigned int y)
 {
 	_lastMousePos.x = x;
 	_lastMousePos.y = y;

@@ -13,9 +13,9 @@
 Scene* Scene::CurrentScene;
 Scene Scene::PlantScene;
 Scene Scene::BuddhaScene;
-UINT64 Scene::MaxSceneFacesCount = 0;
-UINT64 Scene::MaxSceneInstancesCount = 0;
-UINT64 Scene::MaxSceneMeshesMetaCount = 0;
+size_t Scene::MaxSceneFacesCount = 0;
+size_t Scene::MaxSceneInstancesCount = 0;
+size_t Scene::MaxSceneMeshesMetaCount = 0;
 
 using namespace DirectX;
 
@@ -93,8 +93,8 @@ void Scene::_loadObj(
 	const std::string& OBJPath,
 	float translation,
 	float scale,
-	UINT instancesCountX,
-	UINT instancesCountZ)
+	unsigned int instancesCountX,
+	unsigned int instancesCountZ)
 {
 	fastObjMesh* OBJMesh = fast_obj_read(OBJPath.c_str());
 	if (!OBJMesh)
@@ -112,12 +112,12 @@ void Scene::_loadObj(
 	std::vector<XMFLOAT4> unindexedColors;
 	std::vector<XMFLOAT2> unindexedUVs;
 
-	UINT64 facesCount = 0;
+	size_t facesCount = 0;
 	for (unsigned int group = 0; group < OBJMesh->group_count; group++)
 	{
 		const fastObjGroup& currentGroup = OBJMesh->groups[group];
 
-		UINT64 currentFacesCount = currentGroup.face_count;
+		size_t currentFacesCount = currentGroup.face_count;
 		facesCount += currentFacesCount;
 
 		unindexedPositions.reserve(currentFacesCount * 3);
@@ -224,7 +224,7 @@ void Scene::_loadObj(
 			}
 		};
 
-		UINT64 indexCount = currentFacesCount * 3;
+		size_t indexCount = currentFacesCount * 3;
 		std::vector<unsigned int> remap(indexCount);
 		size_t uniqueVertexCount = meshopt_generateVertexRemapMulti(
 			remap.data(),
@@ -284,21 +284,21 @@ void Scene::_loadObj(
 #ifdef SCENE_MESHLETIZATION
 		// generate meshlets for more efficient culling
 		// not for use with mesh shaders
-		const UINT64 maxVertices = 128;
-		const UINT64 maxTriangles = MESHLET_SIZE;
+		const size_t maxVertices = 128;
+		const size_t maxTriangles = MESHLET_SIZE;
 		// 0.0 had better results overall
 		const float coneWeight = 0.0f;
 
-		UINT64 maxMeshlets = meshopt_buildMeshletsBound(
+		size_t maxMeshlets = meshopt_buildMeshletsBound(
 			indexCount,
 			maxVertices,
 			maxTriangles);
 		std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
 		// indices into positionsCPU + offset
 		std::vector<unsigned int> meshletVertices(maxMeshlets* maxVertices);
-		std::vector<UINT8> meshletTriangles(maxMeshlets* maxTriangles * 3);
+		std::vector<unsigned char> meshletTriangles(maxMeshlets* maxTriangles * 3);
 
-		UINT64 meshletCount = meshopt_buildMeshlets(
+		size_t meshletCount = meshopt_buildMeshlets(
 			meshlets.data(),
 			meshletVertices.data(),
 			meshletTriangles.data(),
@@ -401,8 +401,8 @@ void Scene::_loadObj(
 			{
 				auto& dst = texcoordsCPU[texcoordsCPUOldSize + vertex].packedUV;
 				auto& src = unindexedUVs[vertex];
-				dst |= UINT(meshopt_quantizeHalf(src.x)) << 16;
-				dst |= UINT(meshopt_quantizeHalf(src.y));
+				dst |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.x)) << 16);
+				dst |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.y)));
 			}
 		}
 
@@ -412,10 +412,10 @@ void Scene::_loadObj(
 			{
 				auto& dst = colorsCPU[colorsCPUOldSize + vertex].packedColor;
 				auto& src = unindexedColors[vertex];
-				dst.x |= UINT(meshopt_quantizeHalf(src.x)) << 16;
-				dst.x |= UINT(meshopt_quantizeHalf(src.y));
-				dst.y |= UINT(meshopt_quantizeHalf(src.z)) << 16;
-				dst.y |= UINT(meshopt_quantizeHalf(src.w));
+				dst[0] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.x)) << 16);
+				dst[0] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.y)));
+				dst[1] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.z)) << 16);
+				dst[1] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.w)));
 			}
 		}
 
@@ -443,17 +443,17 @@ void Scene::_loadObj(
 
 	totalFacesCount += facesCount * totalMeshInstances;
 
-	UINT newInstancesOffset = instancesCPU.size();
+	unsigned int newInstancesOffset = instancesCPU.size();
 	instancesCPU.resize(instancesCPU.size() + newPrefab.meshesCount * instancesCountX * instancesCountZ);
-	for (UINT mesh = 0; mesh < newPrefab.meshesCount; mesh++)
+	for (unsigned int mesh = 0; mesh < newPrefab.meshesCount; mesh++)
 	{
-		UINT meshIndex = newPrefab.meshesOffset + mesh;
+		unsigned int meshIndex = newPrefab.meshesOffset + mesh;
 		auto& currentMesh = meshesMetaCPU[meshIndex];
 		currentMesh.instanceCount = totalMeshInstances;
 		currentMesh.startInstanceLocation = newInstancesOffset + mesh * totalMeshInstances;
-		for (UINT instanceZ = 0; instanceZ < instancesCountZ; instanceZ++)
+		for (unsigned int instanceZ = 0; instanceZ < instancesCountZ; instanceZ++)
 		{
-			for (UINT instanceX = 0; instanceX < instancesCountX; instanceX++)
+			for (unsigned int instanceX = 0; instanceX < instancesCountX; instanceX++)
 			{
 				XMMATRIX transform = XMMatrixTranslation(
 					(translation + objectBoundingVolume.extents.x * 2.0f) *

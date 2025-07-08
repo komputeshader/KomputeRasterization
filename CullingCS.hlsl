@@ -46,7 +46,7 @@ bool AABBVsPlane(AABB box, float4 plane)
 {
 	float r = dot(box.extents, abs(plane.xyz));
 	float s = dot(plane.xyz, box.center) + plane.w;
-	return r + s >= 0;
+	return r + s >= 0.0;
 }
 
 bool AABBVsFrustum(AABB box, Frustum frustum)

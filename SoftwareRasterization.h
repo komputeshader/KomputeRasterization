@@ -81,10 +81,10 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _bigTriangleOpaquePSO;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTriangles[MAX_FRUSTUMS_COUNT];
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthSceneCB;
-	UINT8* _depthSceneCBData;
+	unsigned char* _depthSceneCBData;
 	int _depthSceneCBFrameSize = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _sceneCB;
-	UINT8* _sceneCBData;
+	unsigned char* _sceneCBData;
 
 	int _width = 0;
 	int _height = 0;

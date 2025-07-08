@@ -1,14 +1,3 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #pragma once
 
 #pragma comment(lib,"d3dcompiler.lib")
@@ -21,36 +10,36 @@
 class DXSample
 {
 public:
-	DXSample(UINT width, UINT height, std::wstring name);
+	DXSample(unsigned int width, unsigned int height, std::wstring name);
 	virtual ~DXSample();
 
 	virtual void Initialize() = 0;
 	virtual void Update() = 0;
 	virtual void Draw() = 0;
-	virtual void Resize(UINT width, UINT height, bool minimized) = 0;
+	virtual void Resize(unsigned int width, unsigned int height, bool minimized) = 0;
 	virtual void Destroy() = 0;
 
 	// Samples override the event handlers to handle specific messages.
 	virtual void WindowMoved(int /*x*/, int /*y*/) {}
-	virtual void MouseMove(UINT /*x*/, UINT /*y*/) {}
-	virtual void LMBPressed(UINT /*x*/, UINT /*y*/) {}
-	virtual void LMBReleased(UINT /*x*/, UINT /*y*/) {}
-	virtual void RMBPressed(UINT /*x*/, UINT /*y*/) {}
-	virtual void RMBReleased(UINT /*x*/, UINT /*y*/) {}
-	virtual void KeyPressed(UINT8 /*key*/) {}
-	virtual void KeyReleased(UINT8 /*key*/) {}
+	virtual void MouseMove(unsigned int /*x*/, unsigned int /*y*/) {}
+	virtual void LMBPressed(unsigned int /*x*/, unsigned int /*y*/) {}
+	virtual void LMBReleased(unsigned int /*x*/, unsigned int /*y*/) {}
+	virtual void RMBPressed(unsigned int /*x*/, unsigned int /*y*/) {}
+	virtual void RMBReleased(unsigned int /*x*/, unsigned int /*y*/) {}
+	virtual void KeyPressed(unsigned char /*key*/) {}
+	virtual void KeyReleased(unsigned char /*key*/) {}
 	virtual void DisplayChanged() {}
 
 	// Accessors.
-	UINT GetWidth() const           { return _width; }
-	UINT GetHeight() const          { return _height; }
-	const WCHAR* GetTitle() const   { return m_title.c_str(); }
-	bool GetTearingSupport() const  { return m_tearingSupport; }
-	RECT GetWindowsBounds() const   { return m_windowBounds; }
+	unsigned int GetWidth() const { return _width; }
+	unsigned int GetHeight() const { return _height; }
+	const wchar_t* GetTitle() const { return m_title.c_str(); }
+	bool GetTearingSupport() const { return m_tearingSupport; }
+	RECT GetWindowsBounds() const { return m_windowBounds; }
 	virtual IDXGISwapChain* GetSwapchain() { return nullptr; }
 
-	void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc);
-	void UpdateForSizeChange(UINT clientWidth, UINT clientHeight);
+	void ParseCommandLineArgs(_In_reads_(argc) wchar_t* argv[], int argc);
+	void UpdateForSizeChange(unsigned int clientWidth, unsigned int clientHeight);
 	void SetWindowBounds(int left, int top, int right, int bottom);
 
 protected:
@@ -59,8 +48,8 @@ protected:
 	void CheckTearingSupport();
 
 	// Viewport dimensions.
-	UINT _width;
-	UINT _height;
+	unsigned int _width;
+	unsigned int _height;
 
 	// Window bounds
 	RECT m_windowBounds;

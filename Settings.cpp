@@ -4,7 +4,7 @@
 Settings Settings::Demo;
 
 // TODO: fix this
-//const UINT Settings::BackBufferMipsCount =
+//const unsigned int Settings::BackBufferMipsCount =
 //	Utils::MipsCount(BackBufferWidth, BackBufferHeight);
 const float Settings::BackBufferAspectRatio =
 	static_cast<float>(Settings::BackBufferWidth) /

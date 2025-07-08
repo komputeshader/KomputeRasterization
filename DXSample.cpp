@@ -1,14 +1,3 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #include "DXSample.h"
 #include "Win32Application.h"
 #include "Utils.h"
@@ -16,15 +5,15 @@
 using namespace Microsoft::WRL;
 using namespace std;
 
-DXSample::DXSample(UINT width, UINT height, std::wstring name) :
+DXSample::DXSample(unsigned int width, unsigned int height, std::wstring name) :
 	_width(width),
 	_height(height),
-	m_windowBounds{0,0,0,0},
+	m_windowBounds{0, 0, 0, 0},
 	m_title(name),
 	m_useWarpDevice(false),
 	m_enableUI(true)
 {
-	WCHAR assetsPath[512];
+	wchar_t assetsPath[512];
 	Utils::GetAssetsPath(assetsPath, _countof(assetsPath));
 	_assetsPath = assetsPath;
 
@@ -36,7 +25,7 @@ DXSample::~DXSample()
 {
 }
 
-void DXSample::UpdateForSizeChange(UINT clientWidth, UINT clientHeight)
+void DXSample::UpdateForSizeChange(unsigned int clientWidth, unsigned int clientHeight)
 {
 	_width = clientWidth;
 	_height = clientHeight;
@@ -51,7 +40,7 @@ void DXSample::SetCustomWindowText(LPCWSTR text)
 
 // Helper function for parsing any supplied command line args.
 _Use_decl_annotations_
-void DXSample::ParseCommandLineArgs(WCHAR* argv[], int argc)
+void DXSample::ParseCommandLineArgs(wchar_t* argv[], int argc)
 {
 	for (int i = 1; i < argc; ++i)
 	{

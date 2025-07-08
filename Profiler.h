@@ -43,20 +43,20 @@ public:
 private:
 
 	// per separate command list
-	static const UINT MaxQueries = 2;
-	static const UINT FrameCountToAverage = 30;
+	static const unsigned int MaxQueries = 2;
+	static const unsigned int FrameCountToAverage = 30;
 
 	struct Profile
 	{
 		ID3D12GraphicsCommandList* commandList;
-		UINT queryIndex;
+		unsigned int queryIndex;
 	};
 
 	Profile _profiles[MaxQueries];
-	UINT _profilesCount = 0;
+	unsigned int _profilesCount = 0;
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> _queryHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _queryResult[DX::FramesCount];
-	UINT64 _time[2 * MaxQueries];
+	size_t _time[2 * MaxQueries];
 	float _lastFrames[FrameCountToAverage];
-	UINT _lastFramesIndex = 0;
+	unsigned int _lastFramesIndex = 0;
 };

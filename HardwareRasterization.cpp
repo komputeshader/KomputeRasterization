@@ -225,7 +225,7 @@ void HardwareRasterization::_drawDepth()
 			for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
 			{
 				const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-				UINT commandData[] =
+				unsigned int commandData[] =
 				{
 					currentMesh.startInstanceLocation
 				};
@@ -298,7 +298,7 @@ void HardwareRasterization::_drawShadows()
 				for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
 				{
 					const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-					UINT commandData[] =
+					unsigned int commandData[] =
 					{
 						currentMesh.startInstanceLocation
 					};
@@ -385,7 +385,7 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 			for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
 			{
 				const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-				UINT commandData[] =
+				unsigned int commandData[] =
 				{
 					currentMesh.startInstanceLocation
 				};

@@ -32,5 +32,5 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommandsCounterReset;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> _cullingCB;
-	UINT8* _cullingCBData;
+	unsigned char* _cullingCBData;
 };

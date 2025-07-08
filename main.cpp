@@ -20,11 +20,11 @@
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-    ForwardRenderer sample(
-        static_cast<UINT>(Settings::BackBufferWidth),
-        static_cast<UINT>(Settings::BackBufferHeight),
-        L"HOLD Right Mouse Button to turn camera, WASD to move camera, press F to pay re... to Freeze culling");
-    return Win32Application::Run(&sample, hInstance, nCmdShow);
+	ForwardRenderer sample(
+		static_cast<unsigned int>(Settings::BackBufferWidth),
+		static_cast<unsigned int>(Settings::BackBufferHeight),
+		L"HOLD Right Mouse Button to turn camera, WASD to move camera, press F to pay re... to Freeze culling");
+	return Win32Application::Run(&sample, hInstance, nCmdShow);
 }

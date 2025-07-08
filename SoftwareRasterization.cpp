@@ -107,7 +107,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	// and in practice we'll always have smth like O(WH)
 	int bigTrianglesPerFrame[MAX_FRUSTUMS_COUNT] =
 	{
-		Settings::BackBufferWidth * Settings::BackBufferHeight
+		Settings::BackBufferWidth * Settings::BackBufferHeight / 10
 	};
 	for (int cascade = 1; cascade <= MAX_CASCADES_COUNT; cascade++)
 	{
@@ -181,7 +181,7 @@ void SoftwareRasterization::_createStatsResources()
 {
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
-		StatsCount * sizeof(UINT),
+		StatsCount * sizeof(unsigned int),
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,
@@ -197,7 +197,7 @@ void SoftwareRasterization::_createStatsResources()
 	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	UAVDesc.Buffer.FirstElement = 0;
 	UAVDesc.Buffer.NumElements = StatsCount;
-	UAVDesc.Buffer.StructureByteStride = sizeof(UINT);
+	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
 	UAVDesc.Buffer.CounterOffsetInBytes = 0;
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 	DX::Device->CreateUnorderedAccessView(
@@ -207,7 +207,7 @@ void SoftwareRasterization::_createStatsResources()
 		Descriptors::SV.GetCPUHandle(SWRStatsUAV));
 
 	prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-	desc = CD3DX12_RESOURCE_DESC::Buffer(StatsCount * sizeof(UINT));
+	desc = CD3DX12_RESOURCE_DESC::Buffer(StatsCount * sizeof(unsigned int));
 	for (int frame = 0; frame < DX::FramesCount; frame++)
 	{
 		SUCCESS(DX::Device->CreateCommittedResource(
@@ -838,7 +838,7 @@ void SoftwareRasterization::_endFrame()
 		0,
 		_trianglesStats.Get(),
 		0,
-		StatsCount * sizeof(UINT));
+		StatsCount * sizeof(unsigned int));
 
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_trianglesStats.Get(),
@@ -846,7 +846,7 @@ void SoftwareRasterization::_endFrame()
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	COMMAND_LIST->ResourceBarrier(1, barriers);
 
-	UINT* result = nullptr;
+	unsigned int* result = nullptr;
 	SUCCESS(_trianglesStatsReadback[DX::FrameIndex]->Map(
 		0,
 		nullptr,
@@ -854,7 +854,7 @@ void SoftwareRasterization::_endFrame()
 	memcpy(
 		_statsResult,
 		result,
-		StatsCount * sizeof(UINT));
+		StatsCount * sizeof(unsigned int));
 	_trianglesStatsReadback[DX::FrameIndex]->Unmap(0, nullptr);
 }
 
@@ -923,7 +923,7 @@ void SoftwareRasterization::_drawIndexedInstanced(
 	unsigned int startInstanceLocation)
 {
 	// TODO: restore it
-	//UINT commandData[] =
+	//unsigned int commandData[] =
 	//{
 	//	indexCountPerInstance,
 	//	startIndexLocation,
@@ -937,7 +937,7 @@ void SoftwareRasterization::_drawIndexedInstanced(
 	//	0);
 	//
 	//assert(indexCountPerInstance % 3 == 0);
-	//UINT trianglesCount = indexCountPerInstance / 3;
+	//unsigned int trianglesCount = indexCountPerInstance / 3;
 	//COMMAND_LIST->Dispatch(
 	//	Utils::DispatchSize(
 	//		Settings::SWRTriangleThreadsX,
@@ -953,7 +953,7 @@ void SoftwareRasterization::_clearStatistics()
 		0,
 		_counterReset.Get(),
 		0,
-		StatsCount * sizeof(UINT));
+		StatsCount * sizeof(unsigned int));
 }
 
 void SoftwareRasterization::_clearBigTrianglesCounter(int frustum)
@@ -963,7 +963,7 @@ void SoftwareRasterization::_clearBigTrianglesCounter(int frustum)
 		0,
 		_counterReset.Get(),
 		0,
-		sizeof(UINT));
+		sizeof(unsigned int));
 }
 
 void SoftwareRasterization::_createRenderTargetResources()
@@ -1077,7 +1077,7 @@ void SoftwareRasterization::_createResetBuffer()
 	// initialize it to 0
 	// is used also for clearing statistics buffer,
 	// so the size is bigger than 1
-	UINT bufferSize = StatsCount * sizeof(UINT);
+	unsigned int bufferSize = StatsCount * sizeof(unsigned int);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -1089,7 +1089,7 @@ void SoftwareRasterization::_createResetBuffer()
 		IID_PPV_ARGS(&_counterReset)));
 	NAME_D3D12_OBJECT(_counterReset);
 
-	UINT8* mappedCounterReset = nullptr;
+	unsigned char* mappedCounterReset = nullptr;
 	// We do not intend to read from this resource on the CPU.
 	CD3DX12_RANGE readRange(0, 0);
 	SUCCESS(_counterReset->Map(

@@ -70,20 +70,20 @@ public:
 	void Initialize(
 		D3D12_DESCRIPTOR_HEAP_TYPE type,
 		D3D12_DESCRIPTOR_HEAP_FLAGS flags,
-		UINT capacity);
+		unsigned int capacity);
 
 	Descriptors() = default;
 	Descriptors(const Descriptors&) = delete;
 	Descriptors& operator=(const Descriptors&) = delete;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(UINT index);
-	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(UINT index);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(unsigned int index);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(unsigned int index);
 
 	ID3D12DescriptorHeap* GetHeap() { return _heap.Get(); }
 
 private:
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> _heap;
-	UINT _descriptorSize = 0;
-	UINT _capacity = 0;
+	unsigned int _descriptorSize = 0;
+	unsigned int _capacity = 0;
 };

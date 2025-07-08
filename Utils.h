@@ -34,9 +34,9 @@ inline void SetName(ID3D12Object* pObject, LPCWSTR name)
 	pObject->SetName(name);
 }
 
-inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
+inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, unsigned int index)
 {
-	WCHAR fullName[50];
+	wchar_t fullName[50];
 	if (swprintf_s(fullName, L"%s[%u]", name, index) > 0)
 	{
 		pObject->SetName(fullName);
@@ -46,7 +46,7 @@ inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 inline void SetName(ID3D12Object*, LPCWSTR)
 {
 }
-inline void SetNameIndexed(ID3D12Object*, LPCWSTR, UINT)
+inline void SetNameIndexed(ID3D12Object*, LPCWSTR, unsigned int)
 {
 }
 #endif
@@ -66,7 +66,7 @@ inline void SetNameIndexed(ID3D12Object*, LPCWSTR, UINT)
 
 #define SUCCESS(hr, ...) \
 	if (FAILED(hr)) { \
-		PrintToOutput("\nHRESULT hr = 0x%08X failed in file %s, line %d\n", static_cast<UINT>(hr), __FILE__, __LINE__); \
+		PrintToOutput("\nHRESULT hr = 0x%08X failed in file %s, line %d\n", static_cast<unsigned int>(hr), __FILE__, __LINE__); \
 		PrintToOutput(__VA_ARGS__); \
 		__debugbreak(); \
 	}
@@ -78,7 +78,7 @@ extern Microsoft::WRL::ComPtr<ID3D12RootSignature> HiZRS;
 extern Microsoft::WRL::ComPtr<ID3D12PipelineState> HiZPSO;
 extern D3D12_STATIC_SAMPLER_DESC HiZSamplerDesc;
 
-inline void GetAssetsPath(_Out_writes_(pathSize) WCHAR* path, UINT pathSize)
+inline void GetAssetsPath(_Out_writes_(pathSize) wchar_t* path, unsigned int pathSize)
 {
 	ASSERT(path);
 
@@ -86,7 +86,7 @@ inline void GetAssetsPath(_Out_writes_(pathSize) WCHAR* path, UINT pathSize)
 	ASSERT(size);
 	ASSERT(size != pathSize);
 
-	WCHAR* lastSlash = wcsrchr(path, L'\\');
+	wchar_t* lastSlash = wcsrchr(path, L'\\');
 	if (lastSlash)
 	{
 		*(lastSlash + 1) = L'\0';
@@ -131,18 +131,18 @@ public:
 		free(_data);
 	}
 
-	byte* GetData() { return _data; }
-	UINT GetSize() { return _size; }
+	unsigned char* GetData() { return _data; }
+	unsigned int GetSize() { return _size; }
 
 private:
 
-	byte* _data;
-	UINT _size;
+	unsigned char* _data;
+	unsigned int _size;
 };
 
 void InitializeResources();
 
-inline UINT DispatchSize(UINT groupSize, UINT elementsCount)
+inline unsigned int DispatchSize(unsigned int groupSize, unsigned int elementsCount)
 {
 	assert(groupSize != 0 && "DispatchSize : groupSize cannot be 0");
 
@@ -167,7 +167,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,
 	const void* data,
-	UINT64 bufferSize,
+	size_t bufferSize,
 	Microsoft::WRL::ComPtr<ID3D12Resource>& defaultBuffer,
 	Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer,
 	D3D12_RESOURCE_STATES endState,
@@ -175,7 +175,7 @@ void CreateDefaultHeapBuffer(
 
 void CreateCBResources(
 	// CB size is required to be 256-byte aligned.
-	UINT64 bufferSize,
+	size_t bufferSize,
 	void** data,
 	Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer);
 
@@ -183,32 +183,32 @@ void CreateRS(
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc,
 	Microsoft::WRL::ComPtr<ID3D12RootSignature>& rootSignature);
 
-UINT MipsCount(UINT width, UINT height);
+unsigned int MipsCount(unsigned int width, unsigned int height);
 
 void GenerateHiZ(
 	ID3D12GraphicsCommandList* commandList,
 	ID3D12Resource* resource,
-	UINT startSRV,
-	UINT startUAV,
-	UINT inputWidth,
-	UINT inputHeight,
-	UINT arraySlice = 0,
-	UINT arraySize = 1);
+	unsigned int startSRV,
+	unsigned int startUAV,
+	unsigned int inputWidth,
+	unsigned int inputHeight,
+	unsigned int arraySlice = 0,
+	unsigned int arraySize = 1);
 
 inline std::wstring GetAssetFullPath(LPCWSTR assetName)
 {
 	return Settings::Demo.AssetsPath + assetName;
 }
 
-inline UINT AlignForUavCounter(UINT bufferSize)
+inline unsigned int AlignForUavCounter(unsigned int bufferSize)
 {
-	UINT alignment = D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT;
+	unsigned int alignment = D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT;
 	return (bufferSize + (alignment - 1)) & ~(alignment - 1);
 }
 
-inline UINT AsUINT(float f)
+inline unsigned int AsUINT(float f)
 {
-	return *reinterpret_cast<UINT*>(&f);
+	return *reinterpret_cast<unsigned int*>(&f);
 }
 
 class GPUBuffer
@@ -218,10 +218,10 @@ public:
 	void Initialize(
 		ID3D12GraphicsCommandList* commandList,
 		const void* data,
-		UINT elementsCount,
-		UINT strideInBytes,
+		unsigned int elementsCount,
+		unsigned int strideInBytes,
 		D3D12_RESOURCE_STATES endState,
-		UINT SRVIndex,
+		unsigned int SRVIndex,
 		LPCWSTR name);
 
 	GPUBuffer() = default;

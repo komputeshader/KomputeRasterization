@@ -49,10 +49,10 @@ private:
 	DXGI_FORMAT _depthFormat = DXGI_FORMAT_D32_FLOAT;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthSceneCB;
-	UINT8* _depthSceneCBData;
-	UINT _depthSceneCBFrameSize = 0;
+	unsigned char* _depthSceneCBData;
+	unsigned int _depthSceneCBFrameSize = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _sceneCB;
-	UINT8* _sceneCBData;
+	unsigned char* _sceneCBData;
 
 	// MDI stuff
 	Microsoft::WRL::ComPtr<ID3D12CommandSignature> _commandSignature;

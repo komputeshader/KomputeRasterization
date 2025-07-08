@@ -146,7 +146,7 @@ ComPtr<ID3DBlob> CompileShader(
 	const std::string& entrypoint,
 	const std::string& target)
 {
-	UINT compileFlags = 0;
+	unsigned int compileFlags = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)
 	compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -181,7 +181,7 @@ ComPtr<ID3DBlob> CompileShader(
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,
 	const void* data,
-	UINT64 bufferSize,
+	size_t bufferSize,
 	ComPtr<ID3D12Resource>& defaultBuffer,
 	ComPtr<ID3D12Resource>& uploadBuffer,
 	D3D12_RESOURCE_STATES endState,
@@ -242,7 +242,7 @@ void CreateDefaultHeapBuffer(
 
 void CreateCBResources(
 	// CB size is required to be 256-byte aligned.
-	UINT64 bufferSize,
+	size_t bufferSize,
 	void** data,
 	ComPtr<ID3D12Resource>& uploadBuffer)
 {
@@ -309,20 +309,20 @@ void GetFrustumPlanes(XMMATRIX m, Frustum& f)
 	XMStoreFloat4(&f.f, XMPlaneNormalize(XMVectorAdd(r4, -r3)));
 }
 
-UINT MipsCount(UINT width, UINT height)
+unsigned int MipsCount(unsigned int width, unsigned int height)
 {
-	return static_cast<UINT>(floorf(log2f(static_cast<float>(std::max(width, height))))) + 1;
+	return static_cast<unsigned int>(floorf(log2f(static_cast<float>(std::max(width, height))))) + 1;
 }
 
 void GenerateHiZ(
 	ID3D12GraphicsCommandList* commandList,
 	ID3D12Resource* resource,
-	UINT startSRV,
-	UINT startUAV,
-	UINT inputWidth,
-	UINT inputHeight,
-	UINT arraySlice,
-	UINT arraySize)
+	unsigned int startSRV,
+	unsigned int startUAV,
+	unsigned int inputWidth,
+	unsigned int inputHeight,
+	unsigned int arraySlice,
+	unsigned int arraySize)
 {
 	PIXBeginEvent(commandList, 0, L"Generate Hi Z");
 
@@ -330,15 +330,15 @@ void GenerateHiZ(
 	commandList->SetPipelineState(HiZPSO.Get());
 
 	CD3DX12_RESOURCE_BARRIER barriers[1] = {};
-	UINT mipsCount = MipsCount(inputWidth, inputHeight);
-	UINT outputWidth;
-	UINT outputHeight;
-	for (UINT mip = 1; mip < mipsCount; mip++)
+	unsigned int mipsCount = MipsCount(inputWidth, inputHeight);
+	unsigned int outputWidth;
+	unsigned int outputHeight;
+	for (unsigned int mip = 1; mip < mipsCount; mip++)
 	{
 		outputWidth = std::max(inputWidth >> 1, 1u);
 		outputHeight = std::max(inputHeight >> 1, 1u);
 
-		UINT constants[] =
+		unsigned int constants[] =
 		{
 			inputWidth % 2,
 			inputHeight % 2,
@@ -385,10 +385,10 @@ void GenerateHiZ(
 void GPUBuffer::Initialize(
 	ID3D12GraphicsCommandList* commandList,
 	const void* data,
-	UINT elementsCount,
-	UINT strideInBytes,
+	unsigned int elementsCount,
+	unsigned int strideInBytes,
 	D3D12_RESOURCE_STATES endState,
-	UINT SRVIndex,
+	unsigned int SRVIndex,
 	LPCWSTR name)
 {
 	ASSERT(_buffer.Get() == nullptr);
@@ -403,7 +403,7 @@ void GPUBuffer::Initialize(
 		_isIB = true;
 	}
 
-	UINT64 bufferSize = elementsCount * strideInBytes;
+	size_t bufferSize = elementsCount * strideInBytes;
 	Utils::CreateDefaultHeapBuffer(
 		commandList,
 		data,

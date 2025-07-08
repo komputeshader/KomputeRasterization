@@ -18,9 +18,9 @@ ComPtr<ID3D12CommandQueue> ComputeCommandQueue;
 
 HANDLE FenceEvent;
 ComPtr<ID3D12Fence> Fence;
-UINT64 FenceValues[FramesCount];
+size_t FenceValues[FramesCount];
 ComPtr<ID3D12Fence> ComputeFence;
-UINT64 ComputeFenceValue;
+size_t ComputeFenceValue;
 
 DXGI_ADAPTER_DESC1 AdapterDesc;
 D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
@@ -40,7 +40,7 @@ void GetHardwareAdapter(
 	if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6))))
 	{
 		for (
-			UINT adapterIndex = 0;
+			unsigned int adapterIndex = 0;
 			SUCCEEDED(factory6->EnumAdapterByGpuPreference(
 				adapterIndex,
 				requestHighPerformanceAdapter == true
@@ -61,12 +61,11 @@ void GetHardwareAdapter(
 
 			// Check to see whether the adapter supports Direct3D 12, but don't create the
 			// actual device yet.
-			if (SUCCEEDED(
-				D3D12CreateDevice(
-					adapter.Get(),
-					D3D_FEATURE_LEVEL_11_0,
-					_uuidof(ID3D12Device),
-					nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(
+				adapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				_uuidof(ID3D12Device),
+				nullptr)))
 			{
 				break;
 			}
@@ -75,7 +74,10 @@ void GetHardwareAdapter(
 
 	if (adapter.Get() == nullptr)
 	{
-		for (UINT adapterIndex = 0; SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex)
+		for (
+			unsigned int adapterIndex = 0;
+			SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter));
+			++adapterIndex)
 		{
 			DXGI_ADAPTER_DESC1 desc;
 			adapter->GetDesc1(&desc);
@@ -89,12 +91,11 @@ void GetHardwareAdapter(
 
 			// Check to see whether the adapter supports Direct3D 12, but don't create the
 			// actual device yet.
-			if (SUCCEEDED(
-				D3D12CreateDevice(
-					adapter.Get(),
-					D3D_FEATURE_LEVEL_11_0,
-					_uuidof(ID3D12Device),
-					nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(
+				adapter.Get(),
+				D3D_FEATURE_LEVEL_11_0,
+				_uuidof(ID3D12Device),
+				nullptr)))
 			{
 				break;
 			}
@@ -108,7 +109,7 @@ void CreateDevice()
 {
 	FrameIndex = 0;
 
-	UINT dxgiFactoryFlags = 0;
+	unsigned int dxgiFactoryFlags = 0;
 
 #if defined(_DEBUG)
 	// Enable the debug layer (requires the Graphics Tools "optional feature").

@@ -23,9 +23,9 @@ extern Microsoft::WRL::ComPtr<ID3D12CommandQueue> ComputeCommandQueue;
 // synchronization objects
 extern HANDLE FenceEvent;
 extern Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-extern UINT64 FenceValues[DX::FramesCount];
+extern size_t FenceValues[DX::FramesCount];
 extern Microsoft::WRL::ComPtr<ID3D12Fence> ComputeFence;
-extern UINT64 ComputeFenceValue;
+extern size_t ComputeFenceValue;
 
 extern D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
 

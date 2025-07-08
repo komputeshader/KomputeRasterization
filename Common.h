@@ -47,20 +47,20 @@ struct VertexPosition
 struct VertexNormal
 {
 	// | 2 bits - unused | 10 bits - x | 10 bits - y | 10 bits - z |
-	UINT packedNormal;
+	unsigned int packedNormal;
 };
 
 struct VertexColor
 {
-	// .x : |16 bits - r component | 16 bits - g component |
-	// .y : |16 bits - b component | 16 bits - a component |
-	DirectX::XMUINT2 packedColor;
+	// [0] : |16 bits - r component | 16 bits - g component |
+	// [1] : |16 bits - b component | 16 bits - a component |
+	unsigned int packedColor[2];
 };
 
 struct VertexUV
 {
 	// | 16 bits - u | 16 bits - v |
-	UINT packedUV;
+	unsigned int packedUV;
 };
 
 class AABB
@@ -85,11 +85,11 @@ struct MeshMeta
 {
 	AABB AABB;
 
-	UINT indexCountPerInstance;
-	UINT instanceCount;
-	UINT startIndexLocation;
-	INT baseVertexLocation;
-	UINT startInstanceLocation;
+	unsigned int indexCountPerInstance;
+	unsigned int instanceCount;
+	unsigned int startIndexLocation;
+	int baseVertexLocation;
+	unsigned int startInstanceLocation;
 
 	DirectX::XMFLOAT3 coneApex;
 	DirectX::XMFLOAT3 coneAxis;
@@ -111,7 +111,7 @@ struct Frustum
 struct Instance
 {
 	DirectX::XMFLOAT4X4 worldTransform;
-	UINT meshID;
+	unsigned int meshID;
 	DirectX::XMFLOAT3 color;
 };
 
@@ -124,7 +124,7 @@ struct Prefab
 
 struct IndirectCommand
 {
-	UINT startInstanceLocation;
+	unsigned int startInstanceLocation;
 	D3D12_DRAW_INDEXED_ARGUMENTS arguments;
 };
 
