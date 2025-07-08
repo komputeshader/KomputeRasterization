@@ -52,8 +52,8 @@ void ForwardRenderer::Initialize()
 
 	_initGUI();
 
-	SUCCESS(DX::CommandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { DX::CommandList.Get() };
+	DX::CloseCommandLists();
+	ID3D12CommandList* ppCommandLists[] = { COMMAND_LIST.Get() };
 	DX::CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// wait for everything have been uploaded to the GPU
@@ -183,7 +183,7 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 			DX::Device->CreateShaderResourceView(
 				_visibleInstances[frame].Get(),
 				&SRVDesc,
-				Descriptors::SV.GetCPUHandle(VisibleInstancesSRV + frustum + frame * PerFrameDescriptorsCount));
+				Descriptors::SV.GetCPUHandle(VisibleInstancesSRV + frame * PerFrameDescriptorsCount + frustum));
 		}
 	}
 }
@@ -224,7 +224,7 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 		for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
 		{
 			Utils::CreateDefaultHeapBuffer(
-				DX::CommandList.Get(),
+				COMMAND_LIST.Get(),
 				&dispatch,
 				sizeof(D3D12_DISPATCH_ARGUMENTS),
 				_culledCommandsCounters[frame][frustum],
@@ -370,11 +370,11 @@ void ForwardRenderer::PreparePrevFrameDepth(ID3D12Resource* depth)
 			D3D12_RESOURCE_STATE_COPY_SOURCE);
 		src.pResource = depth;
 	}
-	DX::CommandList->ResourceBarrier(2, barriers);
+	COMMAND_LIST->ResourceBarrier(2, barriers);
 
 	dst.SubresourceIndex = 0;
 	src.SubresourceIndex = 0;
-	DX::CommandList->CopyTextureRegion(
+	COMMAND_LIST->CopyTextureRegion(
 		&dst,
 		0,
 		0,
@@ -400,10 +400,10 @@ void ForwardRenderer::PreparePrevFrameDepth(ID3D12Resource* depth)
 			D3D12_RESOURCE_STATE_COPY_SOURCE,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
-	DX::CommandList->ResourceBarrier(2, barriers);
+	COMMAND_LIST->ResourceBarrier(2, barriers);
 
 	Utils::GenerateHiZ(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		_prevFrameDepthBuffer.Get(),
 		PrevFrameDepthMipsSRV,
 		PrevFrameDepthMipsUAV,
@@ -428,8 +428,6 @@ void ForwardRenderer::Update()
 
 void ForwardRenderer::Draw()
 {
-	// populate command lists
-
 	// GUI
 	_newFrameGUI();
 	Shadows::Sun.GUINewFrame();
@@ -438,18 +436,41 @@ void ForwardRenderer::Draw()
 		_SWR->GUINewFrame();
 	}
 
-	_beginFrameRendering();
-
-	if (Settings::CullingEnabled && !Settings::FreezeCulling)
+	if (Settings::CullingEnabled)
 	{
-		_culler->Cull(
-			DX::ComputeCommandList.Get(),
-			_visibleInstances[DX::FrameIndex],
-			_culledCommands[DX::FrameIndex],
-			_culledCommandsCounters[DX::FrameIndex]);
+		SUCCESS(DX::ComputeCommandAllocators[DX::FrameIndex]->Reset());
+		SUCCESS(COMPUTE_COMMAND_LIST->Reset(
+			DX::ComputeCommandAllocators[DX::FrameIndex].Get(),
+			nullptr));
+		//_profiler->BeginMeasure(COMPUTE_COMMAND_LIST.Get());
+
+		ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
+		COMPUTE_COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		if (!Settings::FreezeCulling)
+		{
+			_culler->Cull(
+				COMPUTE_COMMAND_LIST.Get(),
+				_visibleInstances[DX::FrameIndex],
+				_culledCommands[DX::FrameIndex],
+				_culledCommandsCounters[DX::FrameIndex]);
+		}
+
+		//_profiler->FinishMeasure(COMPUTE_COMMAND_LIST.Get());
+		SUCCESS(COMPUTE_COMMAND_LIST->Close());
+
+		ID3D12CommandList* ppCommandLists[] = { COMPUTE_COMMAND_LIST.Get() };
+		DX::ComputeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+		DX::ComputeCommandQueue->Signal(DX::ComputeFence.Get(), DX::ComputeFenceValue);
+		// wait for the compute results
+		DX::CommandQueue->Wait(DX::ComputeFence.Get(), DX::ComputeFenceValue);
+		DX::ComputeFenceValue++;
 	}
 
-	_stats->BeginMeasure(DX::CommandList.Get());
+	_beginFrameRendering();
+
+	_stats->BeginMeasure(COMMAND_LIST.Get());
 	if (Settings::SWREnabled)
 	{
 		_softwareRasterization();
@@ -458,29 +479,28 @@ void ForwardRenderer::Draw()
 	{
 		_HWR->Draw(_renderTargets[DX::FrameIndex].Get());
 	}
-	_stats->FinishMeasure(DX::CommandList.Get());
+	_stats->FinishMeasure(COMMAND_LIST.Get());
 
 	_drawGUI();
 	_finishFrameRendering();
 
-	// execute command lists
-	if (Settings::CullingEnabled)
-	{
-		ID3D12CommandList* ppCommandLists[] = { DX::ComputeCommandList.Get() };
-		DX::ComputeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-		DX::ComputeCommandQueue->Signal(DX::ComputeFence.Get(), DX::FenceValues[DX::FrameIndex]);
-
-		// wait for the compute results
-		DX::CommandQueue->Wait(DX::ComputeFence.Get(), DX::FenceValues[DX::FrameIndex]);
-	}
-
-	ID3D12CommandList* ppCommandLists[] = { DX::CommandList.Get() };
+	ID3D12CommandList* ppCommandLists[] = { COMMAND_LIST.Get() };
 	DX::CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	SUCCESS(_swapChain->Present(0, 0));
 
-	_moveToNextFrame();
+	const UINT64 currentFenceValue = DX::FenceValues[DX::FrameIndex];
+	SUCCESS(DX::CommandQueue->Signal(DX::Fence.Get(), currentFenceValue));
+
+	DX::FrameIndex = _swapChain->GetCurrentBackBufferIndex();
+
+	if (DX::Fence->GetCompletedValue() < DX::FenceValues[DX::FrameIndex])
+	{
+		SUCCESS(DX::Fence->SetEventOnCompletion(DX::FenceValues[DX::FrameIndex], DX::FenceEvent));
+		WaitForSingleObjectEx(DX::FenceEvent, INFINITE, FALSE);
+	}
+
+	DX::FenceValues[DX::FrameIndex] = currentFenceValue + 1;
 }
 
 void ForwardRenderer::_beginFrameRendering()
@@ -496,24 +516,13 @@ void ForwardRenderer::_beginFrameRendering()
 		&_CPUMemoryInfo));
 
 	SUCCESS(DX::CommandAllocators[DX::FrameIndex]->Reset());
-	SUCCESS(DX::CommandList->Reset(DX::CommandAllocators[DX::FrameIndex].Get(), nullptr));
-	_profiler->BeginMeasure(DX::CommandList.Get());
-
-	if (Settings::CullingEnabled)
-	{
-		SUCCESS(DX::ComputeCommandAllocators[DX::FrameIndex]->Reset());
-		SUCCESS(DX::ComputeCommandList->Reset(DX::ComputeCommandAllocators[DX::FrameIndex].Get(), nullptr));
-		//_profiler->BeginMeasure(DX::ComputeCommandList.Get());
-	}
+	SUCCESS(COMMAND_LIST->Reset(DX::CommandAllocators[DX::FrameIndex].Get(), nullptr));
+	_profiler->BeginMeasure(COMMAND_LIST.Get());
 
 	_rasterizerSwitch();
 
 	ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
-	DX::CommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	if (Settings::CullingEnabled)
-	{
-		DX::ComputeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	}
+	COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 }
 
 void ForwardRenderer::_finishFrameRendering()
@@ -525,16 +534,10 @@ void ForwardRenderer::_finishFrameRendering()
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PRESENT)
 	};
-	DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	if (Settings::CullingEnabled)
-	{
-		//_profiler->FinishMeasure(DX::ComputeCommandList.Get());
-		SUCCESS(DX::ComputeCommandList->Close());
-	}
-
-	_profiler->FinishMeasure(DX::CommandList.Get());
-	SUCCESS(DX::CommandList->Close());
+	_profiler->FinishMeasure(COMMAND_LIST.Get());
+	SUCCESS(COMMAND_LIST->Close());
 }
 
 void ForwardRenderer::_softwareRasterization()
@@ -552,9 +555,9 @@ void ForwardRenderer::_softwareRasterization()
 		result,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_COPY_SOURCE);
-	DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	DX::CommandList->CopyResource(_renderTargets[DX::FrameIndex].Get(), result);
+	COMMAND_LIST->CopyResource(_renderTargets[DX::FrameIndex].Get(), result);
 
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_renderTargets[DX::FrameIndex].Get(),
@@ -564,21 +567,21 @@ void ForwardRenderer::_softwareRasterization()
 		result,
 		D3D12_RESOURCE_STATE_COPY_SOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
 	// for subsequent _drawGUI call
 	auto RTVHandle = Descriptors::RT.GetCPUHandle(ForwardRendererRTV + DX::FrameIndex);
-	DX::CommandList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
+	COMMAND_LIST->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
 }
 
 void ForwardRenderer::_drawGUI()
 {
-	PIXBeginEvent(DX::CommandList.Get(), 0, L"Draw GUI");
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw GUI");
 
 	ImGui::Render();
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), DX::CommandList.Get());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), COMMAND_LIST.Get());
 
-	PIXEndEvent(DX::CommandList.Get());
+	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 // Wait for pending GPU work to complete.
@@ -593,27 +596,6 @@ void ForwardRenderer::_waitForGpu()
 
 	// Increment the fence value for the current frame.
 	DX::FenceValues[DX::FrameIndex]++;
-}
-
-// Prepare to render the next frame.
-void ForwardRenderer::_moveToNextFrame()
-{
-	// Schedule a Signal command in the queue.
-	const UINT64 currentFenceValue = DX::FenceValues[DX::FrameIndex];
-	SUCCESS(DX::CommandQueue->Signal(DX::Fence.Get(), currentFenceValue));
-
-	// Update the frame index.
-	DX::FrameIndex = _swapChain->GetCurrentBackBufferIndex();
-
-	// If the next frame is not ready to be rendered yet, wait until it is ready.
-	if (DX::Fence->GetCompletedValue() < DX::FenceValues[DX::FrameIndex])
-	{
-		SUCCESS(DX::Fence->SetEventOnCompletion(DX::FenceValues[DX::FrameIndex], DX::FenceEvent));
-		WaitForSingleObjectEx(DX::FenceEvent, INFINITE, FALSE);
-	}
-
-	// Set the fence value for the next frame.
-	DX::FenceValues[DX::FrameIndex] = currentFenceValue + 1;
 }
 
 void ForwardRenderer::_rasterizerSwitch()
@@ -643,7 +625,7 @@ void ForwardRenderer::_rasterizerSwitch()
 				D3D12_RESOURCE_STATE_INDEX_BUFFER,
 				D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 		};
-		DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+		COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
 		_switchToSWR = false;
 	}
@@ -673,7 +655,7 @@ void ForwardRenderer::_rasterizerSwitch()
 				D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 				D3D12_RESOURCE_STATE_INDEX_BUFFER)
 		};
-		DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+		COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
 		_switchFromSWR = false;
 	}
@@ -926,11 +908,7 @@ void ForwardRenderer::Resize(
 void ForwardRenderer::Destroy()
 {
 	_destroyGUI();
-
-	// Ensure that the GPU is no longer referencing resources that are about to be
-	// cleaned up by the destructor.
 	_waitForGpu();
-
 	CloseHandle(DX::FenceEvent);
 }
 

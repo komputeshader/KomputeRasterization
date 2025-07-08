@@ -5,6 +5,11 @@ It comes with two scenes, the Buddha - about 100M of really small triangles, and
 
 Demo attemps to distribute load over threads  with the notion of big triangle - how big the triangle's screen area should be to rasterize it with a single thread, or to offload it to multiple-threads rasterizer, or hardware rasterizer?
 
+## System requirements
+1. Windows 10, 64-bit.
+2. DirectX 12 compatible GPU.
+3. The WinPixEventRuntime is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
+
 ## How to build and run:
 1. `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
 2. Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `Buddha/` folder.

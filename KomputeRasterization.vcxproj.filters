@@ -300,5 +300,6 @@
     <None Include="CullingCommon.hlsli">
       <Filter>Assets\Shaders\Culling</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

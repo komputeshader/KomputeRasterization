@@ -9,8 +9,8 @@ namespace DX
 ComPtr<ID3D12Device> Device;
 ComPtr<IDXGIFactory4> Factory;
 ComPtr<IDXGIAdapter3> Adapter;
-ComPtr<ID3D12GraphicsCommandList> CommandList;
-ComPtr<ID3D12GraphicsCommandList> ComputeCommandList;
+ComPtr<ID3D12GraphicsCommandList> CommandList[FramesCount];
+ComPtr<ID3D12GraphicsCommandList> ComputeCommandList[FramesCount];
 ComPtr<ID3D12CommandAllocator> CommandAllocators[FramesCount];
 ComPtr<ID3D12CommandAllocator> ComputeCommandAllocators[FramesCount];
 ComPtr<ID3D12CommandQueue> CommandQueue;
@@ -18,8 +18,9 @@ ComPtr<ID3D12CommandQueue> ComputeCommandQueue;
 
 HANDLE FenceEvent;
 ComPtr<ID3D12Fence> Fence;
-ComPtr<ID3D12Fence> ComputeFence;
 UINT64 FenceValues[FramesCount];
+ComPtr<ID3D12Fence> ComputeFence;
+UINT64 ComputeFenceValue;
 
 DXGI_ADAPTER_DESC1 AdapterDesc;
 D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
@@ -182,23 +183,33 @@ void CreateCommandAllocators()
 
 void CreateCommandLists()
 {
-	SUCCESS(Device->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		CommandAllocators[FrameIndex].Get(),
-		nullptr,
-		IID_PPV_ARGS(&CommandList)));
-	NAME_D3D12_OBJECT(CommandList);
+	for (int frame = 0; frame < FramesCount; frame++)
+	{
+		SUCCESS(Device->CreateCommandList(
+			0,
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			CommandAllocators[frame].Get(),
+			nullptr,
+			IID_PPV_ARGS(&CommandList[frame])));
+		NAME_D3D12_OBJECT_INDEXED(CommandList, frame);
 
-	SUCCESS(Device->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_COMPUTE,
-		ComputeCommandAllocators[FrameIndex].Get(),
-		nullptr,
-		IID_PPV_ARGS(&ComputeCommandList)));
-	NAME_D3D12_OBJECT(ComputeCommandList);
+		SUCCESS(Device->CreateCommandList(
+			0,
+			D3D12_COMMAND_LIST_TYPE_COMPUTE,
+			ComputeCommandAllocators[frame].Get(),
+			nullptr,
+			IID_PPV_ARGS(&ComputeCommandList[frame])));
+		NAME_D3D12_OBJECT_INDEXED(ComputeCommandList, frame);
+	}
+}
 
-	SUCCESS(ComputeCommandList->Close());
+void CloseCommandLists()
+{
+	for (int frame = 0; frame < FramesCount; frame++)
+	{
+		SUCCESS(CommandList[frame]->Close());
+		SUCCESS(ComputeCommandList[frame]->Close());
+	}
 }
 
 void CreateCommandQueues()
@@ -227,11 +238,15 @@ void CreateSyncObjects()
 		FenceValues[FrameIndex],
 		D3D12_FENCE_FLAG_NONE,
 		IID_PPV_ARGS(&Fence)));
+	NAME_D3D12_OBJECT(Fence);
+	FenceValues[FrameIndex]++;
+
 	SUCCESS(Device->CreateFence(
-		FenceValues[FrameIndex],
+		0,
 		D3D12_FENCE_FLAG_NONE,
 		IID_PPV_ARGS(&ComputeFence)));
-	FenceValues[FrameIndex]++;
+	NAME_D3D12_OBJECT(ComputeFence);
+	ComputeFenceValue = 1;
 
 	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	if (FenceEvent == nullptr)

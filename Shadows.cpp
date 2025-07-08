@@ -364,7 +364,7 @@ void Shadows::PreparePrevFrameShadowMap()
 			D3D12_RESOURCE_STATE_COPY_SOURCE);
 		src.pResource = _shadowMapHWR.Get();
 	}
-	DX::CommandList->ResourceBarrier(2, barriers);
+	COMMAND_LIST->ResourceBarrier(2, barriers);
 
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
@@ -376,7 +376,7 @@ void Shadows::PreparePrevFrameShadowMap()
 			MAX_CASCADES_COUNT);
 		src.SubresourceIndex = D3D12CalcSubresource(0, cascade, 0, 1, MAX_CASCADES_COUNT);
 
-		DX::CommandList->CopyTextureRegion(
+		COMMAND_LIST->CopyTextureRegion(
 			&dst,
 			0,
 			0,
@@ -403,12 +403,12 @@ void Shadows::PreparePrevFrameShadowMap()
 			D3D12_RESOURCE_STATE_COPY_SOURCE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
-	DX::CommandList->ResourceBarrier(2, barriers);
+	COMMAND_LIST->ResourceBarrier(2, barriers);
 
 	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
 	{
 		Utils::GenerateHiZ(
-			DX::CommandList.Get(),
+			COMMAND_LIST.Get(),
 			_prevFrameShadowMap.Get(),
 			PrevFrameShadowMapMipsSRV + cascade * Settings::ShadowMapMipsCount,
 			PrevFrameShadowMapMipsUAV + cascade * Settings::ShadowMapMipsCount,

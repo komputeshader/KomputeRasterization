@@ -177,30 +177,30 @@ void HardwareRasterization::Draw(ID3D12Resource* renderTarget)
 
 void HardwareRasterization::_beginFrame()
 {
-	DX::CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	DX::CommandList->IASetIndexBuffer(&Scene::CurrentScene->indicesGPU.GetIBView());
+	COMMAND_LIST->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	COMMAND_LIST->IASetIndexBuffer(&Scene::CurrentScene->indicesGPU.GetIBView());
 }
 
 void HardwareRasterization::_drawDepth()
 {
-	PIXBeginEvent(DX::CommandList.Get(), 0, L"Draw Depth");
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Depth");
 
-	DX::CommandList->SetGraphicsRootSignature(_HWRRS.Get());
-	DX::CommandList->SetPipelineState(_depthPSO.Get());
-	DX::CommandList->SetGraphicsRootConstantBufferView(
+	COMMAND_LIST->SetGraphicsRootSignature(_HWRRS.Get());
+	COMMAND_LIST->SetPipelineState(_depthPSO.Get());
+	COMMAND_LIST->SetGraphicsRootConstantBufferView(
 		0,
 		_depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize);
-	DX::CommandList->SetGraphicsRootDescriptorTable(
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(
 		2,
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
-	DX::CommandList->IASetVertexBuffers(0, 1, &Scene::CurrentScene->positionsGPU.GetVBView());
-	DX::CommandList->RSSetViewports(1, &_viewport);
-	DX::CommandList->RSSetScissorRects(1, &_scissorRect);
+	COMMAND_LIST->IASetVertexBuffers(0, 1, &Scene::CurrentScene->positionsGPU.GetVBView());
+	COMMAND_LIST->RSSetViewports(1, &_viewport);
+	COMMAND_LIST->RSSetScissorRects(1, &_scissorRect);
 	auto DSVHandle = Descriptors::DS.GetCPUHandle(HWRDepthDSV);
-	DX::CommandList->OMSetRenderTargets(0, nullptr, FALSE, &DSVHandle);
-	DX::CommandList->ClearDepthStencilView(
+	COMMAND_LIST->OMSetRenderTargets(0, nullptr, FALSE, &DSVHandle);
+	COMMAND_LIST->ClearDepthStencilView(
 		DSVHandle,
 		D3D12_CLEAR_FLAG_DEPTH,
 		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
@@ -210,7 +210,7 @@ void HardwareRasterization::_drawDepth()
 
 	if (Settings::CullingEnabled)
 	{
-		DX::CommandList->ExecuteIndirect(
+		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			Scene::CurrentScene->meshesMetaCPU.size(),
 			_renderer->GetCulledCommands(DX::FrameIndex, 0),
@@ -229,8 +229,8 @@ void HardwareRasterization::_drawDepth()
 				{
 					currentMesh.startInstanceLocation
 				};
-				DX::CommandList->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
-				DX::CommandList->DrawIndexedInstanced(
+				COMMAND_LIST->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
+				COMMAND_LIST->DrawIndexedInstanced(
 					currentMesh.indexCountPerInstance,
 					currentMesh.instanceCount,
 					currentMesh.startIndexLocation,
@@ -242,48 +242,48 @@ void HardwareRasterization::_drawDepth()
 
 	_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
 
-	PIXEndEvent(DX::CommandList.Get());
+	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_drawShadows()
 {
-	PIXBeginEvent(DX::CommandList.Get(), 0, L"Draw Shadows");
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Shadows");
 
 	CD3DX12_RESOURCE_BARRIER barriers[1] = {};
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
 		Shadows::Sun.GetShadowMapHWR(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	DX::CommandList->SetGraphicsRootSignature(_HWRRS.Get());
-	DX::CommandList->SetPipelineState(Shadows::Sun.GetPSO());
-	DX::CommandList->RSSetViewports(1, &Shadows::Sun.GetViewport());
-	DX::CommandList->RSSetScissorRects(1, &Shadows::Sun.GetScissorRect());
+	COMMAND_LIST->SetGraphicsRootSignature(_HWRRS.Get());
+	COMMAND_LIST->SetPipelineState(Shadows::Sun.GetPSO());
+	COMMAND_LIST->RSSetViewports(1, &Shadows::Sun.GetViewport());
+	COMMAND_LIST->RSSetScissorRects(1, &Shadows::Sun.GetScissorRect());
 
 	for (int cascade = 1; cascade <= Settings::CascadesCount; cascade++)
 	{
-		DX::CommandList->SetGraphicsRootConstantBufferView(
+		COMMAND_LIST->SetGraphicsRootConstantBufferView(
 			0,
 			_depthSceneCB->GetGPUVirtualAddress() +
 			DX::FrameIndex * _depthSceneCBFrameSize +
 			cascade * sizeof(DepthSceneCB));
-		DX::CommandList->SetGraphicsRootDescriptorTable(
+		COMMAND_LIST->SetGraphicsRootDescriptorTable(
 			2,
 			Settings::CullingEnabled
 			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
 			: Scene::CurrentScene->instancesGPU.GetSRV());
 		auto shadowMapDSVHandle = Descriptors::DS.GetCPUHandle(CascadeDSV + cascade - 1);
-		DX::CommandList->OMSetRenderTargets(
+		COMMAND_LIST->OMSetRenderTargets(
 			0,
 			nullptr,
 			FALSE,
 			&shadowMapDSVHandle);
-		DX::CommandList->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
+		COMMAND_LIST->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
 		if (Settings::CullingEnabled)
 		{
-			DX::CommandList->ExecuteIndirect(
+			COMMAND_LIST->ExecuteIndirect(
 				_commandSignature.Get(),
 				Scene::CurrentScene->meshesMetaCPU.size(),
 				_renderer->GetCulledCommands(DX::FrameIndex, cascade),
@@ -302,8 +302,8 @@ void HardwareRasterization::_drawShadows()
 					{
 						currentMesh.startInstanceLocation
 					};
-					DX::CommandList->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
-					DX::CommandList->DrawIndexedInstanced(
+					COMMAND_LIST->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
+					COMMAND_LIST->DrawIndexedInstanced(
 						currentMesh.indexCountPerInstance,
 						currentMesh.instanceCount,
 						currentMesh.startIndexLocation,
@@ -324,15 +324,15 @@ void HardwareRasterization::_drawShadows()
 			Shadows::Sun.GetShadowMapHWR(),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		DX::CommandList->ResourceBarrier(1, barriers);
+		COMMAND_LIST->ResourceBarrier(1, barriers);
 	}
 
-	PIXEndEvent(DX::CommandList.Get());
+	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 {
-	PIXBeginEvent(DX::CommandList.Get(), 0, L"Draw Opaque");
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Opaque");
 
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
@@ -341,12 +341,12 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 			D3D12_RESOURCE_STATE_PRESENT,
 			D3D12_RESOURCE_STATE_RENDER_TARGET)
 	};
-	DX::CommandList->ResourceBarrier(_countof(barriers), barriers);
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	DX::CommandList->SetGraphicsRootSignature(_HWRRS.Get());
-	DX::CommandList->SetPipelineState(_opaquePSO.Get());
-	DX::CommandList->RSSetViewports(1, &_viewport);
-	DX::CommandList->RSSetScissorRects(1, &_scissorRect);
+	COMMAND_LIST->SetGraphicsRootSignature(_HWRRS.Get());
+	COMMAND_LIST->SetPipelineState(_opaquePSO.Get());
+	COMMAND_LIST->RSSetViewports(1, &_viewport);
+	COMMAND_LIST->RSSetScissorRects(1, &_scissorRect);
 	D3D12_VERTEX_BUFFER_VIEW VBVs[] =
 	{
 		Scene::CurrentScene->positionsGPU.GetVBView(),
@@ -354,22 +354,23 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 		Scene::CurrentScene->colorsGPU.GetVBView(),
 		Scene::CurrentScene->texcoordsGPU.GetVBView()
 	};
-	DX::CommandList->IASetVertexBuffers(0, _countof(VBVs), VBVs);
-	DX::CommandList->SetGraphicsRootConstantBufferView(0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SceneCB));
-	DX::CommandList->SetGraphicsRootDescriptorTable(
+	COMMAND_LIST->IASetVertexBuffers(0, _countof(VBVs), VBVs);
+	COMMAND_LIST->SetGraphicsRootConstantBufferView(
+		0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SceneCB));
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(
 		2,
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
-	DX::CommandList->SetGraphicsRootDescriptorTable(3, Descriptors::SV.GetGPUHandle(HWRShadowMapSRV));
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(3, Descriptors::SV.GetGPUHandle(HWRShadowMapSRV));
 	auto DSVHandle = Descriptors::DS.GetCPUHandle(HWRDepthDSV);
 	auto RTVHandle = Descriptors::RT.GetCPUHandle(ForwardRendererRTV + DX::FrameIndex);
-	DX::CommandList->OMSetRenderTargets(1, &RTVHandle, FALSE, &DSVHandle);
-	DX::CommandList->ClearRenderTargetView(RTVHandle, SkyColor, 0, nullptr);
+	COMMAND_LIST->OMSetRenderTargets(1, &RTVHandle, FALSE, &DSVHandle);
+	COMMAND_LIST->ClearRenderTargetView(RTVHandle, SkyColor, 0, nullptr);
 
 	if (Settings::CullingEnabled)
 	{
-		DX::CommandList->ExecuteIndirect(
+		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			Scene::CurrentScene->meshesMetaCPU.size(),
 			_renderer->GetCulledCommands(DX::FrameIndex, 0),
@@ -388,8 +389,8 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 				{
 					currentMesh.startInstanceLocation
 				};
-				DX::CommandList->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
-				DX::CommandList->DrawIndexedInstanced(
+				COMMAND_LIST->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
+				COMMAND_LIST->DrawIndexedInstanced(
 					currentMesh.indexCountPerInstance,
 					currentMesh.instanceCount,
 					currentMesh.startIndexLocation,
@@ -399,7 +400,7 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 		}
 	}
 
-	PIXEndEvent(DX::CommandList.Get());
+	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_endFrame()

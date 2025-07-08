@@ -481,7 +481,7 @@ void Scene::_loadObj(
 void Scene::_createVBResources(ScenesIndices sceneIndex)
 {
 	positionsGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		positionsCPU.data(),
 		positionsCPU.size(),
 		sizeof(decltype(positionsCPU)::value_type),
@@ -490,7 +490,7 @@ void Scene::_createVBResources(ScenesIndices sceneIndex)
 		L"VertexPositions");
 
 	normalsGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		normalsCPU.data(),
 		normalsCPU.size(),
 		sizeof(decltype(normalsCPU)::value_type),
@@ -499,7 +499,7 @@ void Scene::_createVBResources(ScenesIndices sceneIndex)
 		L"VertexNormals");
 
 	colorsGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		colorsCPU.data(),
 		colorsCPU.size(),
 		sizeof(decltype(colorsCPU)::value_type),
@@ -508,7 +508,7 @@ void Scene::_createVBResources(ScenesIndices sceneIndex)
 		L"VertexColors");
 
 	texcoordsGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		texcoordsCPU.data(),
 		texcoordsCPU.size(),
 		sizeof(decltype(texcoordsCPU)::value_type),
@@ -520,7 +520,7 @@ void Scene::_createVBResources(ScenesIndices sceneIndex)
 void Scene::_createIBResources(ScenesIndices sceneIndex)
 {
 	indicesGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		indicesCPU.data(),
 		indicesCPU.size(),
 		sizeof(decltype(indicesCPU)::value_type),
@@ -532,7 +532,7 @@ void Scene::_createIBResources(ScenesIndices sceneIndex)
 void Scene::_createMeshMetaResources(ScenesIndices sceneIndex)
 {
 	meshesMetaGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		meshesMetaCPU.data(),
 		meshesMetaCPU.size(),
 		sizeof(decltype(meshesMetaCPU)::value_type),
@@ -544,7 +544,7 @@ void Scene::_createMeshMetaResources(ScenesIndices sceneIndex)
 void Scene::_createInstancesBufferResources(ScenesIndices sceneIndex)
 {
 	instancesGPU.Initialize(
-		DX::CommandList.Get(),
+		COMMAND_LIST.Get(),
 		instancesCPU.data(),
 		instancesCPU.size(),
 		sizeof(decltype(instancesCPU)::value_type),
