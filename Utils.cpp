@@ -385,7 +385,7 @@ void GenerateHiZ(
 void GPUBuffer::Initialize(
 	ID3D12GraphicsCommandList* commandList,
 	const void* data,
-	unsigned int elementsCount,
+	size_t elementsCount,
 	unsigned int strideInBytes,
 	D3D12_RESOURCE_STATES endState,
 	unsigned int SRVIndex,
@@ -417,13 +417,13 @@ void GPUBuffer::Initialize(
 	{
 		_VBView.BufferLocation = _buffer->GetGPUVirtualAddress();
 		_VBView.StrideInBytes = strideInBytes;
-		_VBView.SizeInBytes = bufferSize;
+		_VBView.SizeInBytes = static_cast<unsigned int>(bufferSize);
 	}
 
 	if (_isIB)
 	{
 		_IBView.BufferLocation = _buffer->GetGPUVirtualAddress();
-		_IBView.SizeInBytes = bufferSize;
+		_IBView.SizeInBytes = static_cast<unsigned int>(bufferSize);
 		_IBView.Format = DXGI_FORMAT_R32_UINT;
 	}
 
@@ -432,7 +432,7 @@ void GPUBuffer::Initialize(
 	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	SRVDesc.Buffer.FirstElement = 0;
-	SRVDesc.Buffer.NumElements = elementsCount;
+	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(elementsCount);
 	SRVDesc.Buffer.StructureByteStride = strideInBytes;
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 	DX::Device->CreateShaderResourceView(

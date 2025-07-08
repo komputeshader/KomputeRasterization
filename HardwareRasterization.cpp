@@ -68,7 +68,7 @@ void HardwareRasterization::_createDepthBufferResources()
 	D3D12_CLEAR_VALUE optimizedClear = {};
 	optimizedClear.Format = _depthFormat;
 	optimizedClear.DepthStencil.Depth =
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0 : 1.0f;
+		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f;
 	optimizedClear.DepthStencil.Stencil = 0;
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -212,7 +212,7 @@ void HardwareRasterization::_drawDepth()
 	{
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
-			Scene::CurrentScene->meshesMetaCPU.size(),
+			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
 			_renderer->GetCulledCommands(DX::FrameIndex, 0),
 			0,
 			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
@@ -285,7 +285,7 @@ void HardwareRasterization::_drawShadows()
 		{
 			COMMAND_LIST->ExecuteIndirect(
 				_commandSignature.Get(),
-				Scene::CurrentScene->meshesMetaCPU.size(),
+				static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
 				_renderer->GetCulledCommands(DX::FrameIndex, cascade),
 				0,
 				_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
@@ -372,7 +372,7 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 	{
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
-			Scene::CurrentScene->meshesMetaCPU.size(),
+			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
 			_renderer->GetCulledCommands(DX::FrameIndex, 0),
 			0,
 			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),

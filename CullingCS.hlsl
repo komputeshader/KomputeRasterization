@@ -166,7 +166,7 @@ void main(
 	}
 
 	[unroll(MAX_CASCADES_COUNT)]
-	for (int cascade = 0; cascade < CascadesCount; cascade++)
+	for (uint cascade = 0; cascade < CascadesCount; cascade++)
 	{
 		bool backfacing = BackfacingMeshletOrthographic(meshMeta.coneAxis, meshMeta.coneCutoff);
 		bool notFrustumCulled = AABBVsFrustum(meshMeta.aabb, Cascade[cascade]);

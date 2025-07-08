@@ -218,7 +218,7 @@ public:
 	void Initialize(
 		ID3D12GraphicsCommandList* commandList,
 		const void* data,
-		unsigned int elementsCount,
+		size_t elementsCount,
 		unsigned int strideInBytes,
 		D3D12_RESOURCE_STATES endState,
 		unsigned int SRVIndex,

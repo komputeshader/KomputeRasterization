@@ -234,11 +234,11 @@ void Scene::_loadObj(
 			streams,
 			_countof(streams));
 
-		unsigned int positionsCPUOldSize = positionsCPU.size();
-		unsigned int normalsCPUOldSize = normalsCPU.size();
-		unsigned int colorsCPUOldSize = colorsCPU.size();
-		unsigned int texcoordsCPUOldSize = texcoordsCPU.size();
-		unsigned int indicesCPUOldSize = indicesCPU.size();
+		unsigned int positionsCPUOldSize = static_cast<unsigned int>(positionsCPU.size());
+		unsigned int normalsCPUOldSize = static_cast<unsigned int>(normalsCPU.size());
+		unsigned int colorsCPUOldSize = static_cast<unsigned int>(colorsCPU.size());
+		unsigned int texcoordsCPUOldSize = static_cast<unsigned int>(texcoordsCPU.size());
+		unsigned int indicesCPUOldSize = static_cast<unsigned int>(indicesCPU.size());
 
 		positionsCPU.resize(positionsCPUOldSize + uniqueVertexCount);
 		normalsCPU.resize(normalsCPUOldSize + uniqueVertexCount);
@@ -432,8 +432,8 @@ void Scene::_loadObj(
 	XMStoreFloat3(&objectBoundingVolume.extents, (objectMax - objectMin) * 0.5f);
 
 	Prefab newPrefab;
-	newPrefab.meshesOffset = meshesMetaCPU.size();
-	newPrefab.meshesCount = meshesMeta.size();
+	newPrefab.meshesOffset = static_cast<unsigned int>(meshesMetaCPU.size());
+	newPrefab.meshesCount = static_cast<unsigned int>(meshesMeta.size());
 	prefabs.push_back(newPrefab);
 
 	meshesMetaCPU.insert(meshesMetaCPU.end(), meshesMeta.begin(), meshesMeta.end());
@@ -443,7 +443,7 @@ void Scene::_loadObj(
 
 	totalFacesCount += facesCount * totalMeshInstances;
 
-	unsigned int newInstancesOffset = instancesCPU.size();
+	unsigned int newInstancesOffset = static_cast<unsigned int>(instancesCPU.size());
 	instancesCPU.resize(instancesCPU.size() + newPrefab.meshesCount * instancesCountX * instancesCountZ);
 	for (unsigned int mesh = 0; mesh < newPrefab.meshesCount; mesh++)
 	{

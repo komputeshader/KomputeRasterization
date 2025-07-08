@@ -138,7 +138,7 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.NumElements = Scene::MaxSceneInstancesCount;
+	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneInstancesCount);
 	SRVDesc.Buffer.StructureByteStride = sizeof(Instance);
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
@@ -152,7 +152,7 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = Scene::MaxSceneInstancesCount * MAX_FRUSTUMS_COUNT;
+	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneInstancesCount * MAX_FRUSTUMS_COUNT);
 	UAVDesc.Buffer.StructureByteStride = sizeof(Instance);
 	UAVDesc.Buffer.CounterOffsetInBytes = 0;
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
@@ -200,7 +200,7 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount;
+	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
 	UAVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
 	UAVDesc.Buffer.CounterOffsetInBytes = 0;
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
@@ -211,7 +211,7 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	SRVDesc.Buffer.FirstElement = 0;
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	SRVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount;
+	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
 	SRVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
 
 	static D3D12_DISPATCH_ARGUMENTS dispatch;

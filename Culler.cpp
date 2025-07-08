@@ -74,10 +74,10 @@ void Culler::Update()
 {
 	Camera& camera = Scene::CurrentScene->camera;
 	CullingCB cullingData = {};
-	cullingData.maxSceneInstancesCount = Scene::MaxSceneInstancesCount;
-	cullingData.maxSceneMeshesMetaCount = Scene::MaxSceneMeshesMetaCount;
-	cullingData.totalInstancesCount = Scene::CurrentScene->instancesCPU.size();
-	cullingData.totalMeshesCount = Scene::CurrentScene->meshesMetaCPU.size();
+	cullingData.maxSceneInstancesCount = static_cast<unsigned int>(Scene::MaxSceneInstancesCount);
+	cullingData.maxSceneMeshesMetaCount = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
+	cullingData.totalInstancesCount = static_cast<unsigned int>(Scene::CurrentScene->instancesCPU.size());
+	cullingData.totalMeshesCount = static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size());
 	cullingData.cascadesCount = Settings::CascadesCount;
 	cullingData.frustumCullingEnabled = Settings::FrustumCullingEnabled ? 1 : 0;
 	cullingData.cameraHiZCullingEnabled = Settings::CameraHiZCullingEnabled ? 1 : 0;
@@ -179,7 +179,7 @@ void Culler::Cull(
 	commandList->SetComputeRootDescriptorTable(
 		1, Descriptors::SV.GetGPUHandle(CullingCountersUAV));
 	commandList->Dispatch(
-		Utils::DispatchSize(CULLING_THREADS_X, Scene::CurrentScene->meshesMetaCPU.size()),
+		Utils::DispatchSize(CULLING_THREADS_X, static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size())),
 		1,
 		1);
 
@@ -201,7 +201,7 @@ void Culler::Cull(
 	commandList->SetComputeRootDescriptorTable(
 		6, Descriptors::SV.GetGPUHandle(CullingCountersUAV));
 	commandList->Dispatch(
-		Utils::DispatchSize(CULLING_THREADS_X, Scene::CurrentScene->instancesCPU.size()),
+		Utils::DispatchSize(CULLING_THREADS_X, static_cast<unsigned int>(Scene::CurrentScene->instancesCPU.size())),
 		1,
 		1);
 
@@ -227,7 +227,7 @@ void Culler::Cull(
 	commandList->SetComputeRootDescriptorTable(
 		3, Descriptors::SV.GetGPUHandle(CulledCommandsUAV + DX::FrameIndex * PerFrameDescriptorsCount));
 	commandList->Dispatch(
-		Utils::DispatchSize(CULLING_THREADS_X, Scene::CurrentScene->meshesMetaCPU.size()),
+		Utils::DispatchSize(CULLING_THREADS_X, static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size())),
 		1,
 		1);
 
@@ -265,7 +265,7 @@ void Culler::_createCullingCounters()
 	UAVDesc.Buffer.FirstElement = 0;
 	UAVDesc.Buffer.CounterOffsetInBytes = 0;
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-	UAVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT;
+	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT);
 	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
@@ -274,7 +274,7 @@ void Culler::_createCullingCounters()
 	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	SRVDesc.Buffer.FirstElement = 0;
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	SRVDesc.Buffer.NumElements = Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT;
+	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT);
 	SRVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
 
 	SUCCESS(DX::Device->CreateCommittedResource(
