@@ -141,20 +141,10 @@ void GetSSPositions(
 	out float2 p1SS,
 	out float2 p2SS)
 {
-	// CS -> NDC
-	float2 p0NDC = p0CS * invW0;
-	float2 p1NDC = p1CS * invW1;
-	float2 p2NDC = p2CS * invW2;
-
-	// NDC -> DX [0,1]
-	p0SS = p0NDC * float2(0.5, -0.5) + float2(0.5, 0.5);
-	p1SS = p1NDC * float2(0.5, -0.5) + float2(0.5, 0.5);
-	p2SS = p2NDC * float2(0.5, -0.5) + float2(0.5, 0.5);
-
-	// DX [0,1] -> SS
-	p0SS *= OutputRes;
-	p1SS *= OutputRes;
-	p2SS *= OutputRes;
+	// CS -> NDC -> DX [0,1] -> SS
+	p0SS = (p0CS * invW0 * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
+	p1SS = (p1CS * invW1 * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
+	p2SS = (p2CS * invW2 * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
 }
 
 void ClampToScreenBounds(

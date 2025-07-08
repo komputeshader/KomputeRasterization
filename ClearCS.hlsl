@@ -14,6 +14,7 @@ void main(
 		return;
 	}
 
+	[unroll(MAX_FRUSTUMS_COUNT)]
 	for (uint frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
 	{
 		InstanceCounters[dispatchThreadID.x + frustum * MaxSceneMeshesMetaCount] = 0;

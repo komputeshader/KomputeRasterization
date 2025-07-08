@@ -242,23 +242,21 @@ void main(
 
 						precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-						uint2 pixelCoord = uint2(x, y);
-
 						// early z test
 						[branch]
-						if (Depth[pixelCoord].r == depth)
+						if (Depth[uint2(x, y)].r == depth)
 						{
 							// for perspective-correct interpolation
 							float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
 
-							float3 n0, n1, n2;
-							GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, n0, n1, n2);
-							float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+							float4 attr0, attr1, attr2;
+
+							GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+							float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 							N = normalize(N);
 
-							float4 c0, c1, c2;
-							GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, c0, c1, c2);
-							float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+							GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, attr0, attr1, attr2);
+							float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 							if (ShowMeshlets)
 							{
 								color = instance.color;
@@ -278,7 +276,7 @@ void main(
 								result *= (NdotL * shadow + ambient);
 							}
 
-							RenderTarget[pixelCoord] = float4(result, 1.0);
+							RenderTarget[uint2(x, y)] = float4(result, 1.0);
 						}
 					
 						// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -337,14 +335,14 @@ void main(
 								// for perspective-correct interpolation
 								float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
 
-								float3 n0, n1, n2;
-								GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, n0, n1, n2);
-								float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+								float4 attr0, attr1, attr2;
+
+								GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+								float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 								N = normalize(N);
 
-								float4 c0, c1, c2;
-								GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, c0, c1, c2);
-								float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+								GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, attr0, attr1, attr2);
+								float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 								if (ShowMeshlets)
 								{
 									color = instance.color;
