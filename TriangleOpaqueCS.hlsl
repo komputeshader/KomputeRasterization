@@ -228,10 +228,8 @@ void main(
 						xMax += ((frac(xMax) == 0.5) ? -1.0 : 0.0);
 					}
 
-					float xOffset = xMin - minP.x;
-
-					float area0tmp = area0 - dxdy0.y * xOffset;
-					float area1tmp = area1 - dxdy1.y * xOffset;
+					float area0tmp = area0 - dxdy0.y * (xMin - minP.x);
+					float area1tmp = area1 - dxdy1.y * (xMin - minP.x);
 
 					for (float x = xMin; x <= xMax; x += 1.0)
 					{

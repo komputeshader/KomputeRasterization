@@ -107,7 +107,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	// and in practice we'll always have smth like O(WH)
 	int bigTrianglesPerFrame[MAX_FRUSTUMS_COUNT] =
 	{
-		Settings::BackBufferWidth * Settings::BackBufferHeight / 10
+		Settings::BackBufferWidth * Settings::BackBufferHeight
 	};
 	for (int cascade = 1; cascade <= MAX_CASCADES_COUNT; cascade++)
 	{
