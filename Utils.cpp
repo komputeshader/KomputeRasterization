@@ -15,7 +15,7 @@ D3D12_STATIC_SAMPLER_DESC HiZSamplerDesc;
 void InitializeResources()
 {
 	CD3DX12_ROOT_PARAMETER1 computeRootParameters[3] = {};
-	computeRootParameters[0].InitAsConstants(6, 0);
+	computeRootParameters[0].InitAsConstants(4, 0);
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[2] = {};
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -28,6 +28,7 @@ void InitializeResources()
 		0);
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
 
+	// TODO: unused, remove?
 	D3D12_STATIC_SAMPLER_DESC sampler = {};
 	sampler.Filter = D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
 	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -337,21 +338,12 @@ void GenerateHiZ(
 		outputWidth = std::max(inputWidth >> 1, 1u);
 		outputHeight = std::max(inputHeight >> 1, 1u);
 
-		float NPOTX = (inputWidth % 2)
-			? 1.0f - 1.0f / static_cast<float>(inputWidth)
-			: 1.0f;
-		float NPOTY = (inputHeight % 2)
-			? 1.0f - 1.0f / static_cast<float>(inputHeight)
-			: 1.0f;
-
 		UINT constants[] =
 		{
+			inputWidth % 2,
+			inputHeight % 2,
 			outputWidth,
-			outputHeight,
-			AsUINT(1.0f / static_cast<float>(outputWidth)),
-			AsUINT(1.0f / static_cast<float>(outputHeight)),
-			AsUINT(NPOTX),
-			AsUINT(NPOTY)
+			outputHeight
 		};
 
 		inputWidth = outputWidth;

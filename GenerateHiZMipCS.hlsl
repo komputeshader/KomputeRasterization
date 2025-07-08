@@ -2,17 +2,13 @@
 
 cbuffer Constants : register(b0)
 {
+	uint2 NPOT;
 	uint2 OutputResolution;
-	float2 InvOutputResolution;
-	float2 NPOTCorrection;
 };
 
 Texture2D Input : register(t0);
 
 RWTexture2D<float> Output : register(u0);
-
-// TODO: account for non-reversed Z depth buffers
-SamplerState DepthSampler : register(s0);
 
 [numthreads(HIZ_THREADS_X, HIZ_THREADS_Y, HIZ_THREADS_Z)]
 void main(
@@ -26,27 +22,33 @@ void main(
 		return;
 	}
 
-	float2 uv =
-		(float2(dispatchThreadID.xy) + float2(0.5, 0.5)) *
-		InvOutputResolution * NPOTCorrection;
+	uint2 xyInput = 2 * dispatchThreadID.xy;
 
-	float result = Input.SampleLevel(
-		DepthSampler,
-		uv,
-		0.0).r;
+	// TODO: account for non-reversed Z depth buffers
+	float result = 1.0;
+	result = min(result, Input[xyInput + uint2(0, 0)].r);
+	result = min(result, Input[xyInput + uint2(1, 0)].r);
+	result = min(result, Input[xyInput + uint2(0, 1)].r);
+	result = min(result, Input[xyInput + uint2(1, 1)].r);
 
-	float borderX = (dispatchThreadID.x == OutputResolution.x - 1) ? 1.0 : 0.0;
-	float borderY = (dispatchThreadID.y == OutputResolution.y - 1) ? 1.0 : 0.0;
-	if (borderX || borderY)
+	bool borderXNPOT = (dispatchThreadID.x == OutputResolution.x - 1) && NPOT.x;
+	bool borderYNPOT = (dispatchThreadID.y == OutputResolution.y - 1) && NPOT.y;
+
+	if (borderXNPOT)
 	{
-		result = min(
-			result,
-			Input.SampleLevel(
-				DepthSampler,
-				float2(
-					lerp(uv.x, 1.0, borderX),
-					lerp(uv.y, 1.0, borderY)),
-				0.0).r);
+		result = min(result, Input[xyInput + uint2(2, 0)].r);
+		result = min(result, Input[xyInput + uint2(2, 1)].r);
+	}
+
+	if (borderYNPOT)
+	{
+		result = min(result, Input[xyInput + uint2(0, 2)].r);
+		result = min(result, Input[xyInput + uint2(1, 2)].r);
+	}
+
+	if (borderXNPOT && borderYNPOT)
+	{
+		result = min(result, Input[xyInput + uint2(2, 2)].r);
 	}
 
 	Output[dispatchThreadID.xy] = result;
