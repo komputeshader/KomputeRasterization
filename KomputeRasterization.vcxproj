@@ -345,7 +345,6 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shadows.h" />
     <ClInclude Include="Timer.h" />
-    <ClInclude Include="Types.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Win32Application.h" />
   </ItemGroup>

@@ -1,6 +1,5 @@
 #include "Culler.h"
 #include "Utils.h"
-#include "Types.h"
 #include "Scene.h"
 #include "DX.h"
 #include "DescriptorManager.h"

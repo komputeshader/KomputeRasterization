@@ -176,9 +176,6 @@
     <ClInclude Include="Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Shadows.h">
       <Filter>Header Files</Filter>
     </ClInclude>

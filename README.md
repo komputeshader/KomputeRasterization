@@ -10,16 +10,17 @@ Demo attemps to distribute load over threads  with the notion of big triangle - 
 2. DirectX 12 compatible GPU.
 3. The WinPixEventRuntime is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
 
-## How to build and run:
+## How to build and run
 1. `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
 2. Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `Buddha/` folder.
 3. Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `powerplant/` folder.
 4. Open `.sln` file with the Visual Studio.
 5. Build and run using Visual Studio.
 
-## Papers and other resources used:
+## Papers and other resources used
 * [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf)
 * [Optimizing the Graphics Pipeline with Compute](https://frostbite-wp-prd.s3.amazonaws.com/wp-content/uploads/2016/03/29204330/GDC_2016_Compute.pdf)
 * Models downloaded from Morgan McGuire's [Computer Graphics Archive](https://casual-effects.com/data)
 * Mesh loading is done with [Rapidobj](https://github.com/guybrush77/rapidobj)
 * Mesh processing is done with [Meshoptimizer](https://github.com/zeux/meshoptimizer)
+* GUI is done using the [IMGUI](https://github.com/ocornut/imgui)

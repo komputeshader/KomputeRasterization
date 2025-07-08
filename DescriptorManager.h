@@ -1,7 +1,6 @@
 #pragma once
 
 #include "DX.h"
-#include "Types.h"
 
 // these serve as indices into the descriptor heap
 // NOTE: root signatures are dependent on that ordering

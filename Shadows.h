@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Settings.h"
-#include "Types.h"
 
 class Shadows
 {
