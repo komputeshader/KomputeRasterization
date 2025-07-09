@@ -9,7 +9,7 @@
 #define HIZ_THREADS_Y 8
 #define HIZ_THREADS_Z 1
 
-#define SWR_TRIANGLE_THREADS_X 256 // for consoles, i.e. PS5/PS4/XBOXes, that value should be 64
+#define SWR_TRIANGLE_THREADS_X 64 // for consoles, i.e. PS5/PS4/XBOXes, that value should be 64
 #define SWR_TRIANGLE_THREADS_Y 1
 #define SWR_TRIANGLE_THREADS_Z 1
 
@@ -20,6 +20,7 @@
 #define MESHLET_SIZE 256
 
 #define TRIANGLES_PER_THREAD ((MESHLET_SIZE) / (SWR_TRIANGLE_THREADS_X))
+#define SWR_THREAD_GROUPS_Y ((MESHLET_SIZE) / (SWR_TRIANGLE_THREADS_X))
 
 #define MAX_CASCADES_COUNT 8
 // 1 is for main camera

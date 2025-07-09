@@ -116,7 +116,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	//int bigTrianglesPerFrame = Scene::MaxSceneFacesCount * sizeof(BigTriangle);
 
 	static D3D12_DISPATCH_ARGUMENTS dispatch;
-	dispatch.ThreadGroupCountX = 1;
+	dispatch.ThreadGroupCountX = 0;
 	dispatch.ThreadGroupCountY = 1;
 	dispatch.ThreadGroupCountZ = 1;
 

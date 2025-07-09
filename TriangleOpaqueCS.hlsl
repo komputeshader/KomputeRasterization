@@ -52,28 +52,25 @@ void main(
 	uint groupIndex : SV_GroupIndex)
 {
 	IndirectCommand command = Commands[groupID.x];
-	uint IndexCountPerInstance = command.args.indexCountPerInstance;
-	uint StartIndexLocation = command.args.startIndexLocation;
-	uint BaseVertexLocation = command.args.baseVertexLocation;
-	uint StartInstanceLocation = command.startInstanceLocation;
-	uint InstanceCount = command.args.instanceCount;
 
-	[unroll(TRIANGLES_PER_THREAD)]
-	for (uint triangleIndex = 0; triangleIndex < TRIANGLES_PER_THREAD; triangleIndex++)
-	{
+	uint meshletChunkIndex = groupID.y;
+
+	//[unroll(TRIANGLES_PER_THREAD)]
+	//for (uint triangleIndex = 0; triangleIndex < TRIANGLES_PER_THREAD; triangleIndex++)
+	//{
 		[branch]
-		if ((groupThreadID.x + triangleIndex * SWR_TRIANGLE_THREADS_X) * 3 >= IndexCountPerInstance)
+		if ((groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3 >= command.args.indexCountPerInstance)
 		{
 			return;
 		}
 
 		uint i0, i1, i2;
-		GetTriangleIndices(StartIndexLocation + (groupThreadID.x + triangleIndex * SWR_TRIANGLE_THREADS_X) * 3, i0, i1, i2);
+		GetTriangleIndices(command.args.startIndexLocation + (groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3, i0, i1, i2);
 
 		float3 p0, p1, p2;
-		GetTriangleVertexPositions(i0, i1, i2, BaseVertexLocation, p0, p1, p2);
+		GetTriangleVertexPositions(i0, i1, i2, command.args.baseVertexLocation, p0, p1, p2);
 
-		for (uint inst = 0; inst < InstanceCount; inst++)
+		for (uint inst = 0; inst < command.args.instanceCount; inst++)
 		{
 			// one more triangle attempted to be rendered
 			InterlockedAdd(Statistics[0], 1);
@@ -81,7 +78,7 @@ void main(
 			float3 p0WS, p1WS, p2WS;
 			float4 p0CS, p1CS, p2CS;
 			uint instanceID = inst;
-			uint instanceIndex = StartInstanceLocation + instanceID;
+			uint instanceIndex = command.startInstanceLocation + instanceID;
 			Instance instance = Instances[instanceIndex];
 			GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
@@ -159,9 +156,9 @@ void main(
 			if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 			{
 				BigTriangle result;
-				result.triangleIndex = StartIndexLocation + (groupThreadID.x + triangleIndex * SWR_TRIANGLE_THREADS_X) * 3;
+				result.triangleIndex = command.args.startIndexLocation + (groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3;
 				result.instanceIndex = instanceIndex;
-				result.baseVertexLocation = BaseVertexLocation;
+				result.baseVertexLocation = command.args.baseVertexLocation;
 
 				float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
 				float totalTiles = tilesCount.x * tilesCount.y;
@@ -249,11 +246,11 @@ void main(
 
 							float4 attr0, attr1, attr2;
 
-							GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+							GetTriangleVertexNormals(i0, i1, i2, command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
 							float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 							N = normalize(N);
 
-							GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, attr0, attr1, attr2);
+							GetTriangleVertexColors(i0, i1, i2, command.args.baseVertexLocation, attr0, attr1, attr2);
 							float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 							if (ShowMeshlets)
 							{
@@ -335,11 +332,11 @@ void main(
 
 								float4 attr0, attr1, attr2;
 
-								GetTriangleVertexNormals(i0, i1, i2, BaseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+								GetTriangleVertexNormals(i0, i1, i2, command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
 								float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 								N = normalize(N);
 
-								GetTriangleVertexColors(i0, i1, i2, BaseVertexLocation, attr0, attr1, attr2);
+								GetTriangleVertexColors(i0, i1, i2, command.args.baseVertexLocation, attr0, attr1, attr2);
 								float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 								if (ShowMeshlets)
 								{
@@ -376,5 +373,5 @@ void main(
 				}
 			}
 		}
-	}
+	//}
 }

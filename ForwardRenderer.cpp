@@ -215,8 +215,8 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 	SRVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
 
 	static D3D12_DISPATCH_ARGUMENTS dispatch;
-	dispatch.ThreadGroupCountX = 1;
-	dispatch.ThreadGroupCountY = 1;
+	dispatch.ThreadGroupCountX = 0;
+	dispatch.ThreadGroupCountY = SWR_THREAD_GROUPS_Y;
 	dispatch.ThreadGroupCountZ = 1;
 
 	for (int frame = 0; frame < DX::FramesCount; frame++)
