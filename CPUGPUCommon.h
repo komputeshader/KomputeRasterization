@@ -9,7 +9,9 @@
 #define HIZ_THREADS_Y 8
 #define HIZ_THREADS_Z 1
 
-#define SWR_TRIANGLE_THREADS_X 64 // for consoles, i.e. PS5/PS4/XBOXes, that value should be 64
+// for consoles, i.e. PS5/PS4/XBOXes, group sizes should be 64
+//#define SWR_TRIANGLE_THREADS_X 64
+#define SWR_TRIANGLE_THREADS_X 256
 #define SWR_TRIANGLE_THREADS_Y 1
 #define SWR_TRIANGLE_THREADS_Z 1
 

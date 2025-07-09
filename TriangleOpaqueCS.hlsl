@@ -56,7 +56,7 @@ void main(
 	uint meshletChunkIndex = groupID.y;
 
 	//[unroll(TRIANGLES_PER_THREAD)]
-	//for (uint triangleIndex = 0; triangleIndex < TRIANGLES_PER_THREAD; triangleIndex++)
+	//for (uint meshletChunkIndex = 0; meshletChunkIndex < TRIANGLES_PER_THREAD; meshletChunkIndex++)
 	//{
 		[branch]
 		if ((groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3 >= command.args.indexCountPerInstance)
