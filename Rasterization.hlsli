@@ -48,16 +48,25 @@ float EdgeScanlineIntersection(in float2 v0, in float2 v1, in float y)
 	return ((denom == 0.0) ? FloatMax : (y - v0.y) * rcp(denom));
 }
 
+#ifndef BIG_TRIANGLES
 void GetTriangleIndices(
 	in uint startIndexLocation,
 	out uint i0,
 	out uint i1,
 	out uint i2)
 {
+#ifdef GPU_SOA_BUFFERS
+	startIndexLocation /= INDICES_STRIDE;
+	i0 = Indices[0 * TotalTriangles + startIndexLocation];
+	i1 = Indices[1 * TotalTriangles + startIndexLocation];
+	i2 = Indices[2 * TotalTriangles + startIndexLocation];
+#else
 	i0 = Indices[startIndexLocation + 0];
 	i1 = Indices[startIndexLocation + 1];
 	i2 = Indices[startIndexLocation + 2];
+#endif
 }
+#endif
 
 void GetTriangleVertexPositions(
 	in uint i0, in uint i1, in uint i2,

@@ -2,8 +2,6 @@
 
 #include "Common.h"
 
-#define SCENE_MESHLETIZATION
-
 class Settings
 {
 public:

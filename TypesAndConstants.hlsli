@@ -93,7 +93,9 @@ struct IndirectCommand
 
 struct BigTriangle
 {
-	uint triangleIndex;
+	uint i0;
+	uint i1;
+	uint i2;
 	uint instanceIndex;
 	int baseVertexLocation;
 

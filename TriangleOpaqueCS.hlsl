@@ -9,6 +9,8 @@ cbuffer SceneCB : register(b0)
 	float4x4 VP;
 	float4x4 CascadeVP[MAX_CASCADES_COUNT];
 	float4 SunDirection;
+	float4 CascadeBias[MAX_CASCADES_COUNT / 4];
+	float4 CascadeSplits[MAX_CASCADES_COUNT / 4];
 	float2 OutputRes;
 	float2 InvOutputRes;
 	float BigTriangleThreshold;
@@ -19,8 +21,7 @@ cbuffer SceneCB : register(b0)
 	int CascadesCount;
 	int ScanlineRasterization;
 	float ShadowsDistance;
-	float4 CascadeBias[MAX_CASCADES_COUNT / 4];
-	float4 CascadeSplits[MAX_CASCADES_COUNT / 4];
+	uint TotalTriangles;
 };
 
 SamplerState PointClampSampler : register(s0);
@@ -41,6 +42,8 @@ RWTexture2D<float4> RenderTarget : register(u0);
 AppendStructuredBuffer<BigTriangle> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
 
+groupshared IndirectCommand Command;
+
 #include "Common.hlsli"
 #include "Rasterization.hlsli"
 
@@ -51,26 +54,31 @@ void main(
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
-	IndirectCommand command = Commands[groupID.x];
+	if (groupIndex == 0)
+	{
+		Command = Commands[groupID.x];
+	}
 
-	uint meshletChunkIndex = groupID.y;
+	GroupMemoryBarrierWithGroupSync();
 
 	//[unroll(TRIANGLES_PER_THREAD)]
 	//for (uint meshletChunkIndex = 0; meshletChunkIndex < TRIANGLES_PER_THREAD; meshletChunkIndex++)
 	//{
 		[branch]
-		if ((groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3 >= command.args.indexCountPerInstance)
+		if ((groupThreadID.x + groupID.y * SWR_TRIANGLE_THREADS_X) * 3 >= Command.args.indexCountPerInstance)
 		{
 			return;
 		}
 
 		uint i0, i1, i2;
-		GetTriangleIndices(command.args.startIndexLocation + (groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3, i0, i1, i2);
+		GetTriangleIndices(
+			Command.args.startIndexLocation + (groupThreadID.x + groupID.y * SWR_TRIANGLE_THREADS_X) * 3,
+			i0, i1, i2);
 
 		float3 p0, p1, p2;
-		GetTriangleVertexPositions(i0, i1, i2, command.args.baseVertexLocation, p0, p1, p2);
+		GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
 
-		for (uint inst = 0; inst < command.args.instanceCount; inst++)
+		for (uint inst = 0; inst < Command.args.instanceCount; inst++)
 		{
 			// one more triangle attempted to be rendered
 			InterlockedAdd(Statistics[0], 1);
@@ -78,7 +86,7 @@ void main(
 			float3 p0WS, p1WS, p2WS;
 			float4 p0CS, p1CS, p2CS;
 			uint instanceID = inst;
-			uint instanceIndex = command.startInstanceLocation + instanceID;
+			uint instanceIndex = Command.startInstanceLocation + instanceID;
 			Instance instance = Instances[instanceIndex];
 			GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
@@ -156,9 +164,11 @@ void main(
 			if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 			{
 				BigTriangle result;
-				result.triangleIndex = command.args.startIndexLocation + (groupThreadID.x + meshletChunkIndex * SWR_TRIANGLE_THREADS_X) * 3;
+				result.i0 = i0;
+				result.i1 = i1;
+				result.i2 = i2;
 				result.instanceIndex = instanceIndex;
-				result.baseVertexLocation = command.args.baseVertexLocation;
+				result.baseVertexLocation = Command.args.baseVertexLocation;
 
 				float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
 				float totalTiles = tilesCount.x * tilesCount.y;
@@ -246,11 +256,11 @@ void main(
 
 							float4 attr0, attr1, attr2;
 
-							GetTriangleVertexNormals(i0, i1, i2, command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+							GetTriangleVertexNormals(i0, i1, i2, Command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
 							float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 							N = normalize(N);
 
-							GetTriangleVertexColors(i0, i1, i2, command.args.baseVertexLocation, attr0, attr1, attr2);
+							GetTriangleVertexColors(i0, i1, i2, Command.args.baseVertexLocation, attr0, attr1, attr2);
 							float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 							if (ShowMeshlets)
 							{
@@ -332,11 +342,11 @@ void main(
 
 								float4 attr0, attr1, attr2;
 
-								GetTriangleVertexNormals(i0, i1, i2, command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
+								GetTriangleVertexNormals(i0, i1, i2, Command.args.baseVertexLocation, attr0.xyz, attr1.xyz, attr2.xyz);
 								float3 N = denom * (weight0 * attr0.xyz * invW0 + weight1 * attr1.xyz * invW1 + weight2 * attr2.xyz * invW2);
 								N = normalize(N);
 
-								GetTriangleVertexColors(i0, i1, i2, command.args.baseVertexLocation, attr0, attr1, attr2);
+								GetTriangleVertexColors(i0, i1, i2, Command.args.baseVertexLocation, attr0, attr1, attr2);
 								float3 color = denom * (weight0 * attr0.rgb * invW0 + weight1 * attr1.rgb * invW1 + weight2 * attr2.rgb * invW2);
 								if (ShowMeshlets)
 								{

@@ -112,6 +112,12 @@ void Scene::_loadObj(
 	std::vector<XMFLOAT4> unindexedColors;
 	std::vector<XMFLOAT2> unindexedUVs;
 
+	unsigned int positionsCPUOldSize = 0;
+	unsigned int normalsCPUOldSize = 0;
+	unsigned int colorsCPUOldSize = 0;
+	unsigned int texcoordsCPUOldSize = 0;
+	unsigned int indicesCPUOldSize = 0;
+
 	size_t facesCount = 0;
 	for (unsigned int group = 0; group < OBJMesh->group_count; group++)
 	{
@@ -234,11 +240,10 @@ void Scene::_loadObj(
 			streams,
 			_countof(streams));
 
-		unsigned int positionsCPUOldSize = static_cast<unsigned int>(positionsCPU.size());
-		unsigned int normalsCPUOldSize = static_cast<unsigned int>(normalsCPU.size());
-		unsigned int colorsCPUOldSize = static_cast<unsigned int>(colorsCPU.size());
-		unsigned int texcoordsCPUOldSize = static_cast<unsigned int>(texcoordsCPU.size());
-		unsigned int indicesCPUOldSize = static_cast<unsigned int>(indicesCPU.size());
+		positionsCPUOldSize = static_cast<unsigned int>(positionsCPU.size());
+		normalsCPUOldSize = static_cast<unsigned int>(normalsCPU.size());
+		colorsCPUOldSize = static_cast<unsigned int>(colorsCPU.size());
+		texcoordsCPUOldSize = static_cast<unsigned int>(texcoordsCPU.size());
 
 		positionsCPU.resize(positionsCPUOldSize + uniqueVertexCount);
 		normalsCPU.resize(normalsCPUOldSize + uniqueVertexCount);
@@ -281,7 +286,6 @@ void Scene::_loadObj(
 			indexCount,
 			unindexedPositions.size());
 
-#ifdef SCENE_MESHLETIZATION
 		// generate meshlets for more efficient culling
 		// not for use with mesh shaders
 		const size_t maxVertices = 128;
@@ -295,8 +299,8 @@ void Scene::_loadObj(
 			maxTriangles);
 		std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
 		// indices into positionsCPU + offset
-		std::vector<unsigned int> meshletVertices(maxMeshlets* maxVertices);
-		std::vector<unsigned char> meshletTriangles(maxMeshlets* maxTriangles * 3);
+		std::vector<unsigned int> meshletVertices(maxMeshlets * maxVertices);
+		std::vector<unsigned char> meshletTriangles(maxMeshlets * maxTriangles * 3);
 
 		size_t meshletCount = meshopt_buildMeshlets(
 			meshlets.data(),
@@ -313,16 +317,22 @@ void Scene::_loadObj(
 
 		const meshopt_Meshlet& last = meshlets[meshletCount - 1];
 
+		// trimming
 		meshletVertices.resize(last.vertex_offset + last.vertex_count);
 		meshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
 		meshlets.resize(meshletCount);
 
-		// emulation of classic index buffer
 		indicesCPU.resize(indicesCPUOldSize + meshletTriangles.size());
 
 		MeshMeta mesh = {};
 		for (const auto& meshlet : meshlets)
 		{
+			meshopt_optimizeMeshlet(
+				&meshletVertices[meshlet.vertex_offset],
+				&meshletTriangles[meshlet.triangle_offset],
+				meshlet.triangle_count,
+				meshlet.vertex_count);
+
 			meshopt_Bounds bounds = meshopt_computeMeshletBounds(
 				&meshletVertices[meshlet.vertex_offset],
 				&meshletTriangles[meshlet.triangle_offset],
@@ -357,18 +367,9 @@ void Scene::_loadObj(
 
 			indicesCPUOldSize += meshlet.triangle_count * 3;
 		}
-#else
-		MeshMeta mesh = {};
-		XMStoreFloat3(&mesh.AABB.center, (min + max) * 0.5f);
-		XMStoreFloat3(&mesh.AABB.extents, (max - min) * 0.5f);
-		mesh.indexCountPerInstance = indexCount;
-		mesh.instanceCount = 1;
-		mesh.startIndexLocation = indicesCPUOldSize;
-		mesh.baseVertexLocation = positionsCPUOldSize;
-		mesh.startInstanceLocation = 0;
-		mesh.coneCutoff = D3D12_FLOAT32_MAX;
-		meshesMeta.push_back(mesh);
-#endif
+
+		// trimming
+		indicesCPU.resize(indicesCPUOldSize);
 
 		objectMin = XMVectorMin(objectMin, min);
 		objectMax = XMVectorMax(objectMax, max);
@@ -427,6 +428,17 @@ void Scene::_loadObj(
 
 	fast_obj_destroy(OBJMesh);
 
+#ifdef GPU_SOA_BUFFERS
+	indicesSOACPU.resize(indicesCPU.size());
+	unsigned int totalTrianglesCount = static_cast<unsigned int>(indicesCPU.size() / 3);
+	for (unsigned int triangle = 0; triangle < totalTrianglesCount; triangle++)
+	{
+		indicesSOACPU[0 * totalTrianglesCount + triangle] = indicesCPU[triangle * 3 + 0];
+		indicesSOACPU[1 * totalTrianglesCount + triangle] = indicesCPU[triangle * 3 + 1];
+		indicesSOACPU[2 * totalTrianglesCount + triangle] = indicesCPU[triangle * 3 + 2];
+	}
+#endif
+
 	AABB objectBoundingVolume;
 	XMStoreFloat3(&objectBoundingVolume.center, (objectMin + objectMax) * 0.5f);
 	XMStoreFloat3(&objectBoundingVolume.extents, (objectMax - objectMin) * 0.5f);
@@ -439,6 +451,7 @@ void Scene::_loadObj(
 	meshesMetaCPU.insert(meshesMetaCPU.end(), meshesMeta.begin(), meshesMeta.end());
 
 	// generate instances
+
 	const unsigned int totalMeshInstances = instancesCountX * instancesCountZ;
 
 	totalFacesCount += facesCount * totalMeshInstances;
@@ -527,6 +540,17 @@ void Scene::_createIBResources(ScenesIndices sceneIndex)
 		D3D12_RESOURCE_STATE_INDEX_BUFFER,
 		IndicesSRV + sceneIndex,
 		L"Indices");
+
+#ifdef GPU_SOA_BUFFERS
+	indicesSOAGPU.Initialize(
+		COMMAND_LIST.Get(),
+		indicesSOACPU.data(),
+		indicesSOACPU.size(),
+		sizeof(decltype(indicesSOACPU)::value_type),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		IndicesSOASRV + sceneIndex,
+		L"IndicesSOA");
+#endif
 }
 
 void Scene::_createMeshMetaResources(ScenesIndices sceneIndex)

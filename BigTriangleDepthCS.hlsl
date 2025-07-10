@@ -1,5 +1,7 @@
 #include "TypesAndConstants.hlsli"
 
+#define BIG_TRIANGLES
+
 cbuffer DepthSceneCB : register(b0)
 {
 	float4x4 VP;
@@ -9,11 +11,11 @@ cbuffer DepthSceneCB : register(b0)
 	float BigTriangleTileSize;
 	int UseTopLeftRule;
 	int ScanlineRasterization;
+	uint TotalTriangles;
 };
 
 StructuredBuffer<VertexPosition> Positions : register(t0);
 
-StructuredBuffer<uint> Indices : register(t8);
 StructuredBuffer<Instance> Instances : register(t9);
 StructuredBuffer<BigTriangle> BigTriangles : register(t10);
 
@@ -54,11 +56,8 @@ void main(
 
 		// no tests for this triangle, since it had passed them already
 
-		uint i0, i1, i2;
-		GetTriangleIndices(t.triangleIndex, i0, i1, i2);
-
 		float3 p0, p1, p2;
-		GetTriangleVertexPositions(i0, i1, i2, t.baseVertexLocation, p0, p1, p2);
+		GetTriangleVertexPositions(t.i0, t.i1, t.i2, t.baseVertexLocation, p0, p1, p2);
 
 		float3 p0WS, p1WS, p2WS;
 		float4 p0CS, p1CS, p2CS;

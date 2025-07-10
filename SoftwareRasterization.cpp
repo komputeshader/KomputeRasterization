@@ -15,7 +15,8 @@ struct SWRDepthSceneCB
 	float bigTriangleTileSize;
 	int useTopLeftRule;
 	int scanlineRasterization;
-	int pad[40];
+	unsigned int totalTriangles;
+	int pad[39];
 };
 static_assert(
 	(sizeof(SWRDepthSceneCB) % 256) == 0,
@@ -26,6 +27,8 @@ struct SWRSceneCB
 	XMFLOAT4X4 VP;
 	XMFLOAT4X4 cascadeVP[MAX_CASCADES_COUNT];
 	XMFLOAT4 sunDirection;
+	float cascadeBias[MAX_CASCADES_COUNT];
+	float cascadeSplits[MAX_CASCADES_COUNT];
 	XMFLOAT2 outputRes;
 	XMFLOAT2 invOutputRes;
 	float bigTriangleThreshold;
@@ -36,9 +39,8 @@ struct SWRSceneCB
 	int cascadesCount;
 	int scanlineRasterization;
 	float shadowsDistance;
-	float cascadeBias[MAX_CASCADES_COUNT];
-	float cascadeSplits[MAX_CASCADES_COUNT];
-	int pad1[16];
+	unsigned int totalTriangles;
+	int pad1[15];
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
@@ -46,7 +48,9 @@ static_assert(
 
 struct BigTriangle
 {
-	unsigned int triangleIndex;
+	unsigned int i0;
+	unsigned int i1;
+	unsigned int i2;
 	unsigned int instanceIndex;
 	int baseVertexLocation;
 
@@ -258,6 +262,7 @@ void SoftwareRasterization::Update()
 	depthData.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	depthData.useTopLeftRule = _useTopLeftRule ? 1 : 0;
 	depthData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
+	depthData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
 	memcpy(
 		_depthSceneCBData + DX::FrameIndex * _depthSceneCBFrameSize,
 		&depthData,
@@ -307,6 +312,7 @@ void SoftwareRasterization::Update()
 	sceneData.useTopLeftRule = _useTopLeftRule ? 1 : 0;
 	sceneData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	sceneData.shadowsDistance = Shadows::Sun.GetShadowDistance();
+	sceneData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		sceneData.cascadeVP[cascade] = Shadows::Sun.GetCascadeVP(cascade);
@@ -419,8 +425,13 @@ void SoftwareRasterization::_drawDepth()
 		0, _depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize);
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		1, Scene::CurrentScene->positionsGPU.GetSRV());
+#ifdef GPU_SOA_BUFFERS
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		2, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		2, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		3,
 		Settings::CullingEnabled
@@ -496,8 +507,13 @@ void SoftwareRasterization::_drawShadows()
 			0, _depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize + cascade * sizeof(SWRDepthSceneCB));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			1, Scene::CurrentScene->positionsGPU.GetSRV());
+#ifdef GPU_SOA_BUFFERS
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			2, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			2, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			3,
 			Settings::CullingEnabled
@@ -587,16 +603,14 @@ void SoftwareRasterization::_drawDepthBigTriangles()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		1, Scene::CurrentScene->positionsGPU.GetSRV());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		2, Scene::CurrentScene->indicesGPU.GetSRV());
-	COMMAND_LIST->SetComputeRootDescriptorTable(
-		3,
+		2,
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		4, Descriptors::SV.GetGPUHandle(BigTrianglesSRV));
+		3, Descriptors::SV.GetGPUHandle(BigTrianglesSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		5, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
+		4, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
 
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
@@ -645,16 +659,14 @@ void SoftwareRasterization::_drawShadowsBigTriangles()
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			1, Scene::CurrentScene->positionsGPU.GetSRV());
 		COMMAND_LIST->SetComputeRootDescriptorTable(
-			2, Scene::CurrentScene->indicesGPU.GetSRV());
-		COMMAND_LIST->SetComputeRootDescriptorTable(
-			3,
+			2,
 			Settings::CullingEnabled
 			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
 			: Scene::CurrentScene->instancesGPU.GetSRV());
 		COMMAND_LIST->SetComputeRootDescriptorTable(
-			4, Descriptors::SV.GetGPUHandle(BigTrianglesSRV + cascade));
+			3, Descriptors::SV.GetGPUHandle(BigTrianglesSRV + cascade));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
-			5, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
+			4, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
 
 		COMMAND_LIST->ExecuteIndirect(
 			_dispatchCS.Get(),
@@ -724,8 +736,13 @@ void SoftwareRasterization::_drawOpaque()
 		3, Scene::CurrentScene->colorsGPU.GetSRV());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		4, Scene::CurrentScene->texcoordsGPU.GetSRV());
+#ifdef GPU_SOA_BUFFERS
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		5, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		5, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		6,
 		Settings::CullingEnabled
@@ -797,20 +814,18 @@ void SoftwareRasterization::_drawOpaque()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		4, Scene::CurrentScene->texcoordsGPU.GetSRV());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		5, Scene::CurrentScene->indicesGPU.GetSRV());
-	COMMAND_LIST->SetComputeRootDescriptorTable(
-		6,
+		5,
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		7, Descriptors::SV.GetGPUHandle(BigTrianglesSRV));
+		6, Descriptors::SV.GetGPUHandle(BigTrianglesSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		8, Descriptors::SV.GetGPUHandle(SWRDepthSRV));
+		7, Descriptors::SV.GetGPUHandle(SWRDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		9, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
+		8, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		10, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+		9, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
 
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
@@ -1105,41 +1120,49 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 	CD3DX12_ROOT_PARAMETER1 computeRootParameters[9] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[8] = {};
+
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		0);
 	computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
 	ranges[1].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		8);
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
 	ranges[2].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		9);
 	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
 	ranges[3].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		10);
 	computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
+
 	ranges[4].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		12);
 	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+
 	ranges[5].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		0);
 	computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
 	ranges[6].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		1);
 	computeRootParameters[7].InitAsDescriptorTable(1, &ranges[6]);
+
 	ranges[7].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
@@ -1170,34 +1193,33 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 
 void SoftwareRasterization::_createBigTriangleDepthPSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[6] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[5] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[5] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[4] = {};
+
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		0);
 	computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
 	ranges[1].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		8);
+		9);
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
 	ranges[2].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		9);
-	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
-	ranges[3].Init(
-		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-		1,
 		10);
-	computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
-	ranges[4].Init(
+	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
+	ranges[3].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		0);
-	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+	computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 	computeRootSignatureDesc.Init_1_1(_countof(computeRootParameters), computeRootParameters);
@@ -1222,61 +1244,73 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 	CD3DX12_ROOT_PARAMETER1 computeRootParameters[13] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[12] = {};
+
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		0);
 	computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
 	ranges[1].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		1);
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
 	ranges[2].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		2);
 	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
 	ranges[3].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		3);
 	computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
+
 	ranges[4].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		8);
 	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+
 	ranges[5].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		9);
 	computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
 	ranges[6].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		10);
 	computeRootParameters[7].InitAsDescriptorTable(1, &ranges[6]);
+
 	ranges[7].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		11);
 	computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
+
 	ranges[8].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		12);
 	computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
+
 	ranges[9].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		0);
 	computeRootParameters[10].InitAsDescriptorTable(1, &ranges[9]);
+
 	ranges[10].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		1);
 	computeRootParameters[11].InitAsDescriptorTable(1, &ranges[10]);
+
 	ranges[11].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
@@ -1330,59 +1364,63 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 
 void SoftwareRasterization::_createBigTriangleOpaquePSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[11] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[10] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[10] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[9] = {};
+
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		0);
 	computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
 	ranges[1].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		1);
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
 	ranges[2].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		2);
 	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
 	ranges[3].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
 		3);
 	computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
+
 	ranges[4].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		8);
+		9);
 	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+
 	ranges[5].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		9);
+		10);
 	computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
 	ranges[6].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		10);
+		11);
 	computeRootParameters[7].InitAsDescriptorTable(1, &ranges[6]);
+
 	ranges[7].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 		1,
-		11);
-	computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
-	ranges[8].Init(
-		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-		1,
 		12);
-	computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
-	ranges[9].Init(
+	computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
+
+	ranges[8].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 		1,
 		0);
-	computeRootParameters[10].InitAsDescriptorTable(1, &ranges[9]);
+	computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
 
 	D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
 	pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;

@@ -29,6 +29,9 @@ public:
 	std::vector<VertexColor> colorsCPU;
 	std::vector<VertexUV> texcoordsCPU;
 	std::vector<unsigned int> indicesCPU;
+#ifdef GPU_SOA_BUFFERS
+	std::vector<unsigned int> indicesSOACPU;
+#endif
 	// mesh is a smallest entity with it's own bounding volume
 	std::vector<MeshMeta> meshesMetaCPU;
 	// unique objects in the scene
@@ -54,6 +57,9 @@ public:
 	Utils::GPUBuffer indicesGPU;
 	Utils::GPUBuffer meshesMetaGPU;
 	Utils::GPUBuffer instancesGPU;
+#ifdef GPU_SOA_BUFFERS
+	Utils::GPUBuffer indicesSOAGPU;
+#endif
 
 private:
 

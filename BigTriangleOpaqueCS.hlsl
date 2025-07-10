@@ -1,10 +1,14 @@
 #include "TypesAndConstants.hlsli"
 
+#define BIG_TRIANGLES
+
 cbuffer SceneCB : register(b0)
 {
 	float4x4 VP;
 	float4x4 CascadeVP[MAX_CASCADES_COUNT];
 	float4 SunDirection;
+	float4 CascadeBias[MAX_CASCADES_COUNT / 4];
+	float4 CascadeSplits[MAX_CASCADES_COUNT / 4];
 	float2 OutputRes;
 	float2 InvOutputRes;
 	float BigTriangleThreshold;
@@ -15,8 +19,7 @@ cbuffer SceneCB : register(b0)
 	int CascadesCount;
 	int ScanlineRasterization;
 	float ShadowsDistance;
-	float4 CascadeBias[MAX_CASCADES_COUNT / 4];
-	float4 CascadeSplits[MAX_CASCADES_COUNT / 4];
+	uint TotalTriangles;
 };
 
 SamplerState PointClampSampler : register(s0);
@@ -26,7 +29,6 @@ StructuredBuffer<VertexNormal> Normals : register(t1);
 StructuredBuffer<VertexColor> Colors : register(t2);
 StructuredBuffer<VertexUV> UVs : register(t3);
 
-StructuredBuffer<uint> Indices : register(t8);
 StructuredBuffer<Instance> Instances : register(t9);
 StructuredBuffer<BigTriangle> BigTriangles : register(t10);
 Texture2D Depth : register(t11);
@@ -81,11 +83,8 @@ void main(
 
 		// no tests checks for this triangle, since it had passed them already
 
-		uint i0, i1, i2;
-		GetTriangleIndices(t.triangleIndex, i0, i1, i2);
-
 		float3 p0, p1, p2;
-		GetTriangleVertexPositions(i0, i1, i2, t.baseVertexLocation, p0, p1, p2);
+		GetTriangleVertexPositions(t.i0, t.i1, t.i2, t.baseVertexLocation, p0, p1, p2);
 
 		float4 p0CS, p1CS, p2CS;
 		Instance instance = Instances[t.instanceIndex];
@@ -116,15 +115,15 @@ void main(
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 
-		GetTriangleVertexNormals(i0, i1, i2, t.baseVertexLocation, N0, N1, N2);
-		GetTriangleVertexColors(i0, i1, i2, t.baseVertexLocation, C0, C1, C2);
+		GetTriangleVertexNormals(t.i0, t.i1, t.i2, t.baseVertexLocation, N0, N1, N2);
+		GetTriangleVertexColors(t.i0, t.i1, t.i2, t.baseVertexLocation, C0, C1, C2);
 		if (ShowMeshlets)
 		{
 			C0 = float4(instance.color, 1.0);
 			C1 = float4(instance.color, 1.0);
 			C2 = float4(instance.color, 1.0);
 		}
-		GetTriangleVertexUVs(i0, i1, i2, t.baseVertexLocation, UV0, UV1, UV2);
+		GetTriangleVertexUVs(t.i0, t.i1, t.i2, t.baseVertexLocation, UV0, UV1, UV2);
 		P0SS = p0SS;
 		P1SS = p1SS;
 		P2SS = p2SS;

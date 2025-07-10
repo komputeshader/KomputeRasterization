@@ -861,11 +861,9 @@ void ForwardRenderer::_newFrameGUI()
 			"Enable Frustum Culling",
 			&Settings::FrustumCullingEnabled);
 
-#ifdef SCENE_MESHLETIZATION
 		ImGui::Checkbox(
 			"Enable Cluster Backface Culling",
 			&Settings::ClusterBackfaceCullingEnabled);
-#endif
 
 		ImGui::Checkbox(
 			"Enable Camera Hi-Z Culling",
