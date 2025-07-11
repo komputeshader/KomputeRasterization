@@ -83,10 +83,14 @@ void main(
 
 		// no tests for this triangle, since it had passed them already
 
+		P0WS = float3(t.p0WSX, t.p0WSY, t.p0WSZ);
+		P1WS = float3(t.p1WSX, t.p1WSY, t.p1WSZ);
+		P2WS = float3(t.p2WSX, t.p2WSY, t.p2WSZ);
+
 		// WS -> VS -> CS
-		float4 p0CS = mul(VP, float4(t.p0WS, 1.0));
-		float4 p1CS = mul(VP, float4(t.p1WS, 1.0));
-		float4 p2CS = mul(VP, float4(t.p2WS, 1.0));
+		float4 p0CS = mul(VP, float4(P0WS, 1.0));
+		float4 p1CS = mul(VP, float4(P1WS, 1.0));
+		float4 p2CS = mul(VP, float4(P2WS, 1.0));
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
@@ -117,9 +121,9 @@ void main(
 		N1 = UnpackNormal(t.packedNormal1);
 		N2 = UnpackNormal(t.packedNormal2);
 
-		C0 = UnpackColor(t.packedColor0);
-		C1 = UnpackColor(t.packedColor1);
-		C2 = UnpackColor(t.packedColor2);
+		C0 = UnpackColor(uint2(t.packedColor0X, t.packedColor0Y));
+		C1 = UnpackColor(uint2(t.packedColor1X, t.packedColor1Y));
+		C2 = UnpackColor(uint2(t.packedColor2X, t.packedColor2Y));
 		//if (ShowMeshlets)
 		//{
 		//	C0 = float4(instance.color, 1.0);

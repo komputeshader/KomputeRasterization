@@ -167,15 +167,24 @@ void main(
 			if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 			{
 				BigTriangle result;
-				result.p0WS = p0WS;
+				result.p0WSX = p0WS.x;
+				result.p0WSY = p0WS.y;
+				result.p0WSZ = p0WS.z;
 				result.packedNormal0 = n0P.packedNormal;
-				result.p1WS = p1WS;
+				result.p1WSX = p1WS.x;
+				result.p1WSY = p1WS.y;
+				result.p1WSZ = p1WS.z;
 				result.packedNormal1 = n1P.packedNormal;
-				result.p2WS = p2WS;
+				result.p2WSX = p2WS.x;
+				result.p2WSY = p2WS.y;
+				result.p2WSZ = p2WS.z;
 				result.packedNormal2 = n2P.packedNormal;
-				result.packedColor0 = c0P.packedColor;
-				result.packedColor1 = c1P.packedColor;
-				result.packedColor2 = c2P.packedColor;
+				result.packedColor0X = c0P.packedColor.x;
+				result.packedColor0Y = c0P.packedColor.y;
+				result.packedColor1X = c1P.packedColor.x;
+				result.packedColor1Y = c1P.packedColor.y;
+				result.packedColor2X = c2P.packedColor.x;
+				result.packedColor2Y = c2P.packedColor.y;
 				// TODO: add this
 				result.packedUV0 = 0;
 				result.packedUV1 = 0;

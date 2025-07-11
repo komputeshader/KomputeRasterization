@@ -57,9 +57,9 @@ void main(
 		// no tests for this triangle, since it had passed them already
 
 		// WS -> VS -> CS
-		float4 p0CS = mul(VP, float4(t.p0WS, 1.0));
-		float4 p1CS = mul(VP, float4(t.p1WS, 1.0));
-		float4 p2CS = mul(VP, float4(t.p2WS, 1.0));
+		float4 p0CS = mul(VP, float4(float3(t.p0WSX, t.p0WSY, t.p0WSZ), 1.0));
+		float4 p1CS = mul(VP, float4(float3(t.p1WSX, t.p1WSY, t.p1WSZ), 1.0));
+		float4 p2CS = mul(VP, float4(float3(t.p2WSX, t.p2WSY, t.p2WSZ), 1.0));
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;

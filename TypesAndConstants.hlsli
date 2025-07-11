@@ -93,15 +93,24 @@ struct IndirectCommand
 
 struct BigTriangle
 {
-	float3 p0WS;
+	float p0WSX;
+	float p0WSY;
+	float p0WSZ;
 	uint packedNormal0;
-	float3 p1WS;
+	float p1WSX;
+	float p1WSY;
+	float p1WSZ;
 	uint packedNormal1;
-	float3 p2WS;
+	float p2WSX;
+	float p2WSY;
+	float p2WSZ;
 	uint packedNormal2;
-	uint2 packedColor0;
-	uint2 packedColor1;
-	uint2 packedColor2;
+	uint packedColor0X;
+	uint packedColor0Y;
+	uint packedColor1X;
+	uint packedColor1Y;
+	uint packedColor2X;
+	uint packedColor2Y;
 	uint packedUV0;
 	uint packedUV1;
 	uint packedUV2;
