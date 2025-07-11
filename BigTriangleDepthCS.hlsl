@@ -56,13 +56,10 @@ void main(
 
 		// no tests for this triangle, since it had passed them already
 
-		float3 p0, p1, p2;
-		GetTriangleVertexPositions(t.i0, t.i1, t.i2, t.baseVertexLocation, p0, p1, p2);
-
-		float3 p0WS, p1WS, p2WS;
-		float4 p0CS, p1CS, p2CS;
-		Instance instance = Instances[t.instanceIndex];
-		GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+		// WS -> VS -> CS
+		float4 p0CS = mul(VP, float4(t.p0WS, 1.0));
+		float4 p1CS = mul(VP, float4(t.p1WS, 1.0));
+		float4 p2CS = mul(VP, float4(t.p2WS, 1.0));
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
@@ -99,6 +96,7 @@ void main(
 		InvW1 = invW1;
 		InvW2 = invW2;
 		InvArea = 1.0 / area;
+
 		// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
 		EdgeFunction(p1SS.xy, p2SS.xy, MinP, Area0, Dxdy0);
 		EdgeFunction(p2SS.xy, p0SS.xy, MinP, Area1, Dxdy1);

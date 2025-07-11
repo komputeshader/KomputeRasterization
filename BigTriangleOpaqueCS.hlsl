@@ -81,14 +81,12 @@ void main(
 	{
 		BigTriangle t = BigTriangles[groupID.x];
 
-		// no tests checks for this triangle, since it had passed them already
+		// no tests for this triangle, since it had passed them already
 
-		float3 p0, p1, p2;
-		GetTriangleVertexPositions(t.i0, t.i1, t.i2, t.baseVertexLocation, p0, p1, p2);
-
-		float4 p0CS, p1CS, p2CS;
-		Instance instance = Instances[t.instanceIndex];
-		GetCSPositions(instance, p0, p1, p2, P0WS, P1WS, P2WS, p0CS, p1CS, p2CS);
+		// WS -> VS -> CS
+		float4 p0CS = mul(VP, float4(t.p0WS, 1.0));
+		float4 p1CS = mul(VP, float4(t.p1WS, 1.0));
+		float4 p2CS = mul(VP, float4(t.p2WS, 1.0));
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
@@ -115,15 +113,24 @@ void main(
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 
-		GetTriangleVertexNormals(t.i0, t.i1, t.i2, t.baseVertexLocation, N0, N1, N2);
-		GetTriangleVertexColors(t.i0, t.i1, t.i2, t.baseVertexLocation, C0, C1, C2);
-		if (ShowMeshlets)
-		{
-			C0 = float4(instance.color, 1.0);
-			C1 = float4(instance.color, 1.0);
-			C2 = float4(instance.color, 1.0);
-		}
-		GetTriangleVertexUVs(t.i0, t.i1, t.i2, t.baseVertexLocation, UV0, UV1, UV2);
+		N0 = UnpackNormal(t.packedNormal0);
+		N1 = UnpackNormal(t.packedNormal1);
+		N2 = UnpackNormal(t.packedNormal2);
+
+		C0 = UnpackColor(t.packedColor0);
+		C1 = UnpackColor(t.packedColor1);
+		C2 = UnpackColor(t.packedColor2);
+		//if (ShowMeshlets)
+		//{
+		//	C0 = float4(instance.color, 1.0);
+		//	C1 = float4(instance.color, 1.0);
+		//	C2 = float4(instance.color, 1.0);
+		//}
+
+		UV0 = UnpackTexcoords(t.packedUV0);
+		UV1 = UnpackTexcoords(t.packedUV1);
+		UV2 = UnpackTexcoords(t.packedUV2);
+
 		P0SS = p0SS;
 		P1SS = p1SS;
 		P2SS = p2SS;
@@ -134,6 +141,7 @@ void main(
 		InvW1 = invW1;
 		InvW2 = invW2;
 		InvArea = 1.0 / area;
+
 		// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
 		EdgeFunction(p1SS.xy, p2SS.xy, MinP, Area0, Dxdy0);
 		EdgeFunction(p2SS.xy, p0SS.xy, MinP, Area1, Dxdy1);

@@ -48,11 +48,27 @@ static_assert(
 
 struct BigTriangle
 {
-	unsigned int i0;
-	unsigned int i1;
-	unsigned int i2;
-	unsigned int instanceIndex;
-	int baseVertexLocation;
+	float p0WSX;
+	float p0WSY;
+	float p0WSZ;
+	unsigned int packedNormal0;
+	float p1WSX;
+	float p1WSY;
+	float p1WSZ;
+	unsigned int packedNormal1;
+	float p2WSX;
+	float p2WSY;
+	float p2WSZ;
+	unsigned int packedNormal2;
+	unsigned int packedColor0X;
+	unsigned int packedColor0Y;
+	unsigned int packedColor1X;
+	unsigned int packedColor1Y;
+	unsigned int packedColor2X;
+	unsigned int packedColor2Y;
+	unsigned int packedUV0;
+	unsigned int packedUV1;
+	unsigned int packedUV2;
 
 	float tileOffset;
 };
@@ -115,7 +131,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	};
 	for (int cascade = 1; cascade <= MAX_CASCADES_COUNT; cascade++)
 	{
-		bigTrianglesPerFrame[cascade] = Settings::ShadowMapRes * Settings::ShadowMapRes;
+		bigTrianglesPerFrame[cascade] = Settings::ShadowMapRes * Settings::ShadowMapRes / 5;
 	}
 	//int bigTrianglesPerFrame = Scene::MaxSceneFacesCount * sizeof(BigTriangle);
 

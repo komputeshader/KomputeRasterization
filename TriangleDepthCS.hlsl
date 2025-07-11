@@ -66,16 +66,14 @@ void main(
 		float3 p0, p1, p2;
 		GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
 
-		for (uint inst = 0; inst < Command.args.instanceCount; inst++)
+		for (uint instanceID = 0; instanceID < Command.args.instanceCount; instanceID++)
 		{
 			// one more triangle attempted to be rendered
 			InterlockedAdd(Statistics[0], 1);
 
 			float3 p0WS, p1WS, p2WS;
 			float4 p0CS, p1CS, p2CS;
-			uint instanceID = inst;
-			uint instanceIndex = Command.startInstanceLocation + instanceID;
-			Instance instance = Instances[instanceIndex];
+			Instance instance = Instances[Command.startInstanceLocation + instanceID];
 			GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
 			// crude "clipping" of polygons behind the camera
@@ -155,11 +153,19 @@ void main(
 			if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 			{
 				BigTriangle result;
-				result.i0 = i0;
-				result.i1 = i1;
-				result.i2 = i2;
-				result.instanceIndex = instanceIndex;
-				result.baseVertexLocation = Command.args.baseVertexLocation;
+				result.p0WS = p0WS;
+				result.packedNormal0 = 0;
+				result.p1WS = p1WS;
+				result.packedNormal1 = 0;
+				result.p2WS = p2WS;
+				result.packedNormal2 = 0;
+				result.packedColor0 = uint2(0, 0);
+				result.packedColor1 = uint2(0, 0);
+				result.packedColor2 = uint2(0, 0);
+				// TODO: add this
+				result.packedUV0 = 0;
+				result.packedUV1 = 0;
+				result.packedUV2 = 0;
 
 				float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
 				float totalTiles = tilesCount.x * tilesCount.y;

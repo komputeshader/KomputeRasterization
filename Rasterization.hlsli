@@ -82,40 +82,40 @@ void GetTriangleVertexPositions(
 
 #ifdef OPAQUE
 
-void GetTriangleVertexNormals(
+void GetPackedVertexNormals(
 	in uint i0, in uint i1, in uint i2,
 	in uint baseVertexLocation,
-	out float3 n0,
-	out float3 n1,
-	out float3 n2)
+	out VertexNormal n0,
+	out VertexNormal n1,
+	out VertexNormal n2)
 {
-	n0 = UnpackNormal(Normals[baseVertexLocation + i0]);
-	n1 = UnpackNormal(Normals[baseVertexLocation + i1]);
-	n2 = UnpackNormal(Normals[baseVertexLocation + i2]);
+	n0 = Normals[baseVertexLocation + i0];
+	n1 = Normals[baseVertexLocation + i1];
+	n2 = Normals[baseVertexLocation + i2];
 }
 
-void GetTriangleVertexColors(
+void GetPackedVertexColors(
 	in uint i0, in uint i1, in uint i2,
 	in uint baseVertexLocation,
-	out float4 c0,
-	out float4 c1,
-	out float4 c2)
+	out VertexColor c0,
+	out VertexColor c1,
+	out VertexColor c2)
 {
-	c0 = UnpackColor(Colors[baseVertexLocation + i0]);
-	c1 = UnpackColor(Colors[baseVertexLocation + i1]);
-	c2 = UnpackColor(Colors[baseVertexLocation + i2]);
+	c0 = Colors[baseVertexLocation + i0];
+	c1 = Colors[baseVertexLocation + i1];
+	c2 = Colors[baseVertexLocation + i2];
 }
 
-void GetTriangleVertexUVs(
+void GetPackedVertexUVs(
 	in uint i0, in uint i1, in uint i2,
 	in uint baseVertexLocation,
-	out float2 UV0,
-	out float2 UV1,
-	out float2 UV2)
+	out VertexUV UV0,
+	out VertexUV UV1,
+	out VertexUV UV2)
 {
-	UV0 = UnpackTexcoords(UVs[baseVertexLocation + i0]);
-	UV1 = UnpackTexcoords(UVs[baseVertexLocation + i1]);
-	UV2 = UnpackTexcoords(UVs[baseVertexLocation + i2]);
+	UV0 = UVs[baseVertexLocation + i0];
+	UV1 = UVs[baseVertexLocation + i1];
+	UV2 = UVs[baseVertexLocation + i2];
 }
 
 #endif // OPAQUE

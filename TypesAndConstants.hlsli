@@ -93,11 +93,18 @@ struct IndirectCommand
 
 struct BigTriangle
 {
-	uint i0;
-	uint i1;
-	uint i2;
-	uint instanceIndex;
-	int baseVertexLocation;
+	float3 p0WS;
+	uint packedNormal0;
+	float3 p1WS;
+	uint packedNormal1;
+	float3 p2WS;
+	uint packedNormal2;
+	uint2 packedColor0;
+	uint2 packedColor1;
+	uint2 packedColor2;
+	uint packedUV0;
+	uint packedUV1;
+	uint packedUV2;
 
 	float tileOffset;
 };
