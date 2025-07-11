@@ -14,12 +14,12 @@ cbuffer DepthSceneCB : register(b0)
 	uint TotalTriangles;
 };
 
-StructuredBuffer<VertexPosition> Positions : register(t0);
-
-StructuredBuffer<Instance> Instances : register(t9);
-StructuredBuffer<BigTriangle> BigTriangles : register(t10);
+StructuredBuffer<uint> BigTriangles : register(t0);
+StructuredBuffer<Instance> Instances : register(t1);
 
 RWTexture2D<uint> Depth : register(u0);
+
+groupshared uint Triangle[BIG_TRIANGLE_DEPTH_FIELDS];
 
 groupshared float2 MinP;
 groupshared float2 MaxP;
@@ -50,16 +50,21 @@ void main(
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
+	if (groupIndex < BIG_TRIANGLE_DEPTH_FIELDS)
+	{
+		Triangle[groupIndex] = BigTriangles[groupID.x * BIG_TRIANGLE_DEPTH_FIELDS + groupIndex];
+	}
+
+	GroupMemoryBarrier();
+
 	if (groupIndex == 0)
 	{
-		BigTriangle t = BigTriangles[groupID.x];
-
 		// no tests for this triangle, since it had passed them already
 
 		// WS -> VS -> CS
-		float4 p0CS = mul(VP, float4(float3(t.p0WSX, t.p0WSY, t.p0WSZ), 1.0));
-		float4 p1CS = mul(VP, float4(float3(t.p1WSX, t.p1WSY, t.p1WSZ), 1.0));
-		float4 p2CS = mul(VP, float4(float3(t.p2WSX, t.p2WSY, t.p2WSZ), 1.0));
+		float4 p0CS = mul(VP, float4(asfloat(uint3(Triangle[P0_WS_FLOAT3 + 0], Triangle[P0_WS_FLOAT3 + 1], Triangle[P0_WS_FLOAT3 + 2])), 1.0));
+		float4 p1CS = mul(VP, float4(asfloat(uint3(Triangle[P1_WS_FLOAT3 + 0], Triangle[P1_WS_FLOAT3 + 1], Triangle[P1_WS_FLOAT3 + 2])), 1.0));
+		float4 p2CS = mul(VP, float4(asfloat(uint3(Triangle[P2_WS_FLOAT3 + 0], Triangle[P2_WS_FLOAT3 + 1], Triangle[P2_WS_FLOAT3 + 2])), 1.0));
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
@@ -81,8 +86,8 @@ void main(
 		minP.xy = SnapMinBoundToPixelCenter(minP.xy);
 		float2 dimensions = maxP.xy - minP.xy;
 		float2 tileCount = ceil(dimensions / BigTriangleTileSize);
-		float yTileOffset = floor(t.tileOffset / tileCount.x);
-		float xTileOffset = t.tileOffset - yTileOffset * tileCount.x;
+		float yTileOffset = floor(asfloat(Triangle[TILE_OFFSET_FLOAT]) / tileCount.x);
+		float xTileOffset = asfloat(Triangle[TILE_OFFSET_FLOAT]) - yTileOffset * tileCount.x;
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 

@@ -24,17 +24,14 @@ cbuffer SceneCB : register(b0)
 
 SamplerState PointClampSampler : register(s0);
 
-StructuredBuffer<VertexPosition> Positions : register(t0);
-StructuredBuffer<VertexNormal> Normals : register(t1);
-StructuredBuffer<VertexColor> Colors : register(t2);
-StructuredBuffer<VertexUV> UVs : register(t3);
-
-StructuredBuffer<Instance> Instances : register(t9);
-StructuredBuffer<BigTriangle> BigTriangles : register(t10);
-Texture2D Depth : register(t11);
-Texture2DArray ShadowMap : register(t12);
+StructuredBuffer<uint> BigTriangles : register(t0);
+StructuredBuffer<Instance> Instances : register(t1);
+Texture2D Depth : register(t2);
+Texture2DArray ShadowMap : register(t3);
 
 RWTexture2D<float4> RenderTarget : register(u0);
+
+groupshared uint Triangle[BIG_TRIANGLE_OPAQUE_FIELDS];
 
 groupshared float2 MinP;
 groupshared float2 MaxP;
@@ -77,15 +74,20 @@ void main(
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
+	if (groupIndex < BIG_TRIANGLE_OPAQUE_FIELDS)
+	{
+		Triangle[groupIndex] = BigTriangles[groupID.x * BIG_TRIANGLE_OPAQUE_FIELDS + groupIndex];
+	}
+
+	GroupMemoryBarrier();
+
 	if (groupIndex == 0)
 	{
-		BigTriangle t = BigTriangles[groupID.x];
-
 		// no tests for this triangle, since it had passed them already
 
-		P0WS = float3(t.p0WSX, t.p0WSY, t.p0WSZ);
-		P1WS = float3(t.p1WSX, t.p1WSY, t.p1WSZ);
-		P2WS = float3(t.p2WSX, t.p2WSY, t.p2WSZ);
+		P0WS = asfloat(uint3(Triangle[P0_WS_FLOAT3 + 0], Triangle[P0_WS_FLOAT3 + 1], Triangle[P0_WS_FLOAT3 + 2]));
+		P1WS = asfloat(uint3(Triangle[P1_WS_FLOAT3 + 0], Triangle[P1_WS_FLOAT3 + 1], Triangle[P1_WS_FLOAT3 + 2]));
+		P2WS = asfloat(uint3(Triangle[P2_WS_FLOAT3 + 0], Triangle[P2_WS_FLOAT3 + 1], Triangle[P2_WS_FLOAT3 + 2]));
 
 		// WS -> VS -> CS
 		float4 p0CS = mul(VP, float4(P0WS, 1.0));
@@ -112,18 +114,18 @@ void main(
 		minP.xy = SnapMinBoundToPixelCenter(minP.xy);
 		float2 dimensions = maxP.xy - minP.xy;
 		float2 tileCount = ceil(dimensions / BigTriangleTileSize);
-		float yTileOffset = floor(t.tileOffset / tileCount.x);
-		float xTileOffset = t.tileOffset - yTileOffset * tileCount.x;
+		float yTileOffset = floor(asfloat(Triangle[TILE_OFFSET_FLOAT]) / tileCount.x);
+		float xTileOffset = asfloat(Triangle[TILE_OFFSET_FLOAT]) - yTileOffset * tileCount.x;
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 
-		N0 = UnpackNormal(t.packedNormal0);
-		N1 = UnpackNormal(t.packedNormal1);
-		N2 = UnpackNormal(t.packedNormal2);
+		N0 = UnpackNormal(Triangle[N0_PACKED_UINT]);
+		N1 = UnpackNormal(Triangle[N1_PACKED_UINT]);
+		N2 = UnpackNormal(Triangle[N2_PACKED_UINT]);
 
-		C0 = UnpackColor(uint2(t.packedColor0X, t.packedColor0Y));
-		C1 = UnpackColor(uint2(t.packedColor1X, t.packedColor1Y));
-		C2 = UnpackColor(uint2(t.packedColor2X, t.packedColor2Y));
+		C0 = UnpackColor(uint2(Triangle[C0_PACKED_UINT2 + 0], Triangle[C0_PACKED_UINT2 + 1]));
+		C1 = UnpackColor(uint2(Triangle[C1_PACKED_UINT2 + 0], Triangle[C1_PACKED_UINT2 + 1]));
+		C2 = UnpackColor(uint2(Triangle[C2_PACKED_UINT2 + 0], Triangle[C2_PACKED_UINT2 + 1]));
 		//if (ShowMeshlets)
 		//{
 		//	C0 = float4(instance.color, 1.0);
@@ -131,9 +133,9 @@ void main(
 		//	C2 = float4(instance.color, 1.0);
 		//}
 
-		UV0 = UnpackTexcoords(t.packedUV0);
-		UV1 = UnpackTexcoords(t.packedUV1);
-		UV2 = UnpackTexcoords(t.packedUV2);
+		UV0 = UnpackTexcoords(Triangle[UV0_PACKED_UINT]);
+		UV1 = UnpackTexcoords(Triangle[UV1_PACKED_UINT]);
+		UV2 = UnpackTexcoords(Triangle[UV2_PACKED_UINT]);
 
 		P0SS = p0SS;
 		P1SS = p1SS;

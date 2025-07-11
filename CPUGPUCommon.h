@@ -27,10 +27,30 @@
 #define MAX_CASCADES_COUNT 8
 #define CAMERAS_COUNT 1
 #define MAX_FRUSTUMS_COUNT ((CAMERAS_COUNT) + (MAX_CASCADES_COUNT))
+#define BIG_TRIANGLES_BUFFERS (2 + MAX_CASCADES_COUNT)
 
 #define GPU_SOA_BUFFERS
 #ifdef GPU_SOA_BUFFERS
 #define INDICES_STRIDE 3
 #endif
+
+#define TILE_OFFSET_FLOAT 0
+#define P0_WS_FLOAT3 1
+#define P1_WS_FLOAT3 4
+#define P2_WS_FLOAT3 7
+#define N0_PACKED_UINT 10
+#define N1_PACKED_UINT 11
+#define N2_PACKED_UINT 12
+#define C0_PACKED_UINT2 13
+#define C1_PACKED_UINT2 15
+#define C2_PACKED_UINT2 17
+#define UV0_PACKED_UINT 19
+#define UV1_PACKED_UINT 20
+#define UV2_PACKED_UINT 21
+
+// we don't need any other attributes than position and a tile offset for the depth pass
+#define BIG_TRIANGLE_DEPTH_FIELDS (N0_PACKED_UINT)
+
+#define BIG_TRIANGLE_OPAQUE_FIELDS (UV2_PACKED_UINT + 1)
 
 #endif // CPU_GPU_COMMON

@@ -39,7 +39,7 @@ Texture2DArray ShadowMap : register(t11);
 StructuredBuffer<IndirectCommand> Commands : register(t12);
 
 RWTexture2D<float4> RenderTarget : register(u0);
-AppendStructuredBuffer<BigTriangle> BigTriangles : register(u1);
+AppendStructuredBuffer<BigTriangleOpaque> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
 
 groupshared IndirectCommand Command;
@@ -166,18 +166,18 @@ void main(
 			[branch]
 			if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 			{
-				BigTriangle result;
+				BigTriangleOpaque result;
 				result.p0WSX = p0WS.x;
 				result.p0WSY = p0WS.y;
 				result.p0WSZ = p0WS.z;
-				result.packedNormal0 = n0P.packedNormal;
 				result.p1WSX = p1WS.x;
 				result.p1WSY = p1WS.y;
 				result.p1WSZ = p1WS.z;
-				result.packedNormal1 = n1P.packedNormal;
 				result.p2WSX = p2WS.x;
 				result.p2WSY = p2WS.y;
 				result.p2WSZ = p2WS.z;
+				result.packedNormal0 = n0P.packedNormal;
+				result.packedNormal1 = n1P.packedNormal;
 				result.packedNormal2 = n2P.packedNormal;
 				result.packedColor0X = c0P.packedColor.x;
 				result.packedColor0Y = c0P.packedColor.y;

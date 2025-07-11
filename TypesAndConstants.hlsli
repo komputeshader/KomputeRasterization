@@ -91,19 +91,34 @@ struct IndirectCommand
 	DrawIndexedArguments args;
 };
 
-struct BigTriangle
+struct BigTriangleDepth
 {
+	float tileOffset;
 	float p0WSX;
 	float p0WSY;
 	float p0WSZ;
-	uint packedNormal0;
 	float p1WSX;
 	float p1WSY;
 	float p1WSZ;
-	uint packedNormal1;
 	float p2WSX;
 	float p2WSY;
 	float p2WSZ;
+};
+
+struct BigTriangleOpaque
+{
+	float tileOffset;
+	float p0WSX;
+	float p0WSY;
+	float p0WSZ;
+	float p1WSX;
+	float p1WSY;
+	float p1WSZ;
+	float p2WSX;
+	float p2WSY;
+	float p2WSZ;
+	uint packedNormal0;
+	uint packedNormal1;
 	uint packedNormal2;
 	uint packedColor0X;
 	uint packedColor0Y;
@@ -114,8 +129,6 @@ struct BigTriangle
 	uint packedUV0;
 	uint packedUV1;
 	uint packedUV2;
-
-	float tileOffset;
 };
 
 #endif // TYPES_AND_CONSTANTS_HLSL

@@ -41,7 +41,8 @@ private:
 	void _createDepthBufferResources();
 	void _createMDIResources();
 	void _createResetBuffer();
-	void _clearBigTrianglesCounter(int frustum);
+	void _clearBigTrianglesDepthCounter(int frustum);
+	void _clearBigTrianglesOpaqueCounter();
 	void _createStatsResources();
 	void _clearStatistics();
 
@@ -79,7 +80,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleOpaquePSO;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _bigTriangleOpaqueRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _bigTriangleOpaquePSO;
-	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTriangles[MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesDepth[MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesOpaque;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthSceneCB;
 	unsigned char* _depthSceneCBData;
 	int _depthSceneCBFrameSize = 0;
@@ -97,8 +99,10 @@ private:
 	// [0] - counter / group count X
 	// [1] - group count Y
 	// [2] - group count Z
-	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesCounters[MAX_FRUSTUMS_COUNT];
-	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesCountersUpload[MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesDepthCounters[MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesDepthCountersUpload[MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesOpaqueCounter;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesOpaqueCounterUpload;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _counterReset;
 
 	// statistics resources
@@ -113,7 +117,7 @@ private:
 	int _statsResult[StatsCount];
 
 	// how much screen space area should triangle's AABB occupy to be considered "big"
-	int _bigTriangleThreshold = 64;
+	int _bigTriangleThreshold = 4096;
 	int _bigTriangleTileSize = 128;
 
 	bool _useTopLeftRule = true;

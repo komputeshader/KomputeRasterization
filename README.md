@@ -1,9 +1,9 @@
 ## KomputeRasterizer
 This demo attempts to render scenes with a big amount of triangles using the compute shader rasterization. It also attempts to simulate game engine geometry load with cascaded shadows and culling.
 
-It comes with two scenes, the Buddha - about 100M of really small triangles, and the Plant - about 40M of triangles of various sizes. Even with the most simplistic rasterization approach, software rasterizer outperforms hardware rasterizer on the Buddha scene, but the Plant scene is quite unstable for now in terms of performance, due to presence of alot of "big" triangles.
+It comes with two scenes, the Buddha - about 100M of really small triangles, and the Plant - about 40M of triangles of various sizes. Even with the most simplistic rasterization approach, software rasterizer outperforms hardware rasterizer on the Buddha scene, but the Plant scene is somewhat unstable in terms of performance, due to presence of alot of "big" triangles.
 
-Demo attemps to distribute load over threads  with the notion of big triangle - how big the triangle's screen area should be to rasterize it with a single thread, or to offload it to multiple-threads rasterizer, or hardware rasterizer?
+Demo attemps to distribute load over threads  with the notion of a big triangle - how big the triangle's screen area should be to rasterize it with a single thread, or to offload it to a multiple-threads rasterizer, or a hardware rasterizer?
 
 ## System requirements
 1. Windows 10, 64-bit.

@@ -29,9 +29,11 @@ enum CBVSRVUAVIndices
 	PrevFrameShadowMapSRV = SWRShadowMapUAV + MAX_CASCADES_COUNT,
 	PrevFrameShadowMapMipsSRV = PrevFrameShadowMapSRV + MAX_CASCADES_COUNT,
 	PrevFrameShadowMapMipsUAV = PrevFrameShadowMapMipsSRV + MAX_CASCADES_COUNT * Settings::ShadowMapMipsCount,
-	BigTrianglesSRV = PrevFrameShadowMapMipsUAV + MAX_CASCADES_COUNT * Settings::ShadowMapMipsCount,
-	BigTrianglesUAV = BigTrianglesSRV + MAX_FRUSTUMS_COUNT,
-	SWRStatsUAV = BigTrianglesUAV + MAX_FRUSTUMS_COUNT,
+	BigTrianglesDepthSRV = PrevFrameShadowMapMipsUAV + MAX_CASCADES_COUNT * Settings::ShadowMapMipsCount,
+	BigTrianglesDepthUAV = BigTrianglesDepthSRV + MAX_FRUSTUMS_COUNT,
+	BigTrianglesOpaqueSRV = BigTrianglesDepthUAV + MAX_FRUSTUMS_COUNT,
+	BigTrianglesOpaqueUAV,
+	SWRStatsUAV,
 
 	SingleDescriptorsCount,
 

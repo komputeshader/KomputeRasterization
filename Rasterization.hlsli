@@ -49,6 +49,7 @@ float EdgeScanlineIntersection(in float2 v0, in float2 v1, in float y)
 }
 
 #ifndef BIG_TRIANGLES
+
 void GetTriangleIndices(
 	in uint startIndexLocation,
 	out uint i0,
@@ -66,7 +67,6 @@ void GetTriangleIndices(
 	i2 = Indices[startIndexLocation + 2];
 #endif
 }
-#endif
 
 void GetTriangleVertexPositions(
 	in uint i0, in uint i1, in uint i2,
@@ -119,6 +119,8 @@ void GetPackedVertexUVs(
 }
 
 #endif // OPAQUE
+
+#endif // BIG_TRIANGLES
 
 void GetCSPositions(
 	in Instance instance,
