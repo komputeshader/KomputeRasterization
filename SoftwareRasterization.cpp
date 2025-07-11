@@ -954,9 +954,7 @@ void SoftwareRasterization::_drawIndexedInstanced(
 	//assert(indexCountPerInstance % 3 == 0);
 	//unsigned int trianglesCount = indexCountPerInstance / 3;
 	//COMMAND_LIST->Dispatch(
-	//	Utils::DispatchSize(
-	//		Settings::SWRTriangleThreadsX,
-	//		trianglesCount),
+	//	Utils::DispatchSize(SWR_TRIANGLE_THREADS_X, trianglesCount),
 	//	instanceCount,
 	//	1);
 }

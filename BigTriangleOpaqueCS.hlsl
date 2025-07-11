@@ -148,14 +148,15 @@ void main(
 		y <= MaxP.y;
 		y += SWR_BIG_TRIANGLE_THREADS_Y, yTiles++)
 	{
+		uint yOffset = groupThreadID.y + yTiles * SWR_BIG_TRIANGLE_THREADS_Y;
+
 		uint xTiles = 0;
 		for (
 			float x = MinP.x + groupThreadID.x;
 			x <= MaxP.x;
 			x += SWR_BIG_TRIANGLE_THREADS_X, xTiles++)
 		{
-            uint xOffset = groupThreadID.x + xTiles * SWR_BIG_TRIANGLE_THREADS_X;
-            uint yOffset = groupThreadID.y + yTiles * SWR_BIG_TRIANGLE_THREADS_Y;
+			uint xOffset = groupThreadID.x + xTiles * SWR_BIG_TRIANGLE_THREADS_X;
 
 			// E(x + a, y + b) = E(x, y) - a * dy + b * dx
 			float area0 = Area0 - xOffset * Dxdy0.y + yOffset * Dxdy0.x;
