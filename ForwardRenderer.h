@@ -47,7 +47,6 @@ public:
 
 private:
 
-	void _waitForGpu();
 	void _createDescriptorHeaps();
 	void _createFrameResources();
 	void _createSwapChain();

@@ -16,16 +16,26 @@ ComPtr<ID3D12CommandAllocator> ComputeCommandAllocators[FramesCount];
 ComPtr<ID3D12CommandQueue> CommandQueue;
 ComPtr<ID3D12CommandQueue> ComputeCommandQueue;
 
-HANDLE FenceEvent;
-ComPtr<ID3D12Fence> Fence;
-size_t FenceValues[FramesCount];
-ComPtr<ID3D12Fence> ComputeFence;
+HANDLE FrameFenceEvents[DX::FramesCount];
+Microsoft::WRL::ComPtr<ID3D12Fence> FrameFences[DX::FramesCount];
+size_t FrameFenceValues[DX::FramesCount];
+size_t FrameFenceValue;
+
+HANDLE ComputeFenceEvents[DX::FramesCount];
+Microsoft::WRL::ComPtr<ID3D12Fence> ComputeFences[DX::FramesCount];
+size_t ComputeFenceValues[DX::FramesCount];
 size_t ComputeFenceValue;
+
+HANDLE UploadFenceEvent;
+Microsoft::WRL::ComPtr<ID3D12Fence> UploadFence;
+size_t UploadFenceValue;
 
 DXGI_ADAPTER_DESC1 AdapterDesc;
 D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
 
+int FrameNumber;
 int FrameIndex;
+int LastFrameIndex;
 
 void GetHardwareAdapter(
 	IDXGIFactory1* pFactory,
@@ -107,7 +117,9 @@ void GetHardwareAdapter(
 
 void CreateDevice()
 {
+	FrameNumber = 0;
 	FrameIndex = 0;
+	LastFrameIndex = 0;
 
 	unsigned int dxgiFactoryFlags = 0;
 
@@ -235,24 +247,43 @@ void CreateCommandQueues()
 
 void CreateSyncObjects()
 {
-	SUCCESS(Device->CreateFence(
-		FenceValues[FrameIndex],
-		D3D12_FENCE_FLAG_NONE,
-		IID_PPV_ARGS(&Fence)));
-	NAME_D3D12_OBJECT(Fence);
-	FenceValues[FrameIndex]++;
+	FrameFenceValue = 0;
+	for (int frame = 0; frame < DX::FramesCount; frame++)
+	{
+		FrameFenceValues[frame] = FrameFenceValue;
+		SUCCESS(Device->CreateFence(
+			FrameFenceValues[frame],
+			D3D12_FENCE_FLAG_NONE,
+			IID_PPV_ARGS(&FrameFences[frame])));
+		NAME_D3D12_OBJECT_INDEXED(FrameFences, frame);
+		FrameFenceEvents[frame] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
+		ComputeFenceValues[frame] = 0;
+		SUCCESS(Device->CreateFence(
+			ComputeFenceValues[frame],
+			D3D12_FENCE_FLAG_NONE,
+			IID_PPV_ARGS(&ComputeFences[frame])));
+		NAME_D3D12_OBJECT_INDEXED(ComputeFences, frame);
+		ComputeFenceEvents[frame] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	}
+
+	UploadFenceValue = 0;
 	SUCCESS(Device->CreateFence(
 		0,
 		D3D12_FENCE_FLAG_NONE,
-		IID_PPV_ARGS(&ComputeFence)));
-	NAME_D3D12_OBJECT(ComputeFence);
-	ComputeFenceValue = 1;
+		IID_PPV_ARGS(&UploadFence)));
+	NAME_D3D12_OBJECT(UploadFence);
+	UploadFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (FenceEvent == nullptr)
+	ComputeFenceValue = 1;
+}
+
+void WaitForFence(ID3D12Fence* fence, size_t fenceValue, HANDLE fenceEvent)
+{
+	if (fence->GetCompletedValue() < fenceValue)
 	{
-		SUCCESS(HRESULT_FROM_WIN32(GetLastError()));
+		SUCCESS(fence->SetEventOnCompletion(fenceValue, fenceEvent));
+		WaitForSingleObject(fenceEvent, INFINITE);
 	}
 }
 

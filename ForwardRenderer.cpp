@@ -57,7 +57,9 @@ void ForwardRenderer::Initialize()
 	DX::CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	// wait for everything have been uploaded to the GPU
-	_waitForGpu();
+	DX::UploadFenceValue = 1;
+	DX::CommandQueue->Signal(DX::UploadFence.Get(), DX::UploadFenceValue);
+	DX::WaitForFence(DX::UploadFence.Get(), DX::UploadFenceValue, DX::UploadFenceEvent);
 
 	_timer.Reset();
 }
@@ -75,7 +77,6 @@ void ForwardRenderer::_createSwapChain()
 
 	ComPtr<IDXGISwapChain1> swapChain;
 	SUCCESS(DX::Factory->CreateSwapChainForHwnd(
-		// Swap chain needs the queue so that it can force a flush on it.
 		DX::CommandQueue.Get(),
 		Win32Application::GetHwnd(),
 		&swapChainDesc,
@@ -83,7 +84,6 @@ void ForwardRenderer::_createSwapChain()
 		nullptr,
 		&swapChain));
 
-	// This sample does not support fullscreen transitions.
 	SUCCESS(DX::Factory->MakeWindowAssociation(
 		Win32Application::GetHwnd(),
 		DXGI_MWA_NO_ALT_ENTER));
@@ -462,9 +462,15 @@ void ForwardRenderer::Draw()
 		ID3D12CommandList* ppCommandLists[] = { COMPUTE_COMMAND_LIST.Get() };
 		DX::ComputeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		DX::ComputeCommandQueue->Signal(DX::ComputeFence.Get(), DX::ComputeFenceValue);
+		DX::ComputeFenceValues[DX::FrameIndex] = DX::ComputeFenceValue;
+		DX::ComputeCommandQueue->Signal(
+			DX::ComputeFences[DX::FrameIndex].Get(),
+			DX::ComputeFenceValues[DX::FrameIndex]);
+
 		// wait for the compute results
-		DX::CommandQueue->Wait(DX::ComputeFence.Get(), DX::ComputeFenceValue);
+		DX::CommandQueue->Wait(
+			DX::ComputeFences[DX::FrameIndex].Get(),
+			DX::ComputeFenceValues[DX::FrameIndex]);
 		DX::ComputeFenceValue++;
 	}
 
@@ -489,18 +495,21 @@ void ForwardRenderer::Draw()
 
 	SUCCESS(_swapChain->Present(0, 0));
 
-	const size_t currentFenceValue = DX::FenceValues[DX::FrameIndex];
-	SUCCESS(DX::CommandQueue->Signal(DX::Fence.Get(), currentFenceValue));
+	DX::FrameFenceValues[DX::FrameIndex] = DX::FrameFenceValue;
 
+	SUCCESS(DX::CommandQueue->Signal(
+		DX::FrameFences[DX::FrameIndex].Get(),
+		DX::FrameFenceValues[DX::FrameIndex]));
+	DX::FrameFenceValue++;
+
+	DX::FrameNumber++;
+	DX::LastFrameIndex = DX::FrameIndex;
 	DX::FrameIndex = _swapChain->GetCurrentBackBufferIndex();
 
-	if (DX::Fence->GetCompletedValue() < DX::FenceValues[DX::FrameIndex])
-	{
-		SUCCESS(DX::Fence->SetEventOnCompletion(DX::FenceValues[DX::FrameIndex], DX::FenceEvent));
-		WaitForSingleObjectEx(DX::FenceEvent, INFINITE, FALSE);
-	}
-
-	DX::FenceValues[DX::FrameIndex] = currentFenceValue + 1;
+	DX::WaitForFence(
+		DX::FrameFences[DX::FrameIndex].Get(),
+		DX::FrameFenceValues[DX::FrameIndex],
+		DX::FrameFenceEvents[DX::FrameIndex]);
 }
 
 void ForwardRenderer::_beginFrameRendering()
@@ -582,20 +591,6 @@ void ForwardRenderer::_drawGUI()
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), COMMAND_LIST.Get());
 
 	PIXEndEvent(COMMAND_LIST.Get());
-}
-
-// Wait for pending GPU work to complete.
-void ForwardRenderer::_waitForGpu()
-{
-	// Schedule a Signal command in the queue.
-	SUCCESS(DX::CommandQueue->Signal(DX::Fence.Get(), DX::FenceValues[DX::FrameIndex]));
-
-	// Wait until the fence has been processed.
-	SUCCESS(DX::Fence->SetEventOnCompletion(DX::FenceValues[DX::FrameIndex], DX::FenceEvent));
-	WaitForSingleObjectEx(DX::FenceEvent, INFINITE, FALSE);
-
-	// Increment the fence value for the current frame.
-	DX::FenceValues[DX::FrameIndex]++;
 }
 
 void ForwardRenderer::_rasterizerSwitch()
@@ -905,9 +900,26 @@ void ForwardRenderer::Resize(
 
 void ForwardRenderer::Destroy()
 {
+	for (int frame = 0; frame < DX::FramesCount; frame++)
+	{
+		DX::WaitForFence(
+			DX::ComputeFences[frame].Get(),
+			DX::ComputeFenceValues[frame],
+			DX::ComputeFenceEvents[frame]);
+
+		DX::WaitForFence(
+			DX::FrameFences[frame].Get(),
+			DX::FrameFenceValues[frame],
+			DX::FrameFenceEvents[frame]);
+	}
+
+	for (int frame = 0; frame < DX::FramesCount; frame++)
+	{
+		CloseHandle(DX::ComputeFenceEvents[frame]);
+		CloseHandle(DX::FrameFenceEvents[frame]);
+	}
+
 	_destroyGUI();
-	_waitForGpu();
-	CloseHandle(DX::FenceEvent);
 }
 
 // used for camera movement
