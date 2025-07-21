@@ -13,10 +13,11 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 
 ## How to build and run
 1. `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
-2. Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `Buddha/` folder.
-3. Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `powerplant/` folder.
-4. Open `.sln` file with the Visual Studio.
-5. Build and run using Visual Studio.
+2. In the case you have cloned repo without the `--recursive` flag, perform `git submodule update --init --recursive`.
+3. Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `Buddha/` folder.
+4. Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `powerplant/` folder.
+5. Open `.sln` file with the Visual Studio.
+6. Build and run using Visual Studio.
 
 ## Papers and other resources used
 * [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf)
