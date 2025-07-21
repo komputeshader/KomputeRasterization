@@ -6,24 +6,24 @@ It comes with two scenes, the Buddha - about 100M of really small triangles, and
 Demo attemps to distribute load over threads  with the notion of a big triangle - how big the triangle's screen area should be to rasterize it with a single thread, or to offload it to a multiple-threads rasterizer, or a hardware rasterizer?
 
 ## System requirements
-1. Windows 10, 64-bit.
-2. DirectX 12 compatible GPU.
-3. In order to build the Work Graphs codepath, a GPU supporting shader model 6.8 is required (comment out the USE_WORK_GRAPHS macro otherwise).
-4. The WinPixEventRuntime is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
-5. The Microsoft.Direct3D.DXC is required to build, see https://www.nuget.org/packages/Microsoft.Direct3D.DXC/1.8.2505.32?_src=template.
-6. The Microsoft.Direct3D.D3D12, version 1.616.* is required to build, see https://www.nuget.org/packages/Microsoft.Direct3D.D3D12/1.616.1?_src=template.
+* Windows 10, 64-bit.
+* DirectX 12 compatible GPU.
+* In order to build the Work Graphs codepath, a GPU supporting shader model 6.8 is required (comment out the USE_WORK_GRAPHS macro otherwise).
+* The WinPixEventRuntime NuGet package is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
+* The Microsoft.Direct3D.DXC NuGet package is required to build, see https://www.nuget.org/packages/Microsoft.Direct3D.DXC/1.8.2505.32?_src=template.
+* The Microsoft.Direct3D.D3D12, version 1.616.* NuGet package is required to build, see https://www.nuget.org/packages/Microsoft.Direct3D.D3D12/1.616.1?_src=template.
 
 ## How to build and run
-1. `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
-2. In the case you have cloned repo without the `--recursive` flag, perform `git submodule update --init --recursive`.
-3. Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `KomputeRasterization/Buddha/` folder.
-4. Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `KomputeRasterization/powerplant/` folder.
-5. Open `.sln` file with the Visual Studio.
-6. If not installed already, right-click on the project and select "Manage nuGet Packages", and install the following packages:
+* `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
+* In the case you have cloned repo without the `--recursive` flag, perform `git submodule update --init --recursive`.
+* Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `KomputeRasterization/Buddha/` folder.
+* Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `KomputeRasterization/powerplant/` folder.
+* Open `.sln` file with the Visual Studio.
+* If not installed already, right-click on the project and select "Manage nuGet Packages", and install the following packages:
   * WinPixEventRuntime.
   * Microsoft.Direct3D.DXC.
-  * Microsoft.Direct3D.D3D12, version 1.616.*.
-8. Build and run using Visual Studio.
+  * Microsoft.Direct3D.D3D12, version `1.616.*`.
+* Build and run.
 
 ## Papers and other resources used
 * [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf)
