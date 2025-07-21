@@ -120,6 +120,11 @@ void SoftwareRasterization::Resize(
 	_createMDIResources();
 	_createStatsResources();
 	_createResetBuffer();
+
+#ifdef USE_WORK_GRAPHS
+	_createDepthWGResources();
+	_createOpaqueWGResources();
+#endif
 }
 
 void SoftwareRasterization::_createBigTrianglesBuffers()
@@ -330,6 +335,301 @@ void SoftwareRasterization::_createMDIResources()
 	NAME_D3D12_OBJECT(_dispatchCS);
 }
 
+#ifdef USE_WORK_GRAPHS
+void SoftwareRasterization::_createDepthWGResources()
+{
+	Utils::CompileDXILLibraryFromFile(
+		L"DepthWG.hlsl",
+		L"lib_6_8",
+		nullptr,
+		0,
+		_depthWGLibrary.GetAddressOf());
+
+	CD3DX12_STATE_OBJECT_DESC SO(D3D12_STATE_OBJECT_TYPE_EXECUTABLE);
+
+	CD3DX12_DXIL_LIBRARY_SUBOBJECT* lib = SO.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+	CD3DX12_SHADER_BYTECODE libraryCode(_depthWGLibrary.Get());
+	lib->SetDXILLibrary(&libraryCode);
+
+	{
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[9] = {};
+		computeRootParameters[0].InitAsConstantBufferView(0);
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[8] = {};
+
+		ranges[0].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			0);
+		computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
+		ranges[1].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			10);
+		computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
+		ranges[2].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			20);
+		computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
+		ranges[3].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			21);
+		computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
+
+		ranges[4].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			22);
+		computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+
+		ranges[5].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			0);
+		computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
+		ranges[6].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			1);
+		computeRootParameters[7].InitAsDescriptorTable(1, &ranges[6]);
+
+		ranges[7].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			2);
+		computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
+		computeRootSignatureDesc.Init_1_1(
+			_countof(computeRootParameters),
+			computeRootParameters);
+
+		Utils::CreateRS(computeRootSignatureDesc, _depthWGRS);
+		NAME_D3D12_OBJECT(_depthWGRS);
+	}
+
+	CD3DX12_WORK_GRAPH_SUBOBJECT* WGSubObj = SO.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
+	WGSubObj->IncludeAllAvailableNodes();
+	LPCWSTR workGraphName = L"WGRasterizer";
+	WGSubObj->SetProgramName(workGraphName);
+	CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT* RSSubObj = SO.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+	RSSubObj->SetRootSignature(_depthWGRS.Get());
+
+	ID3D12Device14* device = reinterpret_cast<ID3D12Device14*>(DX::Device.Get());
+	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_depthWGStateObj)));
+
+	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
+	_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps));
+	_depthWG = WGStateObjProps->GetProgramIdentifier(workGraphName);
+
+	ComPtr<ID3D12WorkGraphProperties> WGProps;
+	_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps));
+	D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memoryReqs = {};
+	WGProps->GetWorkGraphMemoryRequirements(
+		WGProps->GetWorkGraphIndex(workGraphName),
+		&memoryReqs);
+
+	D3D12_GPU_VIRTUAL_ADDRESS_RANGE WGBackMemRange = {};
+	WGBackMemRange.SizeInBytes = memoryReqs.MaxSizeInBytes;
+
+	CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
+	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
+		WGBackMemRange.SizeInBytes,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+	SUCCESS(device->CreateCommittedResource(
+		&prop,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(&_depthWGBackMem)));
+
+	WGBackMemRange.StartAddress = _depthWGBackMem->GetGPUVirtualAddress();
+
+	_depthProgramDesc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
+	_depthProgramDesc.WorkGraph.ProgramIdentifier = _depthWG;
+	_depthProgramDesc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
+	_depthProgramDesc.WorkGraph.BackingMemory = WGBackMemRange;
+}
+
+void SoftwareRasterization::_createOpaqueWGResources()
+{
+	DxcDefine defines[] = { { L"OPAQUE", L"1" } };
+
+	Utils::CompileDXILLibraryFromFile(
+		L"OpaqueWG.hlsl",
+		L"lib_6_8",
+		defines,
+		_countof(defines),
+		_opaqueWGLibrary.GetAddressOf());
+
+	CD3DX12_STATE_OBJECT_DESC SO(D3D12_STATE_OBJECT_TYPE_EXECUTABLE);
+
+	CD3DX12_DXIL_LIBRARY_SUBOBJECT* lib = SO.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+	CD3DX12_SHADER_BYTECODE libraryCode(_opaqueWGLibrary.Get());
+	lib->SetDXILLibrary(&libraryCode);
+
+	{
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[14] = {};
+		computeRootParameters[0].InitAsConstantBufferView(0);
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[13] = {};
+
+		ranges[0].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			0);
+		computeRootParameters[1].InitAsDescriptorTable(1, &ranges[0]);
+
+		ranges[1].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			10);
+		computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
+
+		ranges[2].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			11);
+		computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
+
+		ranges[3].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			12);
+		computeRootParameters[4].InitAsDescriptorTable(1, &ranges[3]);
+
+		ranges[4].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			13);
+		computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
+
+		ranges[5].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			20);
+		computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
+		ranges[6].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			21);
+		computeRootParameters[7].InitAsDescriptorTable(1, &ranges[6]);
+
+		ranges[7].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			22);
+		computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
+
+		ranges[8].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			23);
+		computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
+
+		ranges[9].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			24);
+		computeRootParameters[10].InitAsDescriptorTable(1, &ranges[9]);
+
+		ranges[10].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			0);
+		computeRootParameters[11].InitAsDescriptorTable(1, &ranges[10]);
+
+		ranges[11].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			1);
+		computeRootParameters[12].InitAsDescriptorTable(1, &ranges[11]);
+
+		ranges[12].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			2);
+		computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
+
+		D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
+		pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		pointClampSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler.MipLODBias = 0;
+		pointClampSampler.MaxAnisotropy = 0;
+		pointClampSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		pointClampSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		pointClampSampler.MinLOD = 0.0f;
+		pointClampSampler.MaxLOD = D3D12_FLOAT32_MAX;
+		pointClampSampler.ShaderRegister = 0;
+		pointClampSampler.RegisterSpace = 0;
+		pointClampSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
+		computeRootSignatureDesc.Init_1_1(
+			_countof(computeRootParameters),
+			computeRootParameters,
+			1,
+			&pointClampSampler);
+
+		Utils::CreateRS(computeRootSignatureDesc, _opaqueWGRS);
+		NAME_D3D12_OBJECT(_opaqueWGRS);
+	}
+
+	CD3DX12_WORK_GRAPH_SUBOBJECT* WGSubObj = SO.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
+	WGSubObj->IncludeAllAvailableNodes();
+	LPCWSTR workGraphName = L"WGRasterizer";
+	WGSubObj->SetProgramName(workGraphName);
+	CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT* RSSubObj = SO.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+	RSSubObj->SetRootSignature(_opaqueWGRS.Get());
+
+	ID3D12Device14* device = reinterpret_cast<ID3D12Device14*>(DX::Device.Get());
+	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_opaqueWGStateObj)));
+
+	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
+	_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps));
+	_opaqueWG = WGStateObjProps->GetProgramIdentifier(workGraphName);
+
+	ComPtr<ID3D12WorkGraphProperties> WGProps;
+	_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps));
+	D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memoryReqs = {};
+	WGProps->GetWorkGraphMemoryRequirements(
+		WGProps->GetWorkGraphIndex(workGraphName),
+		&memoryReqs);
+
+	D3D12_GPU_VIRTUAL_ADDRESS_RANGE WGBackMemRange = {};
+	WGBackMemRange.SizeInBytes = memoryReqs.MaxSizeInBytes;
+
+	CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
+	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
+		WGBackMemRange.SizeInBytes,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+	SUCCESS(device->CreateCommittedResource(
+		&prop,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(&_opaqueWGBackMem)));
+
+	WGBackMemRange.StartAddress = _opaqueWGBackMem->GetGPUVirtualAddress();
+
+	_opaqueProgramDesc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
+	_opaqueProgramDesc.WorkGraph.ProgramIdentifier = _opaqueWG;
+	_opaqueProgramDesc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
+	_opaqueProgramDesc.WorkGraph.BackingMemory = WGBackMemRange;
+}
+#endif
+
 void SoftwareRasterization::Update()
 {
 	const Camera& camera = Scene::CurrentScene->camera;
@@ -416,14 +716,30 @@ void SoftwareRasterization::Update()
 
 void SoftwareRasterization::Draw()
 {
-	_beginFrame();
-	_drawDepth();
-	_drawShadows();
-	_drawDepthBigTriangles();
-	_drawShadowsBigTriangles();
-	_finishDepthsRendering();
-	_drawOpaque();
-	_endFrame();
+	if (Settings::SWRWGEnabled)
+	{
+#ifdef USE_WORK_GRAPHS
+		_beginFrame();
+		_drawDepthWG();
+		_drawShadowsWG();
+		_drawDepthBigTriangles();
+		_drawShadowsBigTriangles();
+		_finishDepthsRendering();
+		_drawOpaqueWG();
+		_endFrame();
+#endif
+	}
+	else
+	{
+		_beginFrame();
+		_drawDepth();
+		_drawShadows();
+		_drawDepthBigTriangles();
+		_drawShadowsBigTriangles();
+		_finishDepthsRendering();
+		_drawOpaque();
+		_endFrame();
+	}
 }
 
 void SoftwareRasterization::_beginFrame()
@@ -907,6 +1223,236 @@ void SoftwareRasterization::_drawOpaque()
 	PIXEndEvent(COMMAND_LIST.Get());
 }
 
+#ifdef USE_WORK_GRAPHS
+void SoftwareRasterization::_drawDepthWG()
+{
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Depth WG");
+
+	int frustumIndex = 0;
+
+	COMMAND_LIST->SetComputeRootSignature(_depthWGRS.Get());
+
+	COMMAND_LIST->SetComputeRootConstantBufferView(
+		0, _depthSceneCB->GetGPUVirtualAddress() + frustumIndex +  DX::FrameIndex * _depthSceneCBFrameSize);
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		1, Descriptors::SV.GetGPUHandle(CulledCommandsCountersSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		2, Scene::CurrentScene->positionsGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		3, Descriptors::SV.GetGPUHandle(CulledCommandsSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount));
+#ifdef GPU_SOA_BUFFERS
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		4, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		4, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		5,
+		Settings::CullingEnabled
+		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount)
+		: Scene::CurrentScene->instancesGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		6, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + frustumIndex));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+
+	ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
+
+	commandList->SetProgram(&_depthProgramDesc);
+
+	D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
+	dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
+	dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+	dispatchDesc.NodeCPUInput.NumRecords = 1;
+	dispatchDesc.NodeCPUInput.pRecords = nullptr;
+	dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
+	commandList->DispatchGraph(&dispatchDesc);
+
+	//CD3DX12_RESOURCE_BARRIER barriers[2] = {};
+	//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+	//	_bigTriangles[0].Get(),
+	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+	//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
+	//barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+	//	_bigTrianglesCounters[0].Get(),
+	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+	//	D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+	//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
+	//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
+
+	PIXEndEvent(COMMAND_LIST.Get());
+}
+
+void SoftwareRasterization::_drawShadowsWG()
+{
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows WG");
+
+	COMMAND_LIST->SetComputeRootSignature(_depthWGRS.Get());
+
+	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
+	for (int cascade = 1; cascade <= Settings::CascadesCount; cascade++)
+	{
+		COMMAND_LIST->SetComputeRootConstantBufferView(
+			0, _depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize + cascade * sizeof(SWRDepthSceneCB));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			1, Descriptors::SV.GetGPUHandle(CulledCommandsCountersSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			2, Scene::CurrentScene->positionsGPU.GetSRV());
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			3, Descriptors::SV.GetGPUHandle(CulledCommandsSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount));
+#ifdef GPU_SOA_BUFFERS
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			4, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			4, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			5,
+			Settings::CullingEnabled
+			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
+			: Scene::CurrentScene->instancesGPU.GetSRV());
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			6, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + cascade));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+
+		ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
+
+		commandList->SetProgram(&_depthProgramDesc);
+
+		D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
+		dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
+		dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+		dispatchDesc.NodeCPUInput.NumRecords = 1;
+		dispatchDesc.NodeCPUInput.pRecords = nullptr;
+		dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
+		commandList->DispatchGraph(&dispatchDesc);
+
+		//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	_bigTriangles[cascade].Get(),
+		//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
+		//barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	_bigTrianglesCounters[cascade].Get(),
+		//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		//	D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+		//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
+		//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
+	}
+
+	PIXEndEvent(COMMAND_LIST.Get());
+}
+
+void SoftwareRasterization::_drawOpaqueWG()
+{
+	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque WG");
+
+	COMMAND_LIST->SetComputeRootSignature(_opaqueWGRS.Get());
+
+	COMMAND_LIST->SetComputeRootConstantBufferView(
+		0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SWRSceneCB));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		1, Descriptors::SV.GetGPUHandle(CulledCommandsCountersSRV + DX::FrameIndex * PerFrameDescriptorsCount));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		2, Scene::CurrentScene->positionsGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		3, Scene::CurrentScene->normalsGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		4, Scene::CurrentScene->colorsGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		5, Scene::CurrentScene->texcoordsGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		6, Descriptors::SV.GetGPUHandle(CulledCommandsSRV + DX::FrameIndex * PerFrameDescriptorsCount));
+#ifdef GPU_SOA_BUFFERS
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		7, Scene::CurrentScene->indicesSOAGPU.GetSRV());
+#else
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		7, Scene::CurrentScene->indicesGPU.GetSRV());
+#endif
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		8,
+		Settings::CullingEnabled
+		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
+		: Scene::CurrentScene->instancesGPU.GetSRV());
+	// misleading naming, actually, at this point in time, it is
+	// current frame depth with Hi-Z mipchain
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		9, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		10, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		11, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		12, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		13, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+
+	ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
+
+	commandList->SetProgram(&_opaqueProgramDesc);
+
+	D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
+	dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
+	dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+	dispatchDesc.NodeCPUInput.NumRecords = 1;
+	dispatchDesc.NodeCPUInput.pRecords = nullptr;
+	dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
+	commandList->DispatchGraph(&dispatchDesc);
+
+	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+		_bigTrianglesOpaque.Get(),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+		_bigTrianglesOpaqueCounter.Get(),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+	COMMAND_LIST->ResourceBarrier(2, barriers);
+
+	COMMAND_LIST->SetComputeRootSignature(_bigTriangleOpaqueRS.Get());
+	COMMAND_LIST->SetPipelineState(_bigTriangleOpaquePSO.Get());
+	COMMAND_LIST->SetComputeRootConstantBufferView(
+		0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SWRSceneCB));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		1, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueSRV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		2,
+		Settings::CullingEnabled
+		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
+		: Scene::CurrentScene->instancesGPU.GetSRV());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		3, Descriptors::SV.GetGPUHandle(SWRDepthSRV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		4, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		5, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+
+	COMMAND_LIST->ExecuteIndirect(
+		_dispatchCS.Get(),
+		1,
+		_bigTrianglesOpaqueCounter.Get(),
+		0,
+		nullptr,
+		0);
+
+	PIXEndEvent(COMMAND_LIST.Get());
+}
+#endif
+
 void SoftwareRasterization::_endFrame()
 {
 	// collect statistics
@@ -1256,11 +1802,15 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 	Utils::CreateRS(computeRootSignatureDesc, _triangleDepthRS);
 	NAME_D3D12_OBJECT(_triangleDepthRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"TriangleDepthCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"TriangleDepthCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _triangleDepthRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(
 		&psoDesc,
@@ -1298,11 +1848,15 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 	Utils::CreateRS(computeRootSignatureDesc, _bigTriangleDepthRS);
 	NAME_D3D12_OBJECT(_bigTriangleDepthRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"BigTriangleDepthCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"BigTriangleDepthCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _bigTriangleDepthRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(
 		&psoDesc,
@@ -1423,11 +1977,16 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 	Utils::CreateRS(computeRootSignatureDesc, _triangleOpaqueRS);
 	NAME_D3D12_OBJECT(_triangleOpaqueRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"TriangleOpaqueCS.cso").c_str());
+	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"TriangleOpaqueCS.hlsl",
+		defines,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _triangleOpaqueRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&_triangleOpaquePSO)));
 	NAME_D3D12_OBJECT(_triangleOpaquePSO);
@@ -1494,11 +2053,16 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 	Utils::CreateRS(computeRootSignatureDesc, _bigTriangleOpaqueRS);
 	NAME_D3D12_OBJECT(_bigTriangleOpaqueRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"BigTriangleOpaqueCS.cso").c_str());
+	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"BigTriangleOpaqueCS.hlsl",
+		defines,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _bigTriangleOpaqueRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(
 		&psoDesc,

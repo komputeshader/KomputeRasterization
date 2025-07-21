@@ -1,33 +1,63 @@
-// Implicit assumptions:
-// - we are dealing with triangles
-// - indices represent a triangle list
-
 #include "TypesAndConstants.hlsli"
 
-cbuffer DepthSceneCB : register(b0)
+StructuredBuffer<uint3> DispatchArgument : register(t0);
+
+struct RasterizationDispatch
+{
+	uint3 dispatchGrid : SV_DispatchGrid;
+};
+
+[Shader("node")]
+[NodeLaunch("broadcasting")]
+[NodeIsProgramEntry]
+[NodeDispatchGrid(1, 1, 1)]
+[NumThreads(1, 1, 1)]
+void RasterizationDispatchNode(
+	[MaxRecords(1)] NodeOutput<RasterizationDispatch> TriangleRasterizationNode)
+{
+	GroupNodeOutputRecords<RasterizationDispatch> output =
+		TriangleRasterizationNode.GetGroupNodeOutputRecords(1);
+
+	output[0].dispatchGrid = DispatchArgument[0];
+
+	output.OutputComplete();
+}
+
+cbuffer SceneCB : register(b0)
 {
 	float4x4 VP;
+	float4x4 CascadeVP[MAX_CASCADES_COUNT];
+	float4 SunDirection;
+	float4 CascadeBias[MAX_CASCADES_COUNT / 4];
+	float4 CascadeSplits[MAX_CASCADES_COUNT / 4];
 	float2 OutputRes;
 	float2 InvOutputRes;
 	float BigTriangleThreshold;
 	float BigTriangleTileSize;
+	int ShowCascades;
+	int ShowMeshlets;
 	int UseTopLeftRule;
+	int CascadesCount;
 	int ScanlineRasterization;
+	float ShadowsDistance;
 	uint TotalTriangles;
 };
 
-SamplerState DepthSampler : register(s0);
+SamplerState PointClampSampler : register(s0);
 
-StructuredBuffer<VertexPosition> Positions : register(t0);
+StructuredBuffer<VertexPosition> Positions : register(t10);
+StructuredBuffer<VertexNormal> Normals : register(t11);
+StructuredBuffer<VertexColor> Colors : register(t12);
+StructuredBuffer<VertexUV> UVs : register(t13);
 
-StructuredBuffer<uint> Indices : register(t8);
-StructuredBuffer<Instance> Instances : register(t9);
-Texture2D HiZ : register(t10);
+StructuredBuffer<IndirectCommand> Commands : register(t20);
+StructuredBuffer<uint> Indices : register(t21);
+StructuredBuffer<Instance> Instances : register(t22);
+Texture2D Depth : register(t23);
+Texture2DArray ShadowMap : register(t24);
 
-StructuredBuffer<IndirectCommand> Commands : register(t12);
-
-RWTexture2D<uint> Depth : register(u0);
-AppendStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
+RWTexture2D<float4> RenderTarget : register(u0);
+AppendStructuredBuffer<BigTriangleOpaque> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
 
 groupshared IndirectCommand Command;
@@ -36,10 +66,14 @@ groupshared uint2 StatisticsSM;
 #include "Common.hlsli"
 #include "Rasterization.hlsli"
 
-[numthreads(SWR_TRIANGLE_THREADS_X, SWR_TRIANGLE_THREADS_Y, SWR_TRIANGLE_THREADS_Z)]
-void main(
+[Shader("node")]
+[NodeLaunch("broadcasting")]
+// TODO: fix it somehow?
+[NodeMaxDispatchGrid(10000, 1, 1)]
+[numthreads(SWR_WG_TRIANGLE_THREADS_X, SWR_WG_TRIANGLE_THREADS_Y, SWR_WG_TRIANGLE_THREADS_Z)]
+void TriangleRasterizationNode(
+	DispatchNodeInputRecord<RasterizationDispatch> input,
 	uint3 groupID : SV_GroupID,
-	uint3 dispatchThreadID : SV_DispatchThreadID,
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
@@ -49,7 +83,7 @@ void main(
 		StatisticsSM = uint2(0, 0);
 	}
 
-	GroupMemoryBarrierWithGroupSync();
+	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
 	//[unroll(TRIANGLES_PER_THREAD)]
 	//for (uint meshletChunkIndex = 0; meshletChunkIndex < TRIANGLES_PER_THREAD; meshletChunkIndex++)
@@ -64,6 +98,11 @@ void main(
 
 			float3 p0, p1, p2;
 			GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
+
+			VertexNormal n0P, n1P, n2P;
+			GetPackedVertexNormals(i0, i1, i2, Command.args.baseVertexLocation, n0P, n1P, n2P);
+			VertexColor c0P, c1P, c2P;
+			GetPackedVertexColors(i0, i1, i2, Command.args.baseVertexLocation, c0P, c1P, c2P);
 
 			for (uint instanceID = 0; instanceID < Command.args.instanceCount; instanceID++)
 			{
@@ -131,7 +170,7 @@ void main(
 
 				// Hi-Z
 				//float mipLevel = ceil(log2(0.5 * max(dimensions.x, dimensions.y)));
-				//float tileDepth = HiZ.SampleLevel(
+				//float tileDepth = Depth.SampleLevel(
 				//	DepthSampler,
 				//	(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
 				//	mipLevel).r;
@@ -145,13 +184,10 @@ void main(
 				// not precise, though, since it still could miss any pixel centers
 				InterlockedAdd(StatisticsSM[1], 1);
 
-				// TODO: thin triangles area vs box area
-				// TODO: thread local
-
 				[branch]
 				if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 				{
-					BigTriangleDepth result;
+					BigTriangleOpaque result;
 					result.p0WSX = p0WS.x;
 					result.p0WSY = p0WS.y;
 					result.p0WSZ = p0WS.z;
@@ -161,6 +197,19 @@ void main(
 					result.p2WSX = p2WS.x;
 					result.p2WSY = p2WS.y;
 					result.p2WSZ = p2WS.z;
+					result.packedNormal0 = n0P.packedNormal;
+					result.packedNormal1 = n1P.packedNormal;
+					result.packedNormal2 = n2P.packedNormal;
+					result.packedColor0X = c0P.packedColor.x;
+					result.packedColor0Y = c0P.packedColor.y;
+					result.packedColor1X = c1P.packedColor.x;
+					result.packedColor1Y = c1P.packedColor.y;
+					result.packedColor2X = c2P.packedColor.x;
+					result.packedColor2Y = c2P.packedColor.y;
+					// TODO: add this
+					result.packedUV0 = 0;
+					result.packedUV1 = 0;
+					result.packedUV2 = 0;
 
 					float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
 					float totalTiles = tilesCount.x * tilesCount.y;
@@ -173,6 +222,13 @@ void main(
 
 					continue;
 				}
+
+				float3 n0 = UnpackNormal(n0P);
+				float3 n1 = UnpackNormal(n1P);
+				float3 n2 = UnpackNormal(n2P);
+				float4 c0 = UnpackColor(c0P);
+				float4 c1 = UnpackColor(c1P);
+				float4 c2 = UnpackColor(c2P);
 
 				float invArea = 1.0 / area;
 
@@ -238,9 +294,39 @@ void main(
 
 							precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-							// TODO: account for non-reversed Z
-							InterlockedMax(Depth[uint2(x, y)], asuint(depth));
+							// early z test
+							[branch]
+							if (Depth[uint2(x, y)].r == depth)
+							{
+								// for perspective-correct interpolation
+								float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
 
+								float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+								N = normalize(N);
+
+								float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+								if (ShowMeshlets)
+								{
+									color = instance.color;
+								}
+
+								float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+								float NdotL = saturate(dot(SunDirection.xyz, N));
+								float viewDepth = denom;
+								float shadow = GetShadow(viewDepth, positionWS);
+								float3 ambient = 0.2 * SkyColor;
+
+								float3 result = color * (NdotL * shadow + ambient);
+								if (ShowCascades)
+								{
+									result = GetCascadeColor(viewDepth, positionWS);
+									result *= (NdotL * shadow + ambient);
+								}
+
+								RenderTarget[uint2(x, y)] = float4(result, 1.0);
+							}
+					
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
 							area0tmp -= dxdy0.y;
 							area1tmp -= dxdy1.y;
@@ -288,8 +374,40 @@ void main(
 
 								precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-								// TODO: account for non-reversed Z
-								InterlockedMax(Depth[uint2(x, y)], asuint(depth));
+								uint2 pixelCoord = uint2(x, y);
+
+								// early z test
+								[branch]
+								if (Depth[pixelCoord].r == depth)
+								{
+									// for perspective-correct interpolation
+									float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
+
+									float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+									N = normalize(N);
+
+									float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+									if (ShowMeshlets)
+									{
+										color = instance.color;
+									}
+
+									float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+									float NdotL = saturate(dot(SunDirection.xyz, N));
+									float viewDepth = denom;
+									float shadow = GetShadow(viewDepth, positionWS);
+									float3 ambient = 0.2 * SkyColor;
+
+									float3 result = color * (NdotL * shadow + ambient);
+									if (ShowCascades)
+									{
+										result = GetCascadeColor(viewDepth, positionWS);
+										result *= (NdotL * shadow + ambient);
+									}
+
+									RenderTarget[pixelCoord] = float4(result, 1.0);
+								}
 							}
 
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -307,7 +425,7 @@ void main(
 		}
 	//}
 
-	GroupMemoryBarrierWithGroupSync();
+	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
 	if (groupIndex == 0)
 	{

@@ -8,10 +8,12 @@
 #include <windows.h>
 
 #include <d3d12.h>
+#include "d3dx12.h"
 #include <dxgi1_6.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include "d3dx12.h"
+
+//#define USE_PIX
 #include <pix3.h>
 
 #include <string>
@@ -20,6 +22,10 @@
 #include <shellapi.h>
 
 #include "CPUGPUCommon.h"
+
+#ifdef USE_WORK_GRAPHS
+#include "dxcapi.h"
+#endif
 
 static const float SkyColor[] =
 {

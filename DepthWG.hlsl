@@ -1,8 +1,27 @@
-// Implicit assumptions:
-// - we are dealing with triangles
-// - indices represent a triangle list
-
 #include "TypesAndConstants.hlsli"
+
+StructuredBuffer<uint3> DispatchArgument : register(t0);
+
+struct RasterizationDispatch
+{
+	uint3 dispatchGrid : SV_DispatchGrid;
+};
+
+[Shader("node")]
+[NodeLaunch("broadcasting")]
+[NodeIsProgramEntry]
+[NodeDispatchGrid(1, 1, 1)]
+[NumThreads(1, 1, 1)]
+void RasterizationDispatchNode(
+	[MaxRecords(1)] NodeOutput<RasterizationDispatch> TriangleRasterizationNode)
+{
+	GroupNodeOutputRecords<RasterizationDispatch> output =
+		TriangleRasterizationNode.GetGroupNodeOutputRecords(1);
+
+	output[0].dispatchGrid = DispatchArgument[0];
+
+	output.OutputComplete();
+}
 
 cbuffer DepthSceneCB : register(b0)
 {
@@ -16,15 +35,11 @@ cbuffer DepthSceneCB : register(b0)
 	uint TotalTriangles;
 };
 
-SamplerState DepthSampler : register(s0);
+StructuredBuffer<VertexPosition> Positions : register(t10);
 
-StructuredBuffer<VertexPosition> Positions : register(t0);
-
-StructuredBuffer<uint> Indices : register(t8);
-StructuredBuffer<Instance> Instances : register(t9);
-Texture2D HiZ : register(t10);
-
-StructuredBuffer<IndirectCommand> Commands : register(t12);
+StructuredBuffer<IndirectCommand> Commands : register(t20);
+StructuredBuffer<uint> Indices : register(t21);
+StructuredBuffer<Instance> Instances : register(t22);
 
 RWTexture2D<uint> Depth : register(u0);
 AppendStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
@@ -36,10 +51,14 @@ groupshared uint2 StatisticsSM;
 #include "Common.hlsli"
 #include "Rasterization.hlsli"
 
-[numthreads(SWR_TRIANGLE_THREADS_X, SWR_TRIANGLE_THREADS_Y, SWR_TRIANGLE_THREADS_Z)]
-void main(
+[Shader("node")]
+[NodeLaunch("broadcasting")]
+// TODO: fix it somehow?
+[NodeMaxDispatchGrid(10000, 1, 1)]
+[numthreads(SWR_WG_TRIANGLE_THREADS_X, SWR_WG_TRIANGLE_THREADS_Y, SWR_WG_TRIANGLE_THREADS_Z)]
+void TriangleRasterizationNode(
+	DispatchNodeInputRecord<RasterizationDispatch> input,
 	uint3 groupID : SV_GroupID,
-	uint3 dispatchThreadID : SV_DispatchThreadID,
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
@@ -49,13 +68,13 @@ void main(
 		StatisticsSM = uint2(0, 0);
 	}
 
-	GroupMemoryBarrierWithGroupSync();
+	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
 	//[unroll(TRIANGLES_PER_THREAD)]
 	//for (uint meshletChunkIndex = 0; meshletChunkIndex < TRIANGLES_PER_THREAD; meshletChunkIndex++)
 	//{
 		[branch]
-		if ((groupThreadID.x + groupID.y * SWR_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
+		if ((groupThreadID.x + groupID.y * SWR_WG_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
 		{
 			uint i0, i1, i2;
 			GetTriangleIndices(
@@ -307,7 +326,7 @@ void main(
 		}
 	//}
 
-	GroupMemoryBarrierWithGroupSync();
+	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
 	if (groupIndex == 0)
 	{

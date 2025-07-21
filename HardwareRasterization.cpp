@@ -488,17 +488,31 @@ void HardwareRasterization::_createDepthPassPSO()
 	psoDesc.NumRenderTargets = 0;
 	psoDesc.SampleDesc.Count = 1;
 
-	Utils::ShaderHelper vertexShader(Utils::GetAssetFullPath(L"DrawDepthVS.cso").c_str());
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
+		L"DrawDepthVS.hlsl",
+		nullptr,
+		"main",
+		"vs_5_0");
 
-	psoDesc.VS = { vertexShader.GetData(), vertexShader.GetSize() };
+	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 	SUCCESS(DX::Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&_depthPSO)));
 	NAME_D3D12_OBJECT(_depthPSO);
 }
 
 void HardwareRasterization::_createOpaquePassPSO()
 {
-	Utils::ShaderHelper vertexShader(Utils::GetAssetFullPath(L"DrawOpaqueVS.cso").c_str());
-	Utils::ShaderHelper pixelShader(Utils::GetAssetFullPath(L"DrawOpaquePS.cso").c_str());
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
+		L"DrawOpaqueVS.hlsl",
+		nullptr,
+		"main",
+		"vs_5_0");
+
+	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
+		L"DrawOpaquePS.hlsl",
+		defines,
+		"main",
+		"ps_5_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -543,8 +557,8 @@ void HardwareRasterization::_createOpaquePassPSO()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 	psoDesc.pRootSignature = _HWRRS.Get();
-	psoDesc.VS = { vertexShader.GetData(), vertexShader.GetSize() };
-	psoDesc.PS = { pixelShader.GetData(), pixelShader.GetSize() };
+	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+	psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);

@@ -56,11 +56,15 @@ void InitializeResources()
 		HiZRS);
 	NAME_D3D12_OBJECT(HiZRS);
 
-	ShaderHelper computeShader(Utils::GetAssetFullPath(L"GenerateHiZMipCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"GenerateHiZMipCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = HiZRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(
 		&psoDesc,
@@ -168,7 +172,7 @@ ComPtr<ID3DBlob> CompileShader(
 		&byteCode,
 		&errors);
 
-	if (errors != nullptr)
+	if (errors)
 	{
 		OutputDebugStringA((char*)errors->GetBufferPointer());
 	}
@@ -177,6 +181,93 @@ ComPtr<ID3DBlob> CompileShader(
 
 	return byteCode;
 }
+
+#ifdef USE_WORK_GRAPHS
+void CompileDXILLibraryFromFile(
+	const std::wstring& filename,
+	const std::wstring& target,
+	DxcDefine* defines,
+	unsigned int definesCount,
+	ID3DBlob** ppCode)
+{
+	HRESULT hr = S_OK;
+	*ppCode = nullptr;
+
+	static HMODULE hmod = 0;
+	static HMODULE hmodDxil = 0;
+	static DxcCreateInstanceProc pDxcCreateInstanceProc = nullptr;
+
+	if (hmodDxil == 0)
+	{
+		hmodDxil = LoadLibrary(L"dxil.dll");
+		ASSERT(hmodDxil != 0, "dxil.dll missing or wrong architecture")
+	}
+
+	if (hmod == 0)
+	{
+		hmod = LoadLibrary(L"dxcompiler.dll");
+		ASSERT(hmod != 0, "dxcompiler.dll missing or wrong architecture")
+
+		if (pDxcCreateInstanceProc == nullptr)
+		{
+			pDxcCreateInstanceProc = (DxcCreateInstanceProc)GetProcAddress(hmod, "DxcCreateInstance");
+			ASSERT(pDxcCreateInstanceProc, "Unable to find dxcompiler!DxcCreateInstance")
+		}
+	}
+
+	ComPtr<IDxcLibrary> library;
+	SUCCESS(pDxcCreateInstanceProc(
+		CLSID_DxcLibrary,
+		__uuidof(IDxcLibrary),
+		reinterpret_cast<LPVOID*>(library.GetAddressOf())));
+
+	ComPtr<IDxcBlobEncoding> source;
+	HRESULT createBlobHr = library->CreateBlobFromFile(filename.c_str(), nullptr, source.GetAddressOf());
+	ASSERT(createBlobHr == S_OK, "CreateBlobFromFile failed - perhaps file is missing?")
+
+	ComPtr<IDxcIncludeHandler> includeHandler;
+	hr = library->CreateIncludeHandler(&includeHandler);
+	ASSERT(SUCCEEDED(hr), "Failed to create include handler.")
+
+	ComPtr<IDxcCompiler> compiler;
+	hr = pDxcCreateInstanceProc(
+		CLSID_DxcCompiler,
+		__uuidof(IDxcCompiler),
+		reinterpret_cast<LPVOID*>(compiler.GetAddressOf()));
+	ASSERT(SUCCEEDED(hr), "Failed to instantiate compiler.")
+
+	ComPtr<IDxcOperationResult> operationResult;
+	LPCWSTR args[] = { L"" };
+	UINT cArgs = 0;
+	hr = compiler->Compile(
+		source.Get(),
+		nullptr,
+		nullptr,
+		target.c_str(),
+		args, cArgs,
+		defines, definesCount,
+		includeHandler.Get(),
+		operationResult.GetAddressOf());
+	ASSERT(SUCCEEDED(hr), "Failed to compile.")
+
+	operationResult->GetStatus(&hr);
+	if (SUCCEEDED(hr))
+	{
+		hr = operationResult->GetResult((IDxcBlob**)ppCode);
+		ASSERT(SUCCEEDED(hr), "Failed to retrieve compiled code.")
+	}
+
+	ComPtr<IDxcBlobEncoding> errors;
+	if (SUCCEEDED(operationResult->GetErrorBuffer(errors.GetAddressOf())))
+	{
+		auto errorText = errors->GetBufferPointer();
+		if (errorText)
+		{
+			OutputDebugStringA((char*)errorText);
+		}
+	}
+}
+#endif
 
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,
@@ -391,7 +482,7 @@ void GPUBuffer::Initialize(
 	unsigned int SRVIndex,
 	LPCWSTR name)
 {
-	ASSERT(_buffer.Get() == nullptr);
+	ASSERT(_buffer.Get() == nullptr)
 
 	if (endState == D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
 	{

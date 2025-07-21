@@ -1,5 +1,5 @@
 ## KomputeRasterizer
-This demo attempts to render scenes with a big amount of triangles using the compute shader rasterization. It also attempts to simulate game engine geometry load with cascaded shadows and culling.
+This demo attempts to render scenes with a big amount of triangles in a GPU-driven fashion using the compute shader rasterization, both via vanilla compute shaders, and the work graphs. It also attempts to simulate game engine geometry load with cascaded shadows and culling.
 
 It comes with two scenes, the Buddha - about 100M of really small triangles, and the Plant - about 40M of triangles of various sizes. Even with the most simplistic rasterization approach, software rasterizer outperforms hardware rasterizer on the Buddha scene, but the Plant scene is somewhat unstable in terms of performance, due to presence of alot of "big" triangles.
 
@@ -8,7 +8,8 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 ## System requirements
 1. Windows 10, 64-bit.
 2. DirectX 12 compatible GPU.
-3. The WinPixEventRuntime is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
+3. In order to build Work Graphs codepath, a GPU supporting shader model 6.8 is required (comment out the USE_WORK_GRAPHS macro otherwise).
+4. The WinPixEventRuntime is required to build, see instructions: https://devblogs.microsoft.com/pix/winpixeventruntime/.
 
 ## How to build and run
 1. `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`

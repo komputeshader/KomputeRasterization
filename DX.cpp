@@ -1,5 +1,10 @@
 #include "DX.h"
 
+#ifdef USE_WORK_GRAPHS
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 616; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+#endif
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -171,14 +176,22 @@ void CreateDevice()
 
 	RSFeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-	if (FAILED(
-		Device->CheckFeatureSupport(
-			D3D12_FEATURE_ROOT_SIGNATURE,
-			&RSFeatureData,
-			sizeof(RSFeatureData))))
+	if (FAILED(Device->CheckFeatureSupport(
+		D3D12_FEATURE_ROOT_SIGNATURE,
+		&RSFeatureData,
+		sizeof(RSFeatureData))))
 	{
 		RSFeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
+
+#ifdef USE_WORK_GRAPHS
+	D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options;
+	SUCCESS(Device->CheckFeatureSupport(
+		D3D12_FEATURE_D3D12_OPTIONS21,
+		&Options,
+		sizeof(Options)));
+	ASSERT(Options.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED, "Device does not report support for work graphs.")
+#endif
 }
 
 void CreateCommandAllocators()

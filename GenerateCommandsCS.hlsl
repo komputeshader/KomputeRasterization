@@ -3,7 +3,7 @@
 StructuredBuffer<MeshMeta> MeshesMeta : register(t0);
 StructuredBuffer<uint> InstanceCounters : register(t1);
 
-// TODO: remove hardcode
+// TODO: remove hardcode and reduce atomics use per group
 AppendStructuredBuffer<IndirectCommand> CameraCommands : register(u0);
 AppendStructuredBuffer<IndirectCommand> Cascade0Commands : register(u1);
 AppendStructuredBuffer<IndirectCommand> Cascade1Commands : register(u2);

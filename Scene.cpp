@@ -100,7 +100,7 @@ void Scene::_loadObj(
 	if (!OBJMesh)
 	{
 		PrintToOutput("Error loading %s: file not found\n", OBJPath.c_str());
-		ASSERT(false);
+		ASSERT(false)
 	}
 
 	std::vector<MeshMeta> meshesMeta;

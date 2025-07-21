@@ -182,9 +182,6 @@
     <ClInclude Include="SoftwareRasterization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="d3dx12.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
     <ClInclude Include="DescriptorManager.h">
       <Filter>Header Files\Utils</Filter>
     </ClInclude>
@@ -282,6 +279,12 @@
     </FxCompile>
     <FxCompile Include="DrawOpaqueVS.hlsl">
       <Filter>Assets\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="DepthWG.hlsl">
+      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    </FxCompile>
+    <FxCompile Include="OpaqueWG.hlsl">
+      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

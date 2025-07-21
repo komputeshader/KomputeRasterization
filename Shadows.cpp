@@ -303,7 +303,11 @@ void Shadows::_createPSO()
 	Utils::CreateRS(rootSignatureDesc, _shadowsRS);
 	NAME_D3D12_OBJECT(_shadowsRS);
 
-	Utils::ShaderHelper vertexShader(Utils::GetAssetFullPath(L"DrawDepthVS.cso").c_str());
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
+		L"DrawDepthVS.hlsl",
+		nullptr,
+		"main",
+		"vs_5_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -319,7 +323,7 @@ void Shadows::_createPSO()
 	};
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.VS = { vertexShader.GetData(), vertexShader.GetSize() };
+	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 	psoDesc.pRootSignature = _shadowsRS.Get();
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

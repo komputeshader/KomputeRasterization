@@ -315,11 +315,15 @@ void Culler::_createClearPSO()
 	Utils::CreateRS(computeRootSignatureDesc, _clearRS);
 	NAME_D3D12_OBJECT(_clearRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"ClearCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"ClearCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _clearRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&_clearPSO)));
 	NAME_D3D12_OBJECT(_clearPSO);
@@ -375,11 +379,15 @@ void Culler::_createCullingPSO()
 		_cullingRS);
 	NAME_D3D12_OBJECT(_cullingRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"CullingCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"CullingCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _cullingRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&_cullingPSO)));
 	NAME_D3D12_OBJECT(_cullingPSO);
@@ -418,11 +426,15 @@ void Culler::_createGenerateCommandsPSO()
 		_generateHWRCommandsRS);
 	NAME_D3D12_OBJECT(_generateHWRCommandsRS);
 
-	Utils::ShaderHelper computeShader(Utils::GetAssetFullPath(L"GenerateCommandsCS.cso").c_str());
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"GenerateCommandsCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _generateHWRCommandsRS.Get();
-	psoDesc.CS = { computeShader.GetData(), computeShader.GetSize() };
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
 
 	SUCCESS(DX::Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&_generateHWRCommandsPSO)));
 	NAME_D3D12_OBJECT(_generateHWRCommandsPSO);

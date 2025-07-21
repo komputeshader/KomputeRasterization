@@ -41,9 +41,14 @@ private:
 	void _createDepthBufferResources();
 	void _createMDIResources();
 	void _createResetBuffer();
+	void _createStatsResources();
+#ifdef USE_WORK_GRAPHS
+	void _createDepthWGResources();
+	void _createOpaqueWGResources();
+#endif
+
 	void _clearBigTrianglesDepthCounter(int frustum);
 	void _clearBigTrianglesOpaqueCounter();
-	void _createStatsResources();
 	void _clearStatistics();
 
 	void _beginFrame();
@@ -54,6 +59,11 @@ private:
 	void _finishDepthsRendering();
 	void _drawOpaque();
 	void _endFrame();
+#ifdef USE_WORK_GRAPHS
+	void _drawDepthWG();
+	void _drawShadowsWG();
+	void _drawOpaqueWG();
+#endif
 
 	void _drawIndexedInstanced(
 		unsigned int indexCountPerInstance,
@@ -104,6 +114,22 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesOpaqueCounter;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesOpaqueCounterUpload;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _counterReset;
+
+#ifdef USE_WORK_GRAPHS
+	Microsoft::WRL::ComPtr<ID3DBlob> _depthWGLibrary;
+	Microsoft::WRL::ComPtr<ID3D12StateObject> _depthWGStateObj;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> _depthWGRS;
+	D3D12_PROGRAM_IDENTIFIER _depthWG;
+	D3D12_SET_PROGRAM_DESC _depthProgramDesc;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _depthWGBackMem;
+
+	Microsoft::WRL::ComPtr<ID3DBlob> _opaqueWGLibrary;
+	Microsoft::WRL::ComPtr<ID3D12StateObject> _opaqueWGStateObj;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> _opaqueWGRS;
+	D3D12_PROGRAM_IDENTIFIER _opaqueWG;
+	D3D12_SET_PROGRAM_DESC _opaqueProgramDesc;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _opaqueWGBackMem;
+#endif
 
 	// statistics resources
 	enum StatsIndices

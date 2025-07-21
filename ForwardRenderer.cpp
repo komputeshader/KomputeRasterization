@@ -211,8 +211,6 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	SRVDesc.Buffer.FirstElement = 0;
 	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
-	SRVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
 
 	static D3D12_DISPATCH_ARGUMENTS dispatch;
 	dispatch.ThreadGroupCountX = 0;
@@ -240,6 +238,14 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				L"_culledCommandsCountersUpload",
 				frame * MAX_FRUSTUMS_COUNT + frustum);
 
+			SRVDesc.Buffer.NumElements = 1;
+			SRVDesc.Buffer.StructureByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
+
+			DX::Device->CreateShaderResourceView(
+				_culledCommandsCounters[frame][frustum].Get(),
+				&SRVDesc,
+				Descriptors::SV.GetCPUHandle(CulledCommandsCountersSRV + frustum + frame * PerFrameDescriptorsCount));
+
 			SUCCESS(DX::Device->CreateCommittedResource(
 				&prop,
 				D3D12_HEAP_FLAG_NONE,
@@ -259,6 +265,9 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				_culledCommandsCounters[frame][frustum].Get(),
 				&UAVDesc,
 				Descriptors::SV.GetCPUHandle(CulledCommandsUAV + frustum + frame * PerFrameDescriptorsCount));
+
+			SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
+			SRVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
 
 			DX::Device->CreateShaderResourceView(
 				_culledCommands[frame][frustum].Get(),
@@ -413,6 +422,8 @@ void ForwardRenderer::PreparePrevFrameDepth(ID3D12Resource* depth)
 
 void ForwardRenderer::Update()
 {
+	PIXBeginEvent(PIX_COLOR_DEFAULT, L"Update %llu", DX::FrameNumber);
+
 	_timer.Tick();
 
 	KeyboardInput();
@@ -424,10 +435,14 @@ void ForwardRenderer::Update()
 	_culler->Update();
 	_HWR->Update();
 	_SWR->Update();
+
+	PIXEndEvent();
 }
 
 void ForwardRenderer::Draw()
 {
+	PIXBeginEvent(PIX_COLOR_DEFAULT, L"Draw %llu", DX::FrameNumber);
+
 	// GUI
 	_newFrameGUI();
 	Shadows::Sun.GUINewFrame();
@@ -510,6 +525,8 @@ void ForwardRenderer::Draw()
 		DX::FrameFences[DX::FrameIndex].Get(),
 		DX::FrameFenceValues[DX::FrameIndex],
 		DX::FrameFenceEvents[DX::FrameIndex]);
+
+	PIXEndEvent();
 }
 
 void ForwardRenderer::_beginFrameRendering()
@@ -850,6 +867,11 @@ void ForwardRenderer::_newFrameGUI()
 			{
 				_switchFromSWR = true;
 			}
+		}
+
+		if (Settings::SWREnabled)
+		{
+			ImGui::Checkbox("Use Work Graphs", &Settings::SWRWGEnabled);
 		}
 
 		ImGui::Checkbox(

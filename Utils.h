@@ -61,6 +61,7 @@ inline void SetNameIndexed(ID3D12Object*, LPCWSTR, unsigned int)
 	if (!(bool)(isFalse)) { \
 		PrintToOutput("\nAssertion " #isFalse " failed in file %s, line %d\n", __FILE__, __LINE__); \
 		PrintToOutput(__VA_ARGS__); \
+		PrintToOutput("\n"); \
 		__debugbreak(); \
 	}
 
@@ -68,6 +69,7 @@ inline void SetNameIndexed(ID3D12Object*, LPCWSTR, unsigned int)
 	if (FAILED(hr)) { \
 		PrintToOutput("\nHRESULT hr = 0x%08X failed in file %s, line %d\n", static_cast<unsigned int>(hr), __FILE__, __LINE__); \
 		PrintToOutput(__VA_ARGS__); \
+		PrintToOutput("\n"); \
 		__debugbreak(); \
 	}
 
@@ -80,11 +82,11 @@ extern D3D12_STATIC_SAMPLER_DESC HiZSamplerDesc;
 
 inline void GetAssetsPath(_Out_writes_(pathSize) wchar_t* path, unsigned int pathSize)
 {
-	ASSERT(path);
+	ASSERT(path)
 
 	DWORD size = GetModuleFileName(nullptr, path, pathSize);
-	ASSERT(size);
-	ASSERT(size != pathSize);
+	ASSERT(size)
+	ASSERT(size != pathSize)
 
 	wchar_t* lastSlash = wcsrchr(path, L'\\');
 	if (lastSlash)
@@ -92,53 +94,6 @@ inline void GetAssetsPath(_Out_writes_(pathSize) wchar_t* path, unsigned int pat
 		*(lastSlash + 1) = L'\0';
 	}
 }
-
-class ShaderHelper
-{
-public:
-
-	ShaderHelper(LPCWSTR filename)
-	{
-		using namespace Microsoft::WRL;
-
-#if WINVER >= _WIN32_WINNT_WIN8
-		CREATEFILE2_EXTENDED_PARAMETERS extendedParams = {};
-		extendedParams.dwSize = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
-		extendedParams.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
-		extendedParams.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
-		extendedParams.dwSecurityQosFlags = SECURITY_ANONYMOUS;
-		extendedParams.lpSecurityAttributes = nullptr;
-		extendedParams.hTemplateFile = nullptr;
-
-		Wrappers::FileHandle file(CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, &extendedParams));
-#else
-		Wrappers::FileHandle file(CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN | SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS, nullptr));
-#endif
-		ASSERT(file.Get() != INVALID_HANDLE_VALUE);
-
-		FILE_STANDARD_INFO fileInfo = {};
-		ASSERT(GetFileInformationByHandleEx(file.Get(), FileStandardInfo, &fileInfo, sizeof(fileInfo)));
-		ASSERT(fileInfo.EndOfFile.HighPart == 0);
-
-		_data = reinterpret_cast<byte*>(malloc(fileInfo.EndOfFile.LowPart));
-		_size = fileInfo.EndOfFile.LowPart;
-
-		ASSERT(ReadFile(file.Get(), _data, fileInfo.EndOfFile.LowPart, nullptr, nullptr));
-	}
-
-	~ShaderHelper()
-	{
-		free(_data);
-	}
-
-	unsigned char* GetData() { return _data; }
-	unsigned int GetSize() { return _size; }
-
-private:
-
-	unsigned char* _data;
-	unsigned int _size;
-};
 
 void InitializeResources();
 
@@ -163,6 +118,15 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
 	const D3D_SHADER_MACRO* defines,
 	const std::string& entrypoint,
 	const std::string& target);
+
+#ifdef USE_WORK_GRAPHS
+void CompileDXILLibraryFromFile(
+	const std::wstring& filename,
+	const std::wstring& target,
+	DxcDefine* defines,
+	unsigned int definesCount,
+	ID3DBlob** ppCode);
+#endif
 
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,

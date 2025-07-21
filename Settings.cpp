@@ -19,6 +19,7 @@ bool Settings::CameraHiZCullingEnabled = true;
 bool Settings::ShadowsHiZCullingEnabled = true;
 bool Settings::ClusterBackfaceCullingEnabled = true;
 bool Settings::SWREnabled = false;
+bool Settings::SWRWGEnabled = false;
 bool Settings::ShowMeshlets = false;
 bool Settings::FreezeCulling = false;
 const float Settings::CameraNearZ = 0.001f;
