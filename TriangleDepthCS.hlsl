@@ -27,11 +27,26 @@ Texture2D HiZ : register(t10);
 StructuredBuffer<IndirectCommand> Commands : register(t12);
 
 RWTexture2D<uint> Depth : register(u0);
-AppendStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
-RWStructuredBuffer<uint> Statistics : register(u2);
+RWStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
+RWStructuredBuffer<uint> BigTrianglesCount : register(u2);
+RWStructuredBuffer<uint> Statistics : register(u3);
 
 groupshared IndirectCommand Command;
 groupshared uint2 StatisticsSM;
+
+groupshared uint TotalBigTiangleTiles[SWR_TRIANGLE_THREADS_X];
+groupshared uint TotalTilesSM;
+groupshared float P0WSX[SWR_TRIANGLE_THREADS_X];
+groupshared float P0WSY[SWR_TRIANGLE_THREADS_X];
+groupshared float P0WSZ[SWR_TRIANGLE_THREADS_X];
+groupshared float P1WSX[SWR_TRIANGLE_THREADS_X];
+groupshared float P1WSY[SWR_TRIANGLE_THREADS_X];
+groupshared float P1WSZ[SWR_TRIANGLE_THREADS_X];
+groupshared float P2WSX[SWR_TRIANGLE_THREADS_X];
+groupshared float P2WSY[SWR_TRIANGLE_THREADS_X];
+groupshared float P2WSZ[SWR_TRIANGLE_THREADS_X];
+groupshared uint BigTrianglesCountSM;
+groupshared uint BigTrianglesWriteOffset;
 
 #include "Common.hlsli"
 #include "Rasterization.hlsli"
@@ -47,6 +62,9 @@ void main(
 	{
 		Command = Commands[groupID.x];
 		StatisticsSM = uint2(0, 0);
+		TotalTilesSM = 0;
+		BigTrianglesCountSM = 0;
+		BigTrianglesWriteOffset = 0;
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -146,30 +164,26 @@ void main(
 				InterlockedAdd(StatisticsSM[1], 1);
 
 				// TODO: thin triangles area vs box area
-				// TODO: thread local
 
 				[branch]
 				if (dimensions.x * dimensions.y >= BigTriangleThreshold)
 				{
-					BigTriangleDepth result;
-					result.p0WSX = p0WS.x;
-					result.p0WSY = p0WS.y;
-					result.p0WSZ = p0WS.z;
-					result.p1WSX = p1WS.x;
-					result.p1WSY = p1WS.y;
-					result.p1WSZ = p1WS.z;
-					result.p2WSX = p2WS.x;
-					result.p2WSY = p2WS.y;
-					result.p2WSZ = p2WS.z;
+					uint writeOffset = 0;
+					InterlockedAdd(BigTrianglesCountSM, 1, writeOffset);
 
-					float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
-					float totalTiles = tilesCount.x * tilesCount.y;
-					for (float offset = 0.0; offset < totalTiles; offset += 1.0)
-					{
-						result.tileOffset = offset;
+					uint2 tilesCount = uint2(ceil(dimensions / BigTriangleTileSize));
+					TotalBigTiangleTiles[writeOffset] = tilesCount.x * tilesCount.y;
+					InterlockedAdd(TotalTilesSM, tilesCount.x * tilesCount.y);
 
-						BigTriangles.Append(result);
-					}
+					P0WSX[writeOffset] = p0WS.x;
+					P0WSY[writeOffset] = p0WS.y;
+					P0WSZ[writeOffset] = p0WS.z;
+					P1WSX[writeOffset] = p1WS.x;
+					P1WSY[writeOffset] = p1WS.y;
+					P1WSZ[writeOffset] = p1WS.z;
+					P2WSX[writeOffset] = p2WS.x;
+					P2WSY[writeOffset] = p2WS.y;
+					P2WSZ[writeOffset] = p2WS.z;
 
 					continue;
 				}
@@ -314,5 +328,39 @@ void main(
 	{
 		InterlockedAdd(Statistics[0], StatisticsSM[0]);
 		InterlockedAdd(Statistics[1], StatisticsSM[1]);
+
+		InterlockedAdd(BigTrianglesCount[0], TotalTilesSM, BigTrianglesWriteOffset);
+	}
+
+	for (uint i = groupThreadID.x; i < TotalTilesSM; i += SWR_TRIANGLE_THREADS_X)
+	{
+		uint offset = i;
+		uint btIdx = 0;
+		for (; btIdx < BigTrianglesCountSM; btIdx++)
+		{
+			uint btTiles = TotalBigTiangleTiles[btIdx];
+			if (offset < btTiles)
+			{
+				break;
+			}
+			else
+			{
+				offset -= btTiles;
+			}
+		}
+
+		BigTriangleDepth result;
+		result.tileOffset = float(offset);
+		result.p0WSX = P0WSX[btIdx];
+		result.p0WSY = P0WSY[btIdx];
+		result.p0WSZ = P0WSZ[btIdx];
+		result.p1WSX = P1WSX[btIdx];
+		result.p1WSY = P1WSY[btIdx];
+		result.p1WSZ = P1WSZ[btIdx];
+		result.p2WSX = P2WSX[btIdx];
+		result.p2WSY = P2WSY[btIdx];
+		result.p2WSZ = P2WSZ[btIdx];
+
+		BigTriangles[BigTrianglesWriteOffset + i] = result;
 	}
 }

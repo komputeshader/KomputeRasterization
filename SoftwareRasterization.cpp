@@ -198,9 +198,17 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 		UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 		DX::Device->CreateUnorderedAccessView(
 			_bigTrianglesDepth[depthBufferIdx].Get(),
-			_bigTrianglesDepthCounters[depthBufferIdx].Get(),
+			nullptr,
 			&UAVDesc,
 			Descriptors::SV.GetCPUHandle(BigTrianglesDepthUAV + depthBufferIdx));
+
+		UAVDesc.Buffer.NumElements = 1;
+		UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
+		DX::Device->CreateUnorderedAccessView(
+			_bigTrianglesDepthCounters[depthBufferIdx].Get(),
+			nullptr,
+			&UAVDesc,
+			Descriptors::SV.GetCPUHandle(BigTrianglesDepthCounterUAV + depthBufferIdx));
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -255,9 +263,17 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 	DX::Device->CreateUnorderedAccessView(
 		_bigTrianglesOpaque.Get(),
-		_bigTrianglesOpaqueCounter.Get(),
+		nullptr,
 		&UAVDesc,
 		Descriptors::SV.GetCPUHandle(BigTrianglesOpaqueUAV));
+
+	UAVDesc.Buffer.NumElements = 1;
+	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
+	DX::Device->CreateUnorderedAccessView(
+		_bigTrianglesOpaqueCounter.Get(),
+		nullptr,
+		&UAVDesc,
+		Descriptors::SV.GetCPUHandle(BigTrianglesOpaqueCounterUAV));
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -863,7 +879,9 @@ void SoftwareRasterization::_drawDepth()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+		8, Descriptors::SV.GetGPUHandle(BigTrianglesDepthCounterUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		9, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
 	if (Settings::CullingEnabled)
 	{
@@ -945,7 +963,9 @@ void SoftwareRasterization::_drawShadows()
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + cascade));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
-			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+			8, Descriptors::SV.GetGPUHandle(BigTrianglesDepthCounterUAV + cascade));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			9, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
 		if (Settings::CullingEnabled)
 		{
@@ -1153,7 +1173,9 @@ void SoftwareRasterization::_drawOpaque()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		11, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		12, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+		12, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueCounterUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		13, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
 	if (Settings::CullingEnabled)
 	{
@@ -1740,9 +1762,9 @@ void SoftwareRasterization::_createResetBuffer()
 
 void SoftwareRasterization::_createTriangleDepthPSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[9] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[10] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[8] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[9] = {};
 
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -1791,6 +1813,12 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 		1,
 		2);
 	computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
+
+	ranges[8].Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		1,
+		3);
+	computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 	computeRootSignatureDesc.Init_1_1(
@@ -1866,9 +1894,9 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 
 void SoftwareRasterization::_createTriangleOpaquePSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[13] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[14] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[12] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[13] = {};
 
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -1941,6 +1969,12 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 		1,
 		2);
 	computeRootParameters[12].InitAsDescriptorTable(1, &ranges[11]);
+
+	ranges[12].Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		1,
+		3);
+	computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
 
 	D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
 	D3D12_STATIC_SAMPLER_DESC* pointClampSampler = &samplers[0];

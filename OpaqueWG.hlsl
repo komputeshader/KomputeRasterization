@@ -72,7 +72,7 @@ groupshared uint2 StatisticsSM;
 [Shader("node")]
 [NodeLaunch("broadcasting")]
 // TODO: fix it somehow?
-[NodeMaxDispatchGrid(10000, 1, 1)]
+[NodeMaxDispatchGrid(65535, 1, 1)]
 [numthreads(SWR_WG_TRIANGLE_THREADS_X, SWR_WG_TRIANGLE_THREADS_Y, SWR_WG_TRIANGLE_THREADS_Z)]
 void TriangleRasterizationNode(
 	DispatchNodeInputRecord<RasterizationDispatch> input,
