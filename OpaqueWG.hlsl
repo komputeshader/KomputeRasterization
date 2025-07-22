@@ -18,7 +18,10 @@ void RasterizationDispatchNode(
 	GroupNodeOutputRecords<RasterizationDispatch> output =
 		TriangleRasterizationNode.GetGroupNodeOutputRecords(1);
 
-	output[0].dispatchGrid = DispatchArgument[0];
+	output[0].dispatchGrid = uint3(
+		DispatchArgument[0].x,
+		SWR_WG_THREAD_GROUPS_Y,
+		1);
 
 	output.OutputComplete();
 }
@@ -85,15 +88,15 @@ void TriangleRasterizationNode(
 
 	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
-	//[unroll(TRIANGLES_PER_THREAD)]
-	//for (uint meshletChunkIndex = 0; meshletChunkIndex < TRIANGLES_PER_THREAD; meshletChunkIndex++)
+	//[unroll(WG_TRIANGLES_PER_THREAD)]
+	//for (uint meshletChunkIndex = 0; meshletChunkIndex < WG_TRIANGLES_PER_THREAD; meshletChunkIndex++)
 	//{
 		[branch]
-		if ((groupThreadID.x + groupID.y * SWR_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
+		if ((groupThreadID.x + groupID.y * SWR_WG_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
 		{
 			uint i0, i1, i2;
 			GetTriangleIndices(
-				Command.args.startIndexLocation + (groupThreadID.x + groupID.y * SWR_TRIANGLE_THREADS_X) * 3,
+				Command.args.startIndexLocation + (groupThreadID.x + groupID.y * SWR_WG_TRIANGLE_THREADS_X) * 3,
 				i0, i1, i2);
 
 			float3 p0, p1, p2;
@@ -425,6 +428,8 @@ void TriangleRasterizationNode(
 		}
 	//}
 
+
+	// WaveActiveSum() + WaveIsFirstLane() approach, instead of grouphared atomics, was slower
 	Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE | GROUP_SYNC);
 
 	if (groupIndex == 0)

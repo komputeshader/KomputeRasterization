@@ -307,6 +307,7 @@ void main(
 		}
 	//}
 
+	// WaveActiveSum() + WaveIsFirstLane() approach, instead of grouphared atomics, was slower
 	GroupMemoryBarrierWithGroupSync();
 
 	if (groupIndex == 0)
