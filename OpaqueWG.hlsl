@@ -220,6 +220,9 @@ void TriangleRasterizationNode(
 					{
 						result.tileOffset = offset;
 
+						// seemingly vastly inefficient way to write out that data,
+						// but the more reasonable/parallel approach isn't faster, and is in fact slower
+						// see the same code in the "experimental" branch
 						BigTriangles.Append(result);
 					}
 
