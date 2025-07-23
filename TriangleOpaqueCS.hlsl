@@ -441,6 +441,8 @@ void main(
 		InterlockedAdd(BigTrianglesCount[0], TotalTilesSM, BigTrianglesWriteOffset);
 	}
 
+	GroupMemoryBarrierWithGroupSync();
+
 	for (uint i = groupThreadID.x; i < TotalTilesSM; i += SWR_TRIANGLE_THREADS_X)
 	{
 		uint offset = i;
