@@ -5,6 +5,8 @@
 
 HWND Win32Application::m_hwnd = nullptr;
 
+#define WINDOW_FLAGS (WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_BORDER)
+
 int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 {
 	// Parse the command line parameters
@@ -30,13 +32,14 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 		static_cast<LONG>(pSample->GetWidth()),
 		static_cast<LONG>(pSample->GetHeight())
 	};
-	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+
+	AdjustWindowRect(&windowRect, WINDOW_FLAGS, FALSE);
 
 	// Create the window and store a handle to it.
 	m_hwnd = CreateWindow(
 		windowClass.lpszClassName,
 		pSample->GetTitle(),
-		WS_OVERLAPPEDWINDOW,
+		WINDOW_FLAGS,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
 		windowRect.right - windowRect.left,
