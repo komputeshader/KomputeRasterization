@@ -24,6 +24,10 @@ FrameStatistics::FrameStatistics()
 			nullptr,
 			IID_PPV_ARGS(&_queryResult[frame])));
 		NAME_D3D12_OBJECT_INDEXED(_queryResult, frame);
+		SUCCESS(_queryResult[frame]->Map(
+			0,
+			nullptr,
+			reinterpret_cast<void**>(&_queryResultData[frame])));
 	}
 }
 
@@ -33,16 +37,12 @@ void FrameStatistics::BeginMeasure(
 {
 	if (queryIndex == 0 && _hasResults[DX::FrameIndex])
 	{
-		D3D12_QUERY_DATA_PIPELINE_STATISTICS* result = nullptr;
-		SUCCESS(_queryResult[DX::FrameIndex]->Map(
-			0,
-			nullptr,
-			reinterpret_cast<void**>(&result)));
 		ZeroMemory(&_currentFrameStats, sizeof(_currentFrameStats));
 		UINT64* current = reinterpret_cast<UINT64*>(&_currentFrameStats);
 		for (int query = 0; query < 2; query++)
 		{
-			UINT64* source = reinterpret_cast<UINT64*>(&result[query]);
+			UINT64* source = reinterpret_cast<UINT64*>(
+				&_queryResultData[DX::FrameIndex][query]);
 			for (int field = 0;
 				field < sizeof(_currentFrameStats) / sizeof(UINT64);
 				field++)
@@ -50,7 +50,6 @@ void FrameStatistics::BeginMeasure(
 				current[field] += source[field];
 			}
 		}
-		_queryResult[DX::FrameIndex]->Unmap(0, nullptr);
 	}
 
 	commandList->BeginQuery(
@@ -102,6 +101,10 @@ Profiler::Profiler()
 			nullptr,
 			IID_PPV_ARGS(&_queryResult[frame])));
 		NAME_D3D12_OBJECT_INDEXED(_queryResult, frame);
+		SUCCESS(_queryResult[frame]->Map(
+			0,
+			nullptr,
+			reinterpret_cast<void**>(&_queryResultData[frame])));
 	}
 
 	ZeroMemory(
@@ -148,20 +151,21 @@ void Profiler::FinishMeasure(ID3D12GraphicsCommandList* commandList)
 		2,
 		_queryResult[DX::FrameIndex].Get(),
 		queryIndex * sizeof(size_t));
+	_hasResults[DX::FrameIndex] = true;
 }
 
 float Profiler::GetTimeMS(ID3D12CommandQueue* queue)
 {
-	size_t* result = nullptr;
-	SUCCESS(_queryResult[DX::FrameIndex]->Map(
-		0,
-		nullptr,
-		reinterpret_cast<void**>(&result)));
+	if (!_hasResults[DX::FrameIndex])
+	{
+		_profilesCount = 0;
+		return 0.0f;
+	}
+
 	memcpy(
 		_time,
-		result,
+		_queryResultData[DX::FrameIndex],
 		2 * MaxQueries * sizeof(size_t));
-	_queryResult[DX::FrameIndex]->Unmap(0, nullptr);
 
 	size_t GPUFrequency;
 	queue->GetTimestampFrequency(&GPUFrequency);

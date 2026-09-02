@@ -94,8 +94,10 @@ bool AABBVsHiZ(
 		maxP = max(maxP, cornerNDC.xyz);
 	}
 	// NDC -> DX [0,1]
-	minP.xy = minP.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-	maxP.xy = maxP.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+	float2 p0 = minP.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+	float2 p1 = maxP.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+	minP.xy = min(p0, p1);
+	maxP.xy = max(p0, p1);
 
 	float mipLevel = ceil(log2(0.5 * max(
 		(maxP.x - minP.x) * HiZResolution.x,

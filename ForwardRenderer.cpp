@@ -571,7 +571,9 @@ void ForwardRenderer::Draw()
 		_depthsFence.Get(),
 		_depthsFenceValue));
 
-	if (!perTriangleHiZRasterizationCullingEnabled)
+	if (!perTriangleHiZRasterizationCullingEnabled &&
+		(Settings::CameraHiZCullingEnabled ||
+			Settings::ShadowsHiZCullingEnabled))
 	{
 		if (Settings::CullingEnabled)
 		{
@@ -686,7 +688,11 @@ void ForwardRenderer::_generateHiZ(
 	ID3D12GraphicsCommandList* commandList,
 	bool perTriangleHiZRasterizationCullingEnabled)
 {
-	GeneratePrevFrameDepthHiZ(commandList);
+	if (Settings::CameraHiZCullingEnabled ||
+		perTriangleHiZRasterizationCullingEnabled)
+	{
+		GeneratePrevFrameDepthHiZ(commandList);
+	}
 	if (Settings::ShadowsHiZCullingEnabled ||
 		perTriangleHiZRasterizationCullingEnabled)
 	{

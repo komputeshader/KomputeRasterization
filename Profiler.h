@@ -27,6 +27,7 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> _queryHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _queryResult[DX::FramesCount];
+	D3D12_QUERY_DATA_PIPELINE_STATISTICS* _queryResultData[DX::FramesCount] = {};
 	D3D12_QUERY_DATA_PIPELINE_STATISTICS _currentFrameStats = {};
 	bool _hasResults[DX::FramesCount] = {};
 };
@@ -61,7 +62,9 @@ private:
 	unsigned int _profilesCount = 0;
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> _queryHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _queryResult[DX::FramesCount];
-	size_t _time[2 * MaxQueries];
+	size_t* _queryResultData[DX::FramesCount] = {};
+	size_t _time[2 * MaxQueries] = {};
 	float _lastFrames[FrameCountToAverage];
 	unsigned int _lastFramesIndex = 0;
+	bool _hasResults[DX::FramesCount] = {};
 };

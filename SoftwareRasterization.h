@@ -141,7 +141,9 @@ private:
 	};
 	Microsoft::WRL::ComPtr<ID3D12Resource> _trianglesStats;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _trianglesStatsReadback[DX::FramesCount];
-	int _statsResult[StatsCount];
+	unsigned int* _trianglesStatsReadbackData[DX::FramesCount] = {};
+	int _statsResult[StatsCount] = {};
+	bool _hasStatsResults[DX::FramesCount] = {};
 
 	// how much screen space area should triangle's AABB occupy to be considered "big"
 	int _bigTriangleThreshold = 4096;

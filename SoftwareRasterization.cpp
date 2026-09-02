@@ -317,6 +317,10 @@ void SoftwareRasterization::_createStatsResources()
 			nullptr,
 			IID_PPV_ARGS(&_trianglesStatsReadback[frame])));
 		NAME_D3D12_OBJECT(_trianglesStatsReadback[frame]);
+		SUCCESS(_trianglesStatsReadback[frame]->Map(
+			0,
+			nullptr,
+			reinterpret_cast<void**>(&_trianglesStatsReadbackData[frame])));
 	}
 }
 
@@ -1131,7 +1135,19 @@ void SoftwareRasterization::_drawShadowsBigTriangles()
 
 void SoftwareRasterization::_finishDepthsRendering()
 {
-	_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
+	if (Settings::CameraHiZCullingEnabled ||
+		Settings::PerTriangleHiZRasterizationCullingEnabled)
+	{
+		_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
+	}
+	else
+	{
+		CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			_depthBuffer.Get(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		COMMAND_LIST->ResourceBarrier(1, &barrier);
+	}
 
 	if (Settings::ShadowsHiZCullingEnabled ||
 		Settings::PerTriangleHiZRasterizationCullingEnabled)
@@ -1498,6 +1514,14 @@ void SoftwareRasterization::_drawOpaqueWG()
 
 void SoftwareRasterization::_endFrame()
 {
+	if (_hasStatsResults[DX::FrameIndex])
+	{
+		memcpy(
+			_statsResult,
+			_trianglesStatsReadbackData[DX::FrameIndex],
+			StatsCount * sizeof(unsigned int));
+	}
+
 	// collect statistics
 	CD3DX12_RESOURCE_BARRIER barriers[1] = {};
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -1518,17 +1542,7 @@ void SoftwareRasterization::_endFrame()
 		D3D12_RESOURCE_STATE_COPY_SOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	COMMAND_LIST->ResourceBarrier(1, barriers);
-
-	unsigned int* result = nullptr;
-	SUCCESS(_trianglesStatsReadback[DX::FrameIndex]->Map(
-		0,
-		nullptr,
-		reinterpret_cast<void**>(&result)));
-	memcpy(
-		_statsResult,
-		result,
-		StatsCount * sizeof(unsigned int));
-	_trianglesStatsReadback[DX::FrameIndex]->Unmap(0, nullptr);
+	_hasStatsResults[DX::FrameIndex] = true;
 }
 
 void SoftwareRasterization::GUINewFrame()

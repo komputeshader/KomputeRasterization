@@ -245,7 +245,10 @@ void HardwareRasterization::_drawDepth()
 		}
 	}
 
-	_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
+	if (Settings::CameraHiZCullingEnabled)
+	{
+		_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
+	}
 
 	PIXEndEvent(COMMAND_LIST.Get());
 }
