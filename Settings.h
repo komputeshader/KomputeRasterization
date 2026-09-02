@@ -23,6 +23,7 @@ public:
 	static bool FrustumCullingEnabled;
 	static bool CameraHiZCullingEnabled;
 	static bool ShadowsHiZCullingEnabled;
+	static bool PerTriangleHiZRasterizationCullingEnabled;
 	static bool ClusterBackfaceCullingEnabled;
 	static bool SWREnabled;
 	static bool SWRWGEnabled;

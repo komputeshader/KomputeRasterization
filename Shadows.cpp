@@ -212,7 +212,7 @@ void Shadows::_createPrevFrameShadowMapResources()
 
 	// mips UAVs
 	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_R32_UINT;
+	UAVDesc.Format = DXGI_FORMAT_R32_FLOAT;
 	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
 	UAVDesc.Texture2DArray.ArraySize = 1;
 	UAVDesc.Texture2DArray.PlaneSlice = 0;
@@ -246,6 +246,35 @@ void Shadows::_createPrevFrameShadowMapResources()
 				Descriptors::SV.GetCPUHandle(PrevFrameShadowMapMipsSRV + cascade * Settings::ShadowMapMipsCount + mip));
 		}
 	}
+
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		_prevFrameShadowMap.Get(),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	COMMAND_LIST->ResourceBarrier(1, &barrier);
+
+	float clearValue[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
+	{
+		for (int mip = 0; mip < Settings::ShadowMapMipsCount; mip++)
+		{
+			int descriptor = PrevFrameShadowMapMipsUAV +
+				cascade * Settings::ShadowMapMipsCount + mip;
+			COMMAND_LIST->ClearUnorderedAccessViewFloat(
+				Descriptors::SV.GetGPUHandle(descriptor),
+				Descriptors::NonSV.GetCPUHandle(descriptor),
+				_prevFrameShadowMap.Get(),
+				clearValue,
+				0,
+				nullptr);
+		}
+	}
+
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		_prevFrameShadowMap.Get(),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	COMMAND_LIST->ResourceBarrier(1, &barrier);
 }
 
 void Shadows::_createPSO()
@@ -408,11 +437,15 @@ void Shadows::PreparePrevFrameShadowMap()
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	COMMAND_LIST->ResourceBarrier(2, barriers);
+}
 
+void Shadows::GeneratePrevFrameShadowMapHiZ(
+	ID3D12GraphicsCommandList* commandList)
+{
 	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
 	{
 		Utils::GenerateHiZ(
-			COMMAND_LIST.Get(),
+			commandList,
 			_prevFrameShadowMap.Get(),
 			PrevFrameShadowMapMipsSRV + cascade * Settings::ShadowMapMipsCount,
 			PrevFrameShadowMapMipsUAV + cascade * Settings::ShadowMapMipsCount,

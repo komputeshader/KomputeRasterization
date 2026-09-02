@@ -21,7 +21,8 @@ public:
 		int height);
 	void GUINewFrame();
 	void Update();
-	void Draw();
+	void DrawDepths();
+	void DrawOpaque();
 
 	ID3D12Resource* GetRenderTarget() const { return _renderTarget.Get(); }
 

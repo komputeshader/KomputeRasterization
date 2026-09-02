@@ -260,10 +260,10 @@ void CreateCommandQueues()
 
 void CreateSyncObjects()
 {
-	FrameFenceValue = 0;
+	FrameFenceValue = 1;
 	for (int frame = 0; frame < DX::FramesCount; frame++)
 	{
-		FrameFenceValues[frame] = FrameFenceValue;
+		FrameFenceValues[frame] = 0;
 		SUCCESS(Device->CreateFence(
 			FrameFenceValues[frame],
 			D3D12_FENCE_FLAG_NONE,

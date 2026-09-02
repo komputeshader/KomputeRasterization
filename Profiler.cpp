@@ -4,7 +4,7 @@
 FrameStatistics::FrameStatistics()
 {
 	D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
-	queryHeapDesc.Count = 1;
+	queryHeapDesc.Count = 2 * DX::FramesCount;
 	queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
 	SUCCESS(DX::Device->CreateQueryHeap(
 		&queryHeapDesc,
@@ -13,50 +13,70 @@ FrameStatistics::FrameStatistics()
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
 	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
-		sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS));
-	SUCCESS(DX::Device->CreateCommittedResource(
-		&prop,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&_queryResult)));
-	NAME_D3D12_OBJECT(_queryResult);
+		2 * sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS));
+	for (int frame = 0; frame < DX::FramesCount; frame++)
+	{
+		SUCCESS(DX::Device->CreateCommittedResource(
+			&prop,
+			D3D12_HEAP_FLAG_NONE,
+			&desc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&_queryResult[frame])));
+		NAME_D3D12_OBJECT_INDEXED(_queryResult, frame);
+	}
 }
 
-void FrameStatistics::BeginMeasure(ID3D12GraphicsCommandList* commandList)
+void FrameStatistics::BeginMeasure(
+	ID3D12GraphicsCommandList* commandList,
+	unsigned int queryIndex)
 {
+	if (queryIndex == 0 && _hasResults[DX::FrameIndex])
+	{
+		D3D12_QUERY_DATA_PIPELINE_STATISTICS* result = nullptr;
+		SUCCESS(_queryResult[DX::FrameIndex]->Map(
+			0,
+			nullptr,
+			reinterpret_cast<void**>(&result)));
+		ZeroMemory(&_currentFrameStats, sizeof(_currentFrameStats));
+		UINT64* current = reinterpret_cast<UINT64*>(&_currentFrameStats);
+		for (int query = 0; query < 2; query++)
+		{
+			UINT64* source = reinterpret_cast<UINT64*>(&result[query]);
+			for (int field = 0;
+				field < sizeof(_currentFrameStats) / sizeof(UINT64);
+				field++)
+			{
+				current[field] += source[field];
+			}
+		}
+		_queryResult[DX::FrameIndex]->Unmap(0, nullptr);
+	}
+
 	commandList->BeginQuery(
 		_queryHeap.Get(),
 		D3D12_QUERY_TYPE_PIPELINE_STATISTICS,
-		0);
+		DX::FrameIndex * 2 + queryIndex);
 }
 
-void FrameStatistics::FinishMeasure(ID3D12GraphicsCommandList* commandList)
+void FrameStatistics::FinishMeasure(
+	ID3D12GraphicsCommandList* commandList,
+	unsigned int queryIndex)
 {
+	unsigned int heapIndex = DX::FrameIndex * 2 + queryIndex;
 	commandList->EndQuery(
 		_queryHeap.Get(),
 		D3D12_QUERY_TYPE_PIPELINE_STATISTICS,
-		0);
+		heapIndex);
 
 	commandList->ResolveQueryData(
 		_queryHeap.Get(),
 		D3D12_QUERY_TYPE_PIPELINE_STATISTICS,
-		0,
+		heapIndex,
 		1,
-		_queryResult.Get(),
-		0);
-
-	unsigned char* result = nullptr;
-	SUCCESS(_queryResult->Map(
-		0,
-		nullptr,
-		reinterpret_cast<void**>(&result)));
-	memcpy(
-		&_currentFrameStats,
-		result,
-		sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS));
-	_queryResult->Unmap(0, nullptr);
+		_queryResult[DX::FrameIndex].Get(),
+		queryIndex * sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS));
+	_hasResults[DX::FrameIndex] = true;
 }
 
 Profiler::Profiler()

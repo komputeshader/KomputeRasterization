@@ -166,11 +166,16 @@ void HardwareRasterization::Update()
 		sizeof(SceneCB));
 }
 
-void HardwareRasterization::Draw(ID3D12Resource* renderTarget)
+void HardwareRasterization::DrawDepths()
 {
 	_beginFrame();
 	_drawDepth();
 	_drawShadows();
+}
+
+void HardwareRasterization::DrawOpaque(ID3D12Resource* renderTarget)
+{
+	_beginFrame();
 	_drawOpaque(renderTarget);
 	_endFrame();
 }

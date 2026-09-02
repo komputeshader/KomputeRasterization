@@ -28,6 +28,7 @@ public:
 	virtual void KeyPressed(unsigned char key);
 
 	void PreparePrevFrameDepth(ID3D12Resource* depth);
+	void GeneratePrevFrameDepthHiZ(ID3D12GraphicsCommandList* commandList);
 	ID3D12Resource* GetCulledCommands(int frame, int frustum)
 	{
 		assert(frame >= 0);
@@ -60,7 +61,11 @@ private:
 	void _destroyGUI();
 
 	void _beginFrameRendering();
+	void _beginOpaqueRendering();
 	void _finishFrameRendering();
+	void _generateHiZ(
+		ID3D12GraphicsCommandList* commandList,
+		bool perTriangleHiZRasterizationCullingEnabled);
 	void _rasterizerSwitch();
 	void _softwareRasterization();
 
@@ -68,6 +73,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> _renderTargets[DX::FramesCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> _visibleInstances[DX::FramesCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> _prevFrameDepthBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Fence> _depthsFence;
+	size_t _depthsFenceValue = 0;
 	// per frame granularity for async compute and graphics work
 	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommands[DX::FramesCount][MAX_FRUSTUMS_COUNT];
 	// first 4 bytes used as a counter

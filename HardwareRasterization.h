@@ -20,7 +20,8 @@ public:
 		ForwardRenderer* renderer,
 		int width,
 		int height);
-	void Draw(ID3D12Resource* renderTarget);
+	void DrawDepths();
+	void DrawOpaque(ID3D12Resource* renderTarget);
 	void Update();
 
 private:

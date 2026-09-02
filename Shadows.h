@@ -16,6 +16,7 @@ public:
 	void Initialize();
 	void Update();
 	void PreparePrevFrameShadowMap();
+	void GeneratePrevFrameShadowMapHiZ(ID3D12GraphicsCommandList* commandList);
 
 	void GUINewFrame();
 

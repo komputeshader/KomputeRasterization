@@ -26,6 +26,8 @@ void ForwardRenderer::Initialize()
 
 	_createSwapChain();
 	_createDescriptorHeaps();
+	ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
+	COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	_createFrameResources();
 
 	Scene::PlantScene.LoadPlant();
@@ -46,6 +48,11 @@ void ForwardRenderer::Initialize()
 	_SWR->Resize(this, _width, _height);
 
 	Shadows::Sun.Initialize();
+	SUCCESS(DX::Device->CreateFence(
+		0,
+		D3D12_FENCE_FLAG_NONE,
+		IID_PPV_ARGS(&_depthsFence)));
+	NAME_D3D12_OBJECT(_depthsFence);
 
 	_stats = std::make_unique<decltype(_stats)::element_type>();
 	_profiler = std::make_unique<decltype(_profiler)::element_type>();
@@ -349,6 +356,30 @@ void ForwardRenderer::_createDepthBufferResources()
 		_prevFrameDepthBuffer.Get(),
 		&depthSRV,
 		Descriptors::SV.GetCPUHandle(PrevFrameDepthSRV));
+
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		_prevFrameDepthBuffer.Get(),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	COMMAND_LIST->ResourceBarrier(1, &barrier);
+
+	float clearValue[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	for (int mip = 0; mip < Settings::BackBufferMipsCount; mip++)
+	{
+		COMMAND_LIST->ClearUnorderedAccessViewFloat(
+			Descriptors::SV.GetGPUHandle(PrevFrameDepthMipsUAV + mip),
+			Descriptors::NonSV.GetCPUHandle(PrevFrameDepthMipsUAV + mip),
+			_prevFrameDepthBuffer.Get(),
+			clearValue,
+			0,
+			nullptr);
+	}
+
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		_prevFrameDepthBuffer.Get(),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	COMMAND_LIST->ResourceBarrier(1, &barrier);
 }
 
 void ForwardRenderer::PreparePrevFrameDepth(ID3D12Resource* depth)
@@ -410,9 +441,13 @@ void ForwardRenderer::PreparePrevFrameDepth(ID3D12Resource* depth)
 			D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 	COMMAND_LIST->ResourceBarrier(2, barriers);
+}
 
+void ForwardRenderer::GeneratePrevFrameDepthHiZ(
+	ID3D12GraphicsCommandList* commandList)
+{
 	Utils::GenerateHiZ(
-		COMMAND_LIST.Get(),
+		commandList,
 		_prevFrameDepthBuffer.Get(),
 		PrevFrameDepthMipsSRV,
 		PrevFrameDepthMipsUAV,
@@ -434,7 +469,6 @@ void ForwardRenderer::Update()
 
 	_culler->Update();
 	_HWR->Update();
-	_SWR->Update();
 
 	PIXEndEvent();
 }
@@ -450,9 +484,17 @@ void ForwardRenderer::Draw()
 	{
 		_SWR->GUINewFrame();
 	}
+	_SWR->Update();
+	bool perTriangleHiZRasterizationCullingEnabled =
+		Settings::SWREnabled &&
+		Settings::PerTriangleHiZRasterizationCullingEnabled;
 
 	if (Settings::CullingEnabled)
 	{
+		DX::WaitForFence(
+			DX::ComputeFences[DX::FrameIndex].Get(),
+			DX::ComputeFenceValues[DX::FrameIndex],
+			DX::ComputeFenceEvents[DX::FrameIndex]);
 		SUCCESS(DX::ComputeCommandAllocators[DX::FrameIndex]->Reset());
 		SUCCESS(COMPUTE_COMMAND_LIST->Reset(
 			DX::ComputeCommandAllocators[DX::FrameIndex].Get(),
@@ -461,6 +503,9 @@ void ForwardRenderer::Draw()
 
 		ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
 		COMPUTE_COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		DX::ComputeCommandQueue->Wait(
+			_depthsFence.Get(),
+			_depthsFenceValue);
 
 		if (!Settings::FreezeCulling)
 		{
@@ -477,7 +522,7 @@ void ForwardRenderer::Draw()
 		ID3D12CommandList* ppCommandLists[] = { COMPUTE_COMMAND_LIST.Get() };
 		DX::ComputeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-		DX::ComputeFenceValues[DX::FrameIndex] = DX::ComputeFenceValue;
+		DX::ComputeFenceValues[DX::FrameIndex] = DX::ComputeFenceValue++;
 		DX::ComputeCommandQueue->Signal(
 			DX::ComputeFences[DX::FrameIndex].Get(),
 			DX::ComputeFenceValues[DX::FrameIndex]);
@@ -486,21 +531,97 @@ void ForwardRenderer::Draw()
 		DX::CommandQueue->Wait(
 			DX::ComputeFences[DX::FrameIndex].Get(),
 			DX::ComputeFenceValues[DX::FrameIndex]);
-		DX::ComputeFenceValue++;
+	}
+	else
+	{
+		DX::CommandQueue->Wait(
+			DX::ComputeFences[DX::LastFrameIndex].Get(),
+			DX::ComputeFenceValues[DX::LastFrameIndex]);
 	}
 
 	_beginFrameRendering();
 
-	_stats->BeginMeasure(COMMAND_LIST.Get());
+	_stats->BeginMeasure(COMMAND_LIST.Get(), 0);
+	if (Settings::SWREnabled)
+	{
+		_SWR->DrawDepths();
+	}
+	else
+	{
+		_HWR->DrawDepths();
+	}
+
+	if (perTriangleHiZRasterizationCullingEnabled)
+	{
+		_generateHiZ(
+			COMMAND_LIST.Get(),
+			perTriangleHiZRasterizationCullingEnabled);
+	}
+	_stats->FinishMeasure(COMMAND_LIST.Get(), 0);
+
+	SUCCESS(COMMAND_LIST->Close());
+	ID3D12CommandList* ppDepthCommandLists[] = { COMMAND_LIST.Get() };
+	DX::CommandQueue->ExecuteCommandLists(
+		_countof(ppDepthCommandLists),
+		ppDepthCommandLists);
+	_depthsFenceValue++;
+	SUCCESS(DX::CommandQueue->Signal(
+		_depthsFence.Get(),
+		_depthsFenceValue));
+
+	if (!perTriangleHiZRasterizationCullingEnabled)
+	{
+		if (Settings::CullingEnabled)
+		{
+			SUCCESS(COMPUTE_COMMAND_LIST->Reset(
+				DX::ComputeCommandAllocators[DX::FrameIndex].Get(),
+				nullptr));
+		}
+		else
+		{
+			DX::WaitForFence(
+				DX::ComputeFences[DX::FrameIndex].Get(),
+				DX::ComputeFenceValues[DX::FrameIndex],
+				DX::ComputeFenceEvents[DX::FrameIndex]);
+			SUCCESS(DX::ComputeCommandAllocators[DX::FrameIndex]->Reset());
+			SUCCESS(COMPUTE_COMMAND_LIST->Reset(
+				DX::ComputeCommandAllocators[DX::FrameIndex].Get(),
+				nullptr));
+		}
+
+		ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
+		COMPUTE_COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		_generateHiZ(
+			COMPUTE_COMMAND_LIST.Get(),
+			perTriangleHiZRasterizationCullingEnabled);
+		SUCCESS(COMPUTE_COMMAND_LIST->Close());
+
+		DX::ComputeCommandQueue->Wait(
+			_depthsFence.Get(),
+			_depthsFenceValue);
+		ID3D12CommandList* ppHiZCommandLists[] = { COMPUTE_COMMAND_LIST.Get() };
+		DX::ComputeCommandQueue->ExecuteCommandLists(
+			_countof(ppHiZCommandLists),
+			ppHiZCommandLists);
+
+		DX::ComputeFenceValues[DX::FrameIndex] = DX::ComputeFenceValue++;
+		SUCCESS(DX::ComputeCommandQueue->Signal(
+			DX::ComputeFences[DX::FrameIndex].Get(),
+			DX::ComputeFenceValues[DX::FrameIndex]));
+	}
+
+	_beginOpaqueRendering();
+	_stats->BeginMeasure(COMMAND_LIST.Get(), 1);
+
 	if (Settings::SWREnabled)
 	{
 		_softwareRasterization();
 	}
 	else
 	{
-		_HWR->Draw(_renderTargets[DX::FrameIndex].Get());
+		_HWR->DrawOpaque(_renderTargets[DX::FrameIndex].Get());
 	}
-	_stats->FinishMeasure(COMMAND_LIST.Get());
+	_stats->FinishMeasure(COMMAND_LIST.Get(), 1);
 
 	_drawGUI();
 	_finishFrameRendering();
@@ -551,6 +672,26 @@ void ForwardRenderer::_beginFrameRendering()
 	COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 }
 
+void ForwardRenderer::_beginOpaqueRendering()
+{
+	SUCCESS(COMMAND_LIST->Reset(DX::CommandAllocators[DX::FrameIndex].Get(), nullptr));
+
+	ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
+	COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+}
+
+void ForwardRenderer::_generateHiZ(
+	ID3D12GraphicsCommandList* commandList,
+	bool perTriangleHiZRasterizationCullingEnabled)
+{
+	GeneratePrevFrameDepthHiZ(commandList);
+	if (Settings::ShadowsHiZCullingEnabled ||
+		perTriangleHiZRasterizationCullingEnabled)
+	{
+		Shadows::Sun.GeneratePrevFrameShadowMapHiZ(commandList);
+	}
+}
+
 void ForwardRenderer::_finishFrameRendering()
 {
 	CD3DX12_RESOURCE_BARRIER barriers[] =
@@ -568,7 +709,7 @@ void ForwardRenderer::_finishFrameRendering()
 
 void ForwardRenderer::_softwareRasterization()
 {
-	_SWR->Draw();
+	_SWR->DrawOpaque();
 
 	auto result = _SWR->GetRenderTarget();
 
@@ -889,6 +1030,10 @@ void ForwardRenderer::_newFrameGUI()
 		ImGui::Checkbox(
 			"Enable Shadows Hi-Z Culling",
 			&Settings::ShadowsHiZCullingEnabled);
+
+		ImGui::Checkbox(
+			"Per-triangle Hi-Z Rasterization Culling",
+			&Settings::PerTriangleHiZRasterizationCullingEnabled);
 
 		if (!Settings::FrustumCullingEnabled
 			&& !Settings::CameraHiZCullingEnabled

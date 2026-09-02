@@ -11,8 +11,12 @@ public:
 	FrameStatistics(const FrameStatistics&) = delete;
 	FrameStatistics& operator=(const FrameStatistics&) = delete;
 
-	void BeginMeasure(ID3D12GraphicsCommandList* commandList);
-	void FinishMeasure(ID3D12GraphicsCommandList* commandList);
+	void BeginMeasure(
+		ID3D12GraphicsCommandList* commandList,
+		unsigned int queryIndex);
+	void FinishMeasure(
+		ID3D12GraphicsCommandList* commandList,
+		unsigned int queryIndex);
 
 	const D3D12_QUERY_DATA_PIPELINE_STATISTICS& GetStats() const
 	{
@@ -22,8 +26,9 @@ public:
 private:
 
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> _queryHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource> _queryResult;
-	D3D12_QUERY_DATA_PIPELINE_STATISTICS _currentFrameStats;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _queryResult[DX::FramesCount];
+	D3D12_QUERY_DATA_PIPELINE_STATISTICS _currentFrameStats = {};
+	bool _hasResults[DX::FramesCount] = {};
 };
 
 class Profiler

@@ -36,13 +36,17 @@ cbuffer DepthSceneCB : register(b0)
 	int UseTopLeftRule;
 	int ScanlineRasterization;
 	uint TotalTriangles;
+	int PerTriangleHiZRasterizationCullingEnabled;
 };
+
+SamplerState DepthSampler : register(s0);
 
 StructuredBuffer<VertexPosition> Positions : register(t10);
 
 StructuredBuffer<IndirectCommand> Commands : register(t20);
 StructuredBuffer<uint> Indices : register(t21);
 StructuredBuffer<Instance> Instances : register(t22);
+Texture2D HiZ : register(t23);
 
 RWTexture2D<uint> Depth : register(u0);
 AppendStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
@@ -152,16 +156,19 @@ void TriangleRasterizationNode(
 				float2 dimensions = maxP.xy - minP.xy;
 
 				// Hi-Z
-				//float mipLevel = ceil(log2(0.5 * max(dimensions.x, dimensions.y)));
-				//float tileDepth = HiZ.SampleLevel(
-				//	DepthSampler,
-				//	(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
-				//	mipLevel).r;
-				//[branch]
-				//if (tileDepth > maxP.z)
-				//{
-				//	continue;
-				//}
+				if (PerTriangleHiZRasterizationCullingEnabled)
+				{
+					float mipLevel = ceil(log2(0.5 * max(dimensions.x, dimensions.y)));
+					float tileDepth = HiZ.SampleLevel(
+						DepthSampler,
+						(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
+						mipLevel).r;
+					[branch]
+					if (tileDepth > maxP.z)
+					{
+						continue;
+					}
+				}
 
 				// one more triangle was rendered
 				// not precise, though, since it still could miss any pixel centers

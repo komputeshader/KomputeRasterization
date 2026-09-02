@@ -16,7 +16,8 @@ struct SWRDepthSceneCB
 	int useTopLeftRule;
 	int scanlineRasterization;
 	unsigned int totalTriangles;
-	int pad[39];
+	int perTriangleHiZRasterizationCullingEnabled;
+	int pad[38];
 };
 static_assert(
 	(sizeof(SWRDepthSceneCB) % 256) == 0,
@@ -40,7 +41,8 @@ struct SWRSceneCB
 	int scanlineRasterization;
 	float shadowsDistance;
 	unsigned int totalTriangles;
-	int pad1[15];
+	int perTriangleHiZRasterizationCullingEnabled;
+	int pad1[14];
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
@@ -352,9 +354,9 @@ void SoftwareRasterization::_createDepthWGResources()
 	lib->SetDXILLibrary(&libraryCode);
 
 	{
-		CD3DX12_ROOT_PARAMETER1 computeRootParameters[9] = {};
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[10] = {};
 		computeRootParameters[0].InitAsConstantBufferView(0);
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[8] = {};
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[9] = {};
 
 		ranges[0].Init(
 			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -404,10 +406,18 @@ void SoftwareRasterization::_createDepthWGResources()
 			2);
 		computeRootParameters[8].InitAsDescriptorTable(1, &ranges[7]);
 
+		ranges[8].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			23);
+		computeRootParameters[9].InitAsDescriptorTable(1, &ranges[8]);
+
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 		computeRootSignatureDesc.Init_1_1(
 			_countof(computeRootParameters),
-			computeRootParameters);
+			computeRootParameters,
+			1,
+			&Utils::HiZSamplerDesc);
 
 		Utils::CreateRS(computeRootSignatureDesc, _depthWGRS);
 		NAME_D3D12_OBJECT(_depthWGRS);
@@ -558,27 +568,37 @@ void SoftwareRasterization::_createOpaqueWGResources()
 			2);
 		computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
 
-		D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
-		pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		pointClampSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler.MipLODBias = 0;
-		pointClampSampler.MaxAnisotropy = 0;
-		pointClampSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		pointClampSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		pointClampSampler.MinLOD = 0.0f;
-		pointClampSampler.MaxLOD = D3D12_FLOAT32_MAX;
-		pointClampSampler.ShaderRegister = 0;
-		pointClampSampler.RegisterSpace = 0;
-		pointClampSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
+		D3D12_STATIC_SAMPLER_DESC* pointClampSampler = &samplers[0];
+		pointClampSampler->Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		pointClampSampler->AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler->AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler->AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pointClampSampler->MipLODBias = 0;
+		pointClampSampler->MaxAnisotropy = 0;
+		pointClampSampler->ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		pointClampSampler->BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		pointClampSampler->MinLOD = 0.0f;
+		pointClampSampler->MaxLOD = D3D12_FLOAT32_MAX;
+		pointClampSampler->ShaderRegister = 0;
+		pointClampSampler->RegisterSpace = 0;
+		pointClampSampler->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		D3D12_STATIC_SAMPLER_DESC* depthSampler = &samplers[1];
+		samplers[1] = samplers[0];
+		depthSampler->Filter = Utils::HiZSamplerDesc.Filter;
+		depthSampler->AddressU = Utils::HiZSamplerDesc.AddressU;
+		depthSampler->AddressV = Utils::HiZSamplerDesc.AddressV;
+		depthSampler->AddressW = Utils::HiZSamplerDesc.AddressW;
+		depthSampler->BorderColor = Utils::HiZSamplerDesc.BorderColor;
+		depthSampler->ShaderRegister = 1;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 		computeRootSignatureDesc.Init_1_1(
 			_countof(computeRootParameters),
 			computeRootParameters,
-			1,
-			&pointClampSampler);
+			_countof(samplers),
+			samplers);
 
 		Utils::CreateRS(computeRootSignatureDesc, _opaqueWGRS);
 		NAME_D3D12_OBJECT(_opaqueWGRS);
@@ -651,6 +671,8 @@ void SoftwareRasterization::Update()
 	depthData.useTopLeftRule = _useTopLeftRule ? 1 : 0;
 	depthData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	depthData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
+	depthData.perTriangleHiZRasterizationCullingEnabled =
+		Settings::PerTriangleHiZRasterizationCullingEnabled ? 1 : 0;
 	memcpy(
 		_depthSceneCBData + DX::FrameIndex * _depthSceneCBFrameSize,
 		&depthData,
@@ -701,6 +723,8 @@ void SoftwareRasterization::Update()
 	sceneData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	sceneData.shadowsDistance = Shadows::Sun.GetShadowDistance();
 	sceneData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
+	sceneData.perTriangleHiZRasterizationCullingEnabled =
+		Settings::PerTriangleHiZRasterizationCullingEnabled ? 1 : 0;
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		sceneData.cascadeVP[cascade] = Shadows::Sun.GetCascadeVP(cascade);
@@ -714,7 +738,7 @@ void SoftwareRasterization::Update()
 		sizeof(SWRSceneCB));
 }
 
-void SoftwareRasterization::Draw()
+void SoftwareRasterization::DrawDepths()
 {
 	if (Settings::SWRWGEnabled)
 	{
@@ -725,8 +749,6 @@ void SoftwareRasterization::Draw()
 		_drawDepthBigTriangles();
 		_drawShadowsBigTriangles();
 		_finishDepthsRendering();
-		_drawOpaqueWG();
-		_endFrame();
 #endif
 	}
 	else
@@ -737,6 +759,20 @@ void SoftwareRasterization::Draw()
 		_drawDepthBigTriangles();
 		_drawShadowsBigTriangles();
 		_finishDepthsRendering();
+	}
+}
+
+void SoftwareRasterization::DrawOpaque()
+{
+	if (Settings::SWRWGEnabled)
+	{
+#ifdef USE_WORK_GRAPHS
+		_drawOpaqueWG();
+		_endFrame();
+#endif
+	}
+	else
+	{
 		_drawOpaque();
 		_endFrame();
 	}
@@ -1097,7 +1133,8 @@ void SoftwareRasterization::_finishDepthsRendering()
 {
 	_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
 
-	if (Settings::ShadowsHiZCullingEnabled)
+	if (Settings::ShadowsHiZCullingEnabled ||
+		Settings::PerTriangleHiZRasterizationCullingEnabled)
 	{
 		Shadows::Sun.PreparePrevFrameShadowMap();
 	}
@@ -1140,10 +1177,11 @@ void SoftwareRasterization::_drawOpaque()
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
-	// misleading naming, actually, at this point in time, it is
-	// current frame depth with Hi-Z mipchain
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		7, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
+		7,
+		Settings::PerTriangleHiZRasterizationCullingEnabled
+		? Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV)
+		: Descriptors::SV.GetGPUHandle(SWRDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1258,6 +1296,8 @@ void SoftwareRasterization::_drawDepthWG()
 		7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + frustumIndex));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		9, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
 
 	ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
 
@@ -1324,6 +1364,8 @@ void SoftwareRasterization::_drawShadowsWG()
 			7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + cascade));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+		COMMAND_LIST->SetComputeRootDescriptorTable(
+			9, Descriptors::SV.GetGPUHandle(PrevFrameShadowMapSRV + cascade - 1));
 
 		ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
 
@@ -1387,10 +1429,11 @@ void SoftwareRasterization::_drawOpaqueWG()
 		Settings::CullingEnabled
 		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
 		: Scene::CurrentScene->instancesGPU.GetSRV());
-	// misleading naming, actually, at this point in time, it is
-	// current frame depth with Hi-Z mipchain
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		9, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
+		9,
+		Settings::PerTriangleHiZRasterizationCullingEnabled
+		? Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV)
+		: Descriptors::SV.GetGPUHandle(SWRDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		10, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(

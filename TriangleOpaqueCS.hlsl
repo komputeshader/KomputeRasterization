@@ -22,6 +22,7 @@ cbuffer SceneCB : register(b0)
 	int ScanlineRasterization;
 	float ShadowsDistance;
 	uint TotalTriangles;
+	int PerTriangleHiZRasterizationCullingEnabled;
 };
 
 SamplerState PointClampSampler : register(s0);
@@ -147,16 +148,19 @@ void main(
 				float2 dimensions = maxP.xy - minP.xy;
 
 				// Hi-Z
-				//float mipLevel = ceil(log2(0.5 * max(dimensions.x, dimensions.y)));
-				//float tileDepth = Depth.SampleLevel(
-				//	DepthSampler,
-				//	(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
-				//	mipLevel).r;
-				//[branch]
-				//if (tileDepth > maxP.z)
-				//{
-				//	continue;
-				//}
+				if (PerTriangleHiZRasterizationCullingEnabled)
+				{
+					float mipLevel = ceil(log2(0.5 * max(dimensions.x, dimensions.y)));
+					float tileDepth = Depth.SampleLevel(
+						DepthSampler,
+						(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
+						mipLevel).r;
+					[branch]
+					if (tileDepth > maxP.z)
+					{
+						continue;
+					}
+				}
 
 				// one more triangle was rendered
 				// not precise, though, since it still could miss any pixel centers
