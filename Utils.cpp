@@ -371,7 +371,6 @@ void CreateRS(
 	if (error)
 	{
 		OutputDebugStringA(reinterpret_cast<const char*>(error->GetBufferPointer()));
-		error->Release();
 	}
 	SUCCESS(hr);
 	SUCCESS(DX::Device->CreateRootSignature(

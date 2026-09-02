@@ -67,6 +67,8 @@ void ForwardRenderer::Initialize()
 	DX::UploadFenceValue = 1;
 	DX::CommandQueue->Signal(DX::UploadFence.Get(), DX::UploadFenceValue);
 	DX::WaitForFence(DX::UploadFence.Get(), DX::UploadFenceValue, DX::UploadFenceEvent);
+	CloseHandle(DX::UploadFenceEvent);
+	DX::UploadFenceEvent = nullptr;
 
 	_timer.Reset();
 }
@@ -1031,9 +1033,12 @@ void ForwardRenderer::_newFrameGUI()
 			"Enable Shadows Hi-Z Culling",
 			&Settings::ShadowsHiZCullingEnabled);
 
-		ImGui::Checkbox(
-			"Per-triangle Hi-Z Rasterization Culling",
-			&Settings::PerTriangleHiZRasterizationCullingEnabled);
+		if (Settings::SWREnabled)
+		{
+			ImGui::Checkbox(
+				"Per-triangle Hi-Z Rasterization Culling",
+				&Settings::PerTriangleHiZRasterizationCullingEnabled);
+		}
 
 		if (!Settings::FrustumCullingEnabled
 			&& !Settings::CameraHiZCullingEnabled
