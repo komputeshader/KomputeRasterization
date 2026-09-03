@@ -1,20 +1,22 @@
-# Set the default behavior, in case people don't have core.autocrlf set.
+# Set the default behavior for files without an explicit rule.
 * text=auto
 
-# Explicitly declare text files you want to always be normalized and converted
-# to native line endings on checkout.
-*.gitattributes text
-*.gitignore text
-*.gitmodules text
-*.md text
-*.txt text
-*.c text
-*.h text
-*.cpp text
-*.hpp text
-*.hlsl text
+# Normalize text files in Git and use CRLF in the working tree.
+*.gitattributes text eol=crlf
+*.editorconfig text eol=crlf
+*.gitignore text eol=crlf
+*.gitmodules text eol=crlf
+*.config text eol=crlf
+*.md text eol=crlf
+*.txt text eol=crlf
+*.c text eol=crlf
+*.h text eol=crlf
+*.cpp text eol=crlf
+*.hpp text eol=crlf
+*.hlsl text eol=crlf
+*.hlsli text eol=crlf
+LICENSE text eol=crlf
 
-# Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf
 *.vcxproj* text eol=crlf
 *.bat text eol=crlf

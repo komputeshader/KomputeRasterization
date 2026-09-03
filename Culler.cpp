@@ -144,6 +144,9 @@ void Culler::Cull(
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS cbAdress = _cullingCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(CullingCB);
+	D3D12_RESOURCE_STATES culledCommandsReadState =
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
 	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
 	{
@@ -154,9 +157,7 @@ void Culler::Cull(
 		barriers[2 * frustum + 1] =
 			CD3DX12_RESOURCE_BARRIER::Transition(
 				culledCommands[frustum].Get(),
-				Settings::SWREnabled
-				? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-				: D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+				culledCommandsReadState,
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	}
 	barriers[_countof(barriers) - 2] =
@@ -236,9 +237,7 @@ void Culler::Cull(
 		barriers[2 * frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
 			culledCommands[frustum].Get(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-			Settings::SWREnabled
-			? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-			: D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+			culledCommandsReadState);
 		barriers[2 * frustum + 1] =
 			CD3DX12_RESOURCE_BARRIER::Transition(
 				culledCommandsCounters[frustum].Get(),

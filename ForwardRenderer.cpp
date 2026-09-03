@@ -190,6 +190,9 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 
 void ForwardRenderer::_createCulledCommandsBuffers()
 {
+	D3D12_RESOURCE_STATES culledCommandsReadState =
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 	CD3DX12_RESOURCE_DESC commandBufferDesc =
 		CD3DX12_RESOURCE_DESC::Buffer(
 			Scene::MaxSceneMeshesMetaCount * sizeof(IndirectCommand),
@@ -241,9 +244,7 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				&prop,
 				D3D12_HEAP_FLAG_NONE,
 				&commandBufferDesc,
-				Settings::SWREnabled
-				? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-				: D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+				culledCommandsReadState,
 				nullptr,
 				IID_PPV_ARGS(&_culledCommands[frame][frustum])));
 			SetNameIndexed(
@@ -448,14 +449,18 @@ void ForwardRenderer::Draw()
 
 	// GUI
 	_newFrameGUI();
+	bool softwareRasterizationEnabled = Settings::SWREnabled;
+	bool asyncComputeEnabled =
+		!softwareRasterizationEnabled &&
+		Settings::AsyncComputeEnabled;
 	Shadows::Sun.GUINewFrame();
-	if (Settings::SWREnabled)
+	if (softwareRasterizationEnabled)
 	{
 		_SWR->GUINewFrame();
 	}
 	_SWR->Update();
 	bool perTriangleHiZRasterizationCullingEnabled =
-		Settings::SWREnabled &&
+		softwareRasterizationEnabled &&
 		Settings::PerTriangleHiZRasterizationCullingEnabled;
 
 	if (Settings::CullingEnabled)
@@ -511,7 +516,7 @@ void ForwardRenderer::Draw()
 	_beginFrameRendering();
 
 	_stats->BeginMeasure(COMMAND_LIST.Get(), 0);
-	if (Settings::SWREnabled)
+	if (softwareRasterizationEnabled)
 	{
 		_SWR->DrawDepths();
 	}
@@ -520,7 +525,7 @@ void ForwardRenderer::Draw()
 		_HWR->DrawDepths();
 	}
 
-	if (perTriangleHiZRasterizationCullingEnabled)
+	if (!asyncComputeEnabled)
 	{
 		_generateHiZ(
 			COMMAND_LIST.Get(),
@@ -528,17 +533,20 @@ void ForwardRenderer::Draw()
 	}
 	_stats->FinishMeasure(COMMAND_LIST.Get(), 0);
 
-	SUCCESS(COMMAND_LIST->Close());
-	ID3D12CommandList* ppDepthCommandLists[] = { COMMAND_LIST.Get() };
-	DX::CommandQueue->ExecuteCommandLists(
-		_countof(ppDepthCommandLists),
-		ppDepthCommandLists);
-	_depthsFenceValue++;
-	SUCCESS(DX::CommandQueue->Signal(
-		_depthsFence.Get(),
-		_depthsFenceValue));
+	if (asyncComputeEnabled)
+	{
+		SUCCESS(COMMAND_LIST->Close());
+		ID3D12CommandList* ppDepthCommandLists[] = { COMMAND_LIST.Get() };
+		DX::CommandQueue->ExecuteCommandLists(
+			_countof(ppDepthCommandLists),
+			ppDepthCommandLists);
+		_depthsFenceValue++;
+		SUCCESS(DX::CommandQueue->Signal(
+			_depthsFence.Get(),
+			_depthsFenceValue));
+	}
 
-	if (!perTriangleHiZRasterizationCullingEnabled &&
+	if (asyncComputeEnabled &&
 		(Settings::CameraHiZCullingEnabled ||
 			Settings::ShadowsHiZCullingEnabled))
 	{
@@ -581,10 +589,14 @@ void ForwardRenderer::Draw()
 			DX::ComputeFenceValues[DX::FrameIndex]));
 	}
 
-	_beginOpaqueRendering();
+	if (asyncComputeEnabled)
+	{
+		_beginOpaqueRendering();
+	}
+
 	_stats->BeginMeasure(COMMAND_LIST.Get(), 1);
 
-	if (Settings::SWREnabled)
+	if (softwareRasterizationEnabled)
 	{
 		_softwareRasterization();
 	}
@@ -599,6 +611,13 @@ void ForwardRenderer::Draw()
 
 	ID3D12CommandList* ppCommandLists[] = { COMMAND_LIST.Get() };
 	DX::CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+	if (!asyncComputeEnabled)
+	{
+		_depthsFenceValue++;
+		SUCCESS(DX::CommandQueue->Signal(
+			_depthsFence.Get(),
+			_depthsFenceValue));
+	}
 
 	SUCCESS(_swapChain->Present(0, 0));
 
@@ -984,6 +1003,10 @@ void ForwardRenderer::_newFrameGUI()
 		if (Settings::SWREnabled)
 		{
 			ImGui::Checkbox("Use Work Graphs", &Settings::SWRWGEnabled);
+		}
+		else
+		{
+			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
 		}
 
 		ImGui::Checkbox(
