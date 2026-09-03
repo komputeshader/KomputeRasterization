@@ -69,7 +69,8 @@ namespace
 	ProcessedOBJShape ProcessOBJShape(
 		const rapidobj::Shape& shape,
 		const rapidobj::Attributes& attributes,
-		float scale)
+		float scale,
+		float rotationYRadians)
 	{
 		ProcessedOBJShape result;
 		const size_t indexCount = shape.mesh.indices.size();
@@ -87,8 +88,8 @@ namespace
 		std::vector<VertexUV> packedTexcoords;
 
 		{
-			// OBJ indexes positions, normals and UVs independently. Weld those
-			// index triplets first so attributes are expanded only for unique vertices.
+			const XMMATRIX rotation = XMMatrixRotationY(rotationYRadians);
+
 			std::vector<unsigned int> remap(indexCount);
 			const size_t vertexCount = meshopt_generateVertexRemap(
 				remap.data(),
@@ -125,6 +126,9 @@ namespace
 					attributes.positions[positionOffset + 1] * scale,
 					attributes.positions[positionOffset + 2] * scale
 				};
+				XMStoreFloat3(
+					&position,
+					XMVector3TransformCoord(XMLoadFloat3(&position), rotation));
 				positions[vertex] = position;
 				shapeMin = XMVectorMin(shapeMin, XMLoadFloat3(&position));
 				shapeMax = XMVectorMax(shapeMax, XMLoadFloat3(&position));
@@ -139,7 +143,9 @@ namespace
 						attributes.normals[normalOffset + 1],
 						attributes.normals[normalOffset + 2]
 					};
-					XMStoreFloat3(&normal, XMVector3Normalize(XMLoadFloat3(&normal)));
+					XMStoreFloat3(
+						&normal,
+						XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&normal), rotation)));
 				}
 				packedNormals[vertex].packedNormal = PackNormal(normal);
 
@@ -174,8 +180,6 @@ namespace
 			MeshletMaxVertices,
 			MeshletMaxTriangles);
 		std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
-		// A meshlet cannot contain more vertex references or triangle bytes
-		// than there are source corner indices.
 		std::vector<unsigned int> meshletVertices(indexCount);
 		std::vector<unsigned char> meshletTriangles(indexCount);
 
@@ -236,8 +240,6 @@ namespace
 		}
 		ASSERT(outputIndexOffset == indexCount)
 
-		// Meshlet construction establishes the final triangle order. Reorder all
-		// deinterleaved vertex streams against that order to minimize fetch misses.
 		std::vector<unsigned int> vertexFetchRemap(vertexCount);
 		const size_t finalVertexCount = meshopt_optimizeVertexFetchRemap(
 			vertexFetchRemap.data(),
@@ -336,7 +338,7 @@ void Scene::LoadPlant()
 
 	lightDirection = { 1.0f, 1.0f, 1.0f };
 
-	_loadObj("powerplant//powerplant.obj", 0.0f, 0.01f, 3, 1);
+	_loadObj("powerplant//powerplant.obj", 0.0f, 0.01f, 3, 1, XM_PIDIV2);
 
 	_createVBResources(Plant);
 	_createIBResources(Plant);
@@ -353,7 +355,8 @@ void Scene::_loadObj(
 	float translation,
 	float scale,
 	unsigned int instancesCountX,
-	unsigned int instancesCountZ)
+	unsigned int instancesCountZ,
+	float rotationYRadians)
 {
 	const auto loadStart = std::chrono::steady_clock::now();
 	XMVECTOR objectMin = g_XMFltMax.v;
@@ -406,7 +409,6 @@ void Scene::_loadObj(
 			return;
 		}
 
-		// Start larger shapes first to keep the worker threads balanced.
 		std::sort(
 			shapeJobs.begin(),
 			shapeJobs.end(),
@@ -435,7 +437,8 @@ void Scene::_loadObj(
 				processedShapes[shapeIndex] = ProcessOBJShape(
 					OBJResult.shapes[shapeIndex],
 					OBJResult.attributes,
-					scale);
+					scale,
+					rotationYRadians);
 			}
 		};
 

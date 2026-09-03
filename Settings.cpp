@@ -3,12 +3,11 @@
 
 Settings Settings::Demo;
 
-// TODO: fix this
-//const unsigned int Settings::BackBufferMipsCount =
-//	Utils::MipsCount(BackBufferWidth, BackBufferHeight);
 const float Settings::BackBufferAspectRatio =
 	static_cast<float>(Settings::BackBufferWidth) /
 	static_cast<float>(Settings::BackBufferHeight);
+unsigned int Settings::RenderWidth = Settings::BackBufferWidth;
+unsigned int Settings::RenderHeight = Settings::BackBufferHeight;
 int Settings::CascadesCount = 4;
 int Settings::FrustumsCount = Settings::CameraCount + Settings::CascadesCount;
 bool Settings::CullingEnabled = true;

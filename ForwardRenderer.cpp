@@ -5,8 +5,59 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
+#include <array>
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+namespace
+{
+	std::array<bool, GUITextureDescriptorsCount> GUITextureDescriptorsInUse = {};
+
+	void AllocateGUITextureDescriptor(
+		ImGui_ImplDX12_InitInfo*,
+		D3D12_CPU_DESCRIPTOR_HANDLE* outCPUHandle,
+		D3D12_GPU_DESCRIPTOR_HANDLE* outGPUHandle)
+	{
+		for (unsigned int index = 0; index < GUITextureDescriptorsCount; index++)
+		{
+			if (!GUITextureDescriptorsInUse[index])
+			{
+				GUITextureDescriptorsInUse[index] = true;
+				*outCPUHandle = Descriptors::SV.GetCPUHandle(GUIFontTextureSRV + index);
+				*outGPUHandle = Descriptors::SV.GetGPUHandle(GUIFontTextureSRV + index);
+				return;
+			}
+		}
+
+		outCPUHandle->ptr = 0;
+		outGPUHandle->ptr = 0;
+		ASSERT(false, "ImGui ran out of reserved texture descriptors")
+	}
+
+	void FreeGUITextureDescriptor(
+		ImGui_ImplDX12_InitInfo*,
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
+	{
+		for (unsigned int index = 0; index < GUITextureDescriptorsCount; index++)
+		{
+			if (Descriptors::SV.GetCPUHandle(GUIFontTextureSRV + index).ptr == cpuHandle.ptr)
+			{
+				ASSERT(
+					Descriptors::SV.GetGPUHandle(GUIFontTextureSRV + index).ptr == gpuHandle.ptr,
+					"ImGui CPU and GPU descriptor handles do not match")
+				ASSERT(
+					GUITextureDescriptorsInUse[index],
+					"ImGui attempted to free an unused texture descriptor")
+				GUITextureDescriptorsInUse[index] = false;
+				return;
+			}
+		}
+
+		ASSERT(false, "ImGui attempted to free an unknown texture descriptor")
+	}
+}
 
 ForwardRenderer::ForwardRenderer(
 	unsigned int width,
@@ -268,7 +319,11 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 
 void ForwardRenderer::_createDepthBufferResources()
 {
-	// A mip count of 0 requests the maximum number of mips.
+	const unsigned int backBufferMipsCount = Utils::MipsCount(_width, _height);
+	ASSERT(
+		backBufferMipsCount <= Settings::MaxBackBufferMipsCount,
+		"The backbuffer exceeds D3D12's maximum texture dimensions")
+
 	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		DXGI_FORMAT_R32_TYPELESS,
 		_width,
@@ -298,7 +353,7 @@ void ForwardRenderer::_createDepthBufferResources()
 		DXGI_FORMAT_R32_FLOAT,
 		1);
 
-	for (int mip = 0; mip < Settings::BackBufferMipsCount; mip++)
+	for (unsigned int mip = 0; mip < backBufferMipsCount; mip++)
 	{
 		depthUAV.Texture2D.MipSlice = mip;
 
@@ -336,7 +391,7 @@ void ForwardRenderer::_createDepthBufferResources()
 	COMMAND_LIST->ResourceBarrier(1, &barrier);
 
 	float clearValue[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	for (int mip = 0; mip < Settings::BackBufferMipsCount; mip++)
+	for (unsigned int mip = 0; mip < backBufferMipsCount; mip++)
 	{
 		COMMAND_LIST->ClearUnorderedAccessViewFloat(
 			Descriptors::SV.GetGPUHandle(PrevFrameDepthMipsUAV + mip),
@@ -423,8 +478,8 @@ void ForwardRenderer::GeneratePrevFrameDepthHiZ(
 		_prevFrameDepthBuffer.Get(),
 		PrevFrameDepthMipsSRV,
 		PrevFrameDepthMipsUAV,
-		Settings::BackBufferWidth,
-		Settings::BackBufferHeight);
+		_width,
+		_height);
 }
 
 void ForwardRenderer::Update()
@@ -808,17 +863,17 @@ void ForwardRenderer::_initGUI()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	// Enable Keyboard Controls
+	ImGuiIO& io = ImGui::GetIO();
+	// enable Keyboard Controls
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	// Enable Gamepad Controls
+	// enable Gamepad Controls
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsLight();
+	io.FontDefault = io.Fonts->AddFontDefault();
 
-	// Setup Platform/Renderer backends
+	_updateGUIScale(ImGui_ImplWin32_GetDpiScaleForHwnd(Win32Application::GetHwnd()));
+
+	// setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
 
 	ImGui_ImplDX12_InitInfo init_info = {};
@@ -827,25 +882,25 @@ void ForwardRenderer::_initGUI()
 	init_info.NumFramesInFlight = DX::FramesCount;
 	init_info.RTVFormat = Settings::BackBufferFormat;
 	init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
-	// TODO: fix for more descriptors
-	// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
-	// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
 	init_info.SrvDescriptorHeap = Descriptors::SV.GetHeap();
-	init_info.SrvDescriptorAllocFn = [](
-		ImGui_ImplDX12_InitInfo*,
-		D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle,
-		D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
-		{
-			out_cpu_handle->ptr = Descriptors::SV.GetCPUHandle(GUIFontTextureSRV).ptr;
-			out_gpu_handle->ptr = Descriptors::SV.GetGPUHandle(GUIFontTextureSRV).ptr;
-		};
-	init_info.SrvDescriptorFreeFn = [](
-		ImGui_ImplDX12_InitInfo*,
-		D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle,
-		D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle)
-		{
-		};
+	init_info.SrvDescriptorAllocFn = AllocateGUITextureDescriptor;
+	init_info.SrvDescriptorFreeFn = FreeGUITextureDescriptor;
 	ImGui_ImplDX12_Init(&init_info);
+}
+
+void ForwardRenderer::_updateGUIScale(float dpiScale)
+{
+	if (dpiScale <= 0.0f)
+	{
+		dpiScale = 1.0f;
+	}
+
+	ImGuiStyle style;
+	ImGui::StyleColorsDark(&style);
+	style.FontSizeBase = ImGui::GetIO().FontDefault->LegacySize;
+	style.FontScaleDpi = dpiScale;
+	style.ScaleAllSizes(dpiScale);
+	ImGui::GetStyle() = style;
 }
 
 void ForwardRenderer::_newFrameGUI()
@@ -853,6 +908,7 @@ void ForwardRenderer::_newFrameGUI()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	const float guiSpacing = ImGui::GetFontSize() * 0.625f;
 
 	// IMGUI code
 	int location = Settings::StatsGUILocation;
@@ -865,9 +921,8 @@ void ForwardRenderer::_newFrameGUI()
 		ImGuiWindowFlags_NoNav;
 	if (location >= 0)
 	{
-		float PAD = 10.0f;
+		const float PAD = guiSpacing;
 		const ImGuiViewport* viewport = ImGui::GetMainViewport();
-		// Use work area to avoid menu-bar/task-bar, if any!
 		ImVec2 work_pos = viewport->WorkPos;
 		ImVec2 work_size = viewport->WorkSize;
 		ImVec2 window_pos, window_pos_pivot;
@@ -888,7 +943,7 @@ void ForwardRenderer::_newFrameGUI()
 	{
 		ImGui::Text("%ls", DX::AdapterDesc.Description);
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		static int sceneIndex = Buddha;
 		if (ImGui::Combo("Scene", &sceneIndex, "Buddha\0Plant\0"))
@@ -903,7 +958,7 @@ void ForwardRenderer::_newFrameGUI()
 			}
 		}
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		ImGui::Text(
 			"Total triangles in the scene: %.3f Mil",
@@ -932,7 +987,7 @@ void ForwardRenderer::_newFrameGUI()
 			"Triangles Rendered: %.3f Mil",
 			trianglesRendered / 1'000'000.0f);
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		ImGui::Text(
 			"PS Invocations: %.3f Mil",
@@ -942,7 +997,7 @@ void ForwardRenderer::_newFrameGUI()
 			"CS Invocations: %.3f Mil",
 			stats.CSInvocations / 1'000'000.0f);
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		if (Settings::SWREnabled)
 		{
@@ -958,7 +1013,7 @@ void ForwardRenderer::_newFrameGUI()
 				stats.VSInvocations / pipelineTriangles);
 		}
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		ImGui::Text(
 			"Current DX12 GPU Memory Usage: %.1f GB / %.1f GB",
@@ -970,7 +1025,7 @@ void ForwardRenderer::_newFrameGUI()
 			_CPUMemoryInfo.CurrentUsage / 1'000'000'000.0f,
 			_CPUMemoryInfo.Budget / 1'000'000'000.0f);
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		ImGui::Text("Frame Time:");
 		ImGui::SameLine();
@@ -986,7 +1041,7 @@ void ForwardRenderer::_newFrameGUI()
 		}
 		ImGui::TextColored(frameColor, "%.1f ms", frameTime);
 
-		ImGui::Dummy(ImVec2(0.0f, 10.0f));
+		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
 		if (ImGui::Checkbox("Software Rasterization", &Settings::SWREnabled))
 		{
@@ -1054,12 +1109,12 @@ void ForwardRenderer::_destroyGUI()
 	ImGui::DestroyContext();
 }
 
-void ForwardRenderer::Resize(
-	unsigned int width,
-	unsigned int height,
-	bool minimized)
+void ForwardRenderer::DpiChanged(float dpiScale)
 {
-
+	if (ImGui::GetCurrentContext())
+	{
+		_updateGUIScale(dpiScale);
+	}
 }
 
 void ForwardRenderer::Destroy()
@@ -1089,6 +1144,11 @@ void ForwardRenderer::Destroy()
 // used for camera movement
 void ForwardRenderer::KeyboardInput()
 {
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureKeyboard)
+	{
+		return;
+	}
+
 	float cameraSpeed = 200.0f;
 
 	if (GetAsyncKeyState(VK_SHIFT) & 0x8000)

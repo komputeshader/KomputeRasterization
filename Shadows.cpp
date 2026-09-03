@@ -147,7 +147,6 @@ void Shadows::_createSWRShadowMapResources()
 
 void Shadows::_createPrevFrameShadowMapResources()
 {
-	// A mip count of 0 requests the maximum number of mips.
 	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		DXGI_FORMAT_R32_TYPELESS,
 		Settings::ShadowMapRes,
@@ -631,9 +630,8 @@ void Shadows::GUINewFrame()
 		ImGuiWindowFlags_NoNav;
 	if (location >= 0)
 	{
-		float PAD = 10.0f;
+		const float PAD = ImGui::GetFontSize() * 0.625f;
 		const ImGuiViewport* viewport = ImGui::GetMainViewport();
-		// Use work area to avoid menu-bar/task-bar, if any!
 		ImVec2 work_pos = viewport->WorkPos;
 		ImVec2 work_size = viewport->WorkSize;
 		ImVec2 window_pos, window_pos_pivot;

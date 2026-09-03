@@ -6,6 +6,8 @@ using namespace Microsoft::WRL;
 using namespace std;
 
 DXSample::DXSample(unsigned int width, unsigned int height, std::wstring name) :
+	_logicalWidth(width),
+	_logicalHeight(height),
 	_width(width),
 	_height(height),
 	m_windowBounds{0, 0, 0, 0},
@@ -29,6 +31,8 @@ void DXSample::UpdateForSizeChange(unsigned int clientWidth, unsigned int client
 {
 	_width = clientWidth;
 	_height = clientHeight;
+	Settings::RenderWidth = clientWidth;
+	Settings::RenderHeight = clientHeight;
 }
 
 // Helper function for setting the window's title text.

@@ -19,7 +19,7 @@ public:
 	virtual void Initialize();
 	virtual void Update();
 	virtual void Draw();
-	virtual void Resize(unsigned int width, unsigned int height, bool minimized);
+	virtual void DpiChanged(float dpiScale);
 	virtual void Destroy();
 
 	void KeyboardInput();
@@ -59,6 +59,7 @@ private:
 	void _newFrameGUI();
 	void _drawGUI();
 	void _destroyGUI();
+	void _updateGUIScale(float dpiScale);
 
 	void _beginFrameRendering();
 	void _beginOpaqueRendering();

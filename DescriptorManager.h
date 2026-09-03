@@ -2,6 +2,8 @@
 
 #include "DX.h"
 
+constexpr unsigned int GUITextureDescriptorsCount = 8;
+
 // these serve as indices into the descriptor heap
 // NOTE: root signatures are dependent on that ordering
 enum CBVSRVUAVIndices
@@ -11,7 +13,7 @@ enum CBVSRVUAVIndices
 	CullingCountersSRV = InstancesSRV + ScenesCount,
 	CullingCountersUAV,
 	GUIFontTextureSRV,
-	HWRShadowMapSRV,
+	HWRShadowMapSRV = GUIFontTextureSRV + GUITextureDescriptorsCount,
 	VertexPositionsSRV,
 	VertexNormalsSRV = VertexPositionsSRV + ScenesCount,
 	VertexColorsSRV = VertexNormalsSRV + ScenesCount,
@@ -22,8 +24,8 @@ enum CBVSRVUAVIndices
 	SWRDepthUAV,
 	PrevFrameDepthSRV,
 	PrevFrameDepthMipsSRV,
-	PrevFrameDepthMipsUAV = PrevFrameDepthMipsSRV + Settings::BackBufferMipsCount,
-	SWRRenderTargetUAV = PrevFrameDepthMipsUAV + Settings::BackBufferMipsCount,
+	PrevFrameDepthMipsUAV = PrevFrameDepthMipsSRV + Settings::MaxBackBufferMipsCount,
+	SWRRenderTargetUAV = PrevFrameDepthMipsUAV + Settings::MaxBackBufferMipsCount,
 	SWRShadowMapSRV,
 	SWRShadowMapUAV,
 	PrevFrameShadowMapSRV = SWRShadowMapUAV + MAX_CASCADES_COUNT,

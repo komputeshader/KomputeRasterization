@@ -147,7 +147,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 	// and in practice we'll always have smth like O(WH)
 	int bigTrianglesPerFrame[MAX_FRUSTUMS_COUNT] =
 	{
-		Settings::BackBufferWidth * Settings::BackBufferHeight
+		static_cast<int>(_width * _height)
 	};
 	for (int cascade = 1; cascade <= MAX_CASCADES_COUNT; cascade++)
 	{
@@ -1507,9 +1507,8 @@ void SoftwareRasterization::GUINewFrame()
 		ImGuiWindowFlags_NoNav;
 	if (location >= 0)
 	{
-		float PAD = 10.0f;
+		const float PAD = ImGui::GetFontSize() * 0.625f;
 		const ImGuiViewport* viewport = ImGui::GetMainViewport();
-		// Use work area to avoid menu-bar/task-bar, if any!
 		ImVec2 work_pos = viewport->WorkPos;
 		ImVec2 work_size = viewport->WorkSize;
 		ImVec2 window_pos, window_pos_pivot;

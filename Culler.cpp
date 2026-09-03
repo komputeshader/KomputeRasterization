@@ -46,8 +46,6 @@ Culler::Culler()
 		reinterpret_cast<void**>(&_cullingCBData),
 		_cullingCB);
 
-	// Allocate a buffer that can be used to reset the UAV counters and
-	// initialize it to 0.
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(unsigned int));
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -60,7 +58,7 @@ Culler::Culler()
 	NAME_D3D12_OBJECT(_culledCommandsCounterReset);
 
 	unsigned char* pMappedCounterReset = nullptr;
-	// We do not intend to read from this resource on the CPU.
+	// we do not intend to read from this resource on the CPU
 	CD3DX12_RANGE readRange(0, 0);
 	SUCCESS(_culledCommandsCounterReset->Map(
 		0,
@@ -85,8 +83,8 @@ void Culler::Update()
 	cullingData.clusterBackfaceCullingEnabled = Settings::ClusterBackfaceCullingEnabled ? 1 : 0;
 	cullingData.depthResolution =
 	{
-		static_cast<float>(Settings::BackBufferWidth),
-		static_cast<float>(Settings::BackBufferHeight)
+		static_cast<float>(Settings::RenderWidth),
+		static_cast<float>(Settings::RenderHeight)
 	};
 	cullingData.shadowMapResolution =
 	{

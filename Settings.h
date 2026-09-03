@@ -11,7 +11,10 @@ public:
 	static const int BackBufferWidth = 1920;
 	static const int BackBufferHeight = 1080;
 	static const float BackBufferAspectRatio;
-	static const int BackBufferMipsCount = 11;
+	static unsigned int RenderWidth;
+	static unsigned int RenderHeight;
+	// D3D12's maximum 2D texture dimension (16384) has 15 mip levels
+	static const int MaxBackBufferMipsCount = 15;
 
 	static const int ShadowMapRes = 2048;
 	// TODO: eliminate hardcode

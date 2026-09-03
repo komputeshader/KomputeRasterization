@@ -68,7 +68,8 @@ private:
 		float translation = 0.0f,
 		float scale = 1.0f,
 		unsigned int instancesCountX = 1,
-		unsigned int instancesCountZ = 1);
+		unsigned int instancesCountZ = 1,
+		float rotationYRadians = 0.0f);
 
 	void _createVBResources(ScenesIndices sceneIndex);
 	void _createIBResources(ScenesIndices sceneIndex);

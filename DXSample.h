@@ -16,7 +16,7 @@ public:
 	virtual void Initialize() = 0;
 	virtual void Update() = 0;
 	virtual void Draw() = 0;
-	virtual void Resize(unsigned int width, unsigned int height, bool minimized) = 0;
+	virtual void DpiChanged(float /*dpiScale*/) {}
 	virtual void Destroy() = 0;
 
 	// Samples override the event handlers to handle specific messages.
@@ -33,6 +33,8 @@ public:
 	// Accessors.
 	unsigned int GetWidth() const { return _width; }
 	unsigned int GetHeight() const { return _height; }
+	unsigned int GetLogicalWidth() const { return _logicalWidth; }
+	unsigned int GetLogicalHeight() const { return _logicalHeight; }
 	const wchar_t* GetTitle() const { return m_title.c_str(); }
 	bool GetTearingSupport() const { return m_tearingSupport; }
 	RECT GetWindowsBounds() const { return m_windowBounds; }
@@ -48,6 +50,8 @@ protected:
 	void CheckTearingSupport();
 
 	// Viewport dimensions.
+	const unsigned int _logicalWidth;
+	const unsigned int _logicalHeight;
 	unsigned int _width;
 	unsigned int _height;
 

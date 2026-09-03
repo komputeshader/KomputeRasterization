@@ -51,7 +51,6 @@ void HardwareRasterization::Resize(
 
 void HardwareRasterization::_createDepthBufferResources()
 {
-	// A mip count of 0 requests the maximum number of mips.
 	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		_depthFormat,
 		_width,
