@@ -987,19 +987,19 @@ void ForwardRenderer::_newFrameGUI()
 		}
 
 		ImGui::Checkbox(
-			"Enable Frustum Culling",
+			"Frustum Culling",
 			&Settings::FrustumCullingEnabled);
 
 		ImGui::Checkbox(
-			"Enable Cluster Backface Culling",
+			"Cluster Backface Culling",
 			&Settings::ClusterBackfaceCullingEnabled);
 
 		ImGui::Checkbox(
-			"Enable Camera Hi-Z Culling",
+			"Camera Hi-Z Culling",
 			&Settings::CameraHiZCullingEnabled);
 
 		ImGui::Checkbox(
-			"Enable Shadows Hi-Z Culling",
+			"Shadows Hi-Z Culling",
 			&Settings::ShadowsHiZCullingEnabled);
 
 		if (Settings::SWREnabled)
