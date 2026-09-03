@@ -3,12 +3,16 @@
 #include "DescriptorManager.h"
 #include "CPUGPUCommon.h"
 
-#include <iostream>
-#include <unordered_map>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstring>
+#include <future>
+#include <limits>
+#include <thread>
 
-#define FAST_OBJ_IMPLEMENTATION
-#include "fast_obj.h"
 #include "meshoptimizer/src/meshoptimizer.h"
+#include "rapidobj/include/rapidobj/rapidobj.hpp"
 
 Scene* Scene::CurrentScene;
 Scene Scene::PlantScene;
@@ -18,6 +22,261 @@ size_t Scene::MaxSceneInstancesCount = 0;
 size_t Scene::MaxSceneMeshesMetaCount = 0;
 
 using namespace DirectX;
+
+namespace
+{
+	constexpr size_t MaxOBJProcessingThreads = 8;
+	constexpr size_t MeshletMaxVertices = 128;
+	constexpr size_t MeshletMaxTriangles = MESHLET_SIZE;
+	constexpr float MeshletConeWeight = 0.0f;
+
+	struct ProcessedOBJShape
+	{
+		std::vector<VertexPosition> positions;
+		std::vector<VertexNormal> normals;
+		std::vector<VertexColor> colors;
+		std::vector<VertexUV> texcoords;
+		std::vector<unsigned int> indices;
+		std::vector<MeshMeta> meshes;
+		XMFLOAT3 min = {};
+		XMFLOAT3 max = {};
+		size_t facesCount = 0;
+	};
+
+	static_assert(sizeof(rapidobj::Index) == sizeof(unsigned int) * 3);
+	static_assert(sizeof(VertexPosition) == sizeof(XMFLOAT3));
+
+	unsigned int PackNormal(const XMFLOAT3& normal)
+	{
+		return
+			(meshopt_quantizeUnorm(normal.x * 0.5f + 0.5f, 10) << 20) |
+			(meshopt_quantizeUnorm(normal.y * 0.5f + 0.5f, 10) << 10) |
+			meshopt_quantizeUnorm(normal.z * 0.5f + 0.5f, 10);
+	}
+
+	VertexColor MakeDefaultColor()
+	{
+		VertexColor result = {};
+		result.packedColor[0] =
+			(static_cast<unsigned int>(meshopt_quantizeHalf(0.8f)) << 16) |
+			static_cast<unsigned int>(meshopt_quantizeHalf(0.8f));
+		result.packedColor[1] =
+			(static_cast<unsigned int>(meshopt_quantizeHalf(0.8f)) << 16) |
+			static_cast<unsigned int>(meshopt_quantizeHalf(1.0f));
+		return result;
+	}
+
+	ProcessedOBJShape ProcessOBJShape(
+		const rapidobj::Shape& shape,
+		const rapidobj::Attributes& attributes,
+		float scale)
+	{
+		ProcessedOBJShape result;
+		const size_t indexCount = shape.mesh.indices.size();
+		if (indexCount == 0)
+		{
+			return result;
+		}
+
+		ASSERT(indexCount % 3 == 0)
+		result.facesCount = indexCount / 3;
+
+		std::vector<unsigned int> indices(indexCount);
+		std::vector<XMFLOAT3> positions;
+		std::vector<VertexNormal> packedNormals;
+		std::vector<VertexUV> packedTexcoords;
+
+		{
+			// OBJ indexes positions, normals and UVs independently. Weld those
+			// index triplets first so attributes are expanded only for unique vertices.
+			std::vector<unsigned int> remap(indexCount);
+			const size_t vertexCount = meshopt_generateVertexRemap(
+				remap.data(),
+				nullptr,
+				indexCount,
+				shape.mesh.indices.data(),
+				indexCount,
+				sizeof(rapidobj::Index));
+
+			std::vector<rapidobj::Index> uniqueAttributes(vertexCount);
+			meshopt_remapIndexBuffer(indices.data(), nullptr, indexCount, remap.data());
+			meshopt_remapVertexBuffer(
+				uniqueAttributes.data(),
+				shape.mesh.indices.data(),
+				indexCount,
+				sizeof(rapidobj::Index),
+				remap.data());
+
+			positions.resize(vertexCount);
+			packedNormals.resize(vertexCount);
+			packedTexcoords.resize(vertexCount);
+
+			XMVECTOR shapeMin = g_XMFltMax.v;
+			XMVECTOR shapeMax = -g_XMFltMax.v;
+			for (size_t vertex = 0; vertex < vertexCount; ++vertex)
+			{
+				const rapidobj::Index& source = uniqueAttributes[vertex];
+
+				ASSERT(source.position_index >= 0)
+				const size_t positionOffset = static_cast<size_t>(source.position_index) * 3;
+				XMFLOAT3 position =
+				{
+					attributes.positions[positionOffset + 0] * scale,
+					attributes.positions[positionOffset + 1] * scale,
+					attributes.positions[positionOffset + 2] * scale
+				};
+				positions[vertex] = position;
+				shapeMin = XMVectorMin(shapeMin, XMLoadFloat3(&position));
+				shapeMax = XMVectorMax(shapeMax, XMLoadFloat3(&position));
+
+				XMFLOAT3 normal = {};
+				if (source.normal_index >= 0)
+				{
+					const size_t normalOffset = static_cast<size_t>(source.normal_index) * 3;
+					normal =
+					{
+						attributes.normals[normalOffset + 0],
+						attributes.normals[normalOffset + 1],
+						attributes.normals[normalOffset + 2]
+					};
+					XMStoreFloat3(&normal, XMVector3Normalize(XMLoadFloat3(&normal)));
+				}
+				packedNormals[vertex].packedNormal = PackNormal(normal);
+
+				XMFLOAT2 texcoord = {};
+				if (source.texcoord_index >= 0)
+				{
+					const size_t texcoordOffset = static_cast<size_t>(source.texcoord_index) * 2;
+					texcoord =
+					{
+						attributes.texcoords[texcoordOffset + 0],
+						attributes.texcoords[texcoordOffset + 1]
+					};
+				}
+				packedTexcoords[vertex].packedUV =
+					(static_cast<unsigned int>(meshopt_quantizeHalf(texcoord.x)) << 16) |
+					static_cast<unsigned int>(meshopt_quantizeHalf(texcoord.y));
+			}
+
+			XMStoreFloat3(&result.min, shapeMin);
+			XMStoreFloat3(&result.max, shapeMax);
+		}
+
+		const size_t vertexCount = positions.size();
+		meshopt_optimizeVertexCache(
+			indices.data(),
+			indices.data(),
+			indexCount,
+			vertexCount);
+
+		const size_t maxMeshlets = meshopt_buildMeshletsBound(
+			indexCount,
+			MeshletMaxVertices,
+			MeshletMaxTriangles);
+		std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
+		// A meshlet cannot contain more vertex references or triangle bytes
+		// than there are source corner indices.
+		std::vector<unsigned int> meshletVertices(indexCount);
+		std::vector<unsigned char> meshletTriangles(indexCount);
+
+		const size_t meshletCount = meshopt_buildMeshlets(
+			meshlets.data(),
+			meshletVertices.data(),
+			meshletTriangles.data(),
+			indices.data(),
+			indexCount,
+			reinterpret_cast<const float*>(positions.data()),
+			vertexCount,
+			sizeof(XMFLOAT3),
+			MeshletMaxVertices,
+			MeshletMaxTriangles,
+			MeshletConeWeight);
+		ASSERT(meshletCount > 0)
+
+		meshlets.resize(meshletCount);
+		result.indices.resize(indexCount);
+		result.meshes.reserve(meshletCount);
+		size_t outputIndexOffset = 0;
+		for (const meshopt_Meshlet& meshlet : meshlets)
+		{
+			meshopt_optimizeMeshlet(
+				meshletVertices.data() + meshlet.vertex_offset,
+				meshletTriangles.data() + meshlet.triangle_offset,
+				meshlet.triangle_count,
+				meshlet.vertex_count);
+
+			const meshopt_Bounds bounds = meshopt_computeMeshletBounds(
+				meshletVertices.data() + meshlet.vertex_offset,
+				meshletTriangles.data() + meshlet.triangle_offset,
+				meshlet.triangle_count,
+				reinterpret_cast<const float*>(positions.data()),
+				vertexCount,
+				sizeof(XMFLOAT3));
+
+			MeshMeta mesh = {};
+			memcpy(&mesh.AABB.center, bounds.center, sizeof(mesh.AABB.center));
+			mesh.AABB.extents = { bounds.radius, bounds.radius, bounds.radius };
+			mesh.indexCountPerInstance = meshlet.triangle_count * 3;
+			mesh.instanceCount = 1;
+			mesh.startIndexLocation = static_cast<unsigned int>(outputIndexOffset);
+			mesh.baseVertexLocation = 0;
+			mesh.startInstanceLocation = 0;
+			memcpy(&mesh.coneApex, bounds.cone_apex, sizeof(mesh.coneApex));
+			memcpy(&mesh.coneAxis, bounds.cone_axis, sizeof(mesh.coneAxis));
+			mesh.coneCutoff = bounds.cone_cutoff;
+			result.meshes.push_back(mesh);
+
+			const size_t meshletIndexCount = static_cast<size_t>(meshlet.triangle_count) * 3;
+			for (size_t index = 0; index < meshletIndexCount; ++index)
+			{
+				result.indices[outputIndexOffset + index] =
+					meshletVertices[meshlet.vertex_offset + meshletTriangles[meshlet.triangle_offset + index]];
+			}
+			outputIndexOffset += meshletIndexCount;
+		}
+		ASSERT(outputIndexOffset == indexCount)
+
+		// Meshlet construction establishes the final triangle order. Reorder all
+		// deinterleaved vertex streams against that order to minimize fetch misses.
+		std::vector<unsigned int> vertexFetchRemap(vertexCount);
+		const size_t finalVertexCount = meshopt_optimizeVertexFetchRemap(
+			vertexFetchRemap.data(),
+			result.indices.data(),
+			result.indices.size(),
+			vertexCount);
+		ASSERT(finalVertexCount == vertexCount)
+
+		result.positions.resize(finalVertexCount);
+		result.normals.resize(finalVertexCount);
+		result.texcoords.resize(finalVertexCount);
+		meshopt_remapIndexBuffer(
+			result.indices.data(),
+			result.indices.data(),
+			result.indices.size(),
+			vertexFetchRemap.data());
+		meshopt_remapVertexBuffer(
+			result.positions.data(),
+			positions.data(),
+			vertexCount,
+			sizeof(VertexPosition),
+			vertexFetchRemap.data());
+		meshopt_remapVertexBuffer(
+			result.normals.data(),
+			packedNormals.data(),
+			vertexCount,
+			sizeof(VertexNormal),
+			vertexFetchRemap.data());
+		meshopt_remapVertexBuffer(
+			result.texcoords.data(),
+			packedTexcoords.data(),
+			vertexCount,
+			sizeof(VertexUV),
+			vertexFetchRemap.data());
+		result.colors.assign(finalVertexCount, MakeDefaultColor());
+
+		return result;
+	}
+}
 
 void Scene::LoadBuddha()
 {
@@ -96,337 +355,167 @@ void Scene::_loadObj(
 	unsigned int instancesCountX,
 	unsigned int instancesCountZ)
 {
-	fastObjMesh* OBJMesh = fast_obj_read(OBJPath.c_str());
-	if (!OBJMesh)
-	{
-		PrintToOutput("Error loading %s: file not found\n", OBJPath.c_str());
-		ASSERT(false)
-	}
-
-	std::vector<MeshMeta> meshesMeta;
+	const auto loadStart = std::chrono::steady_clock::now();
 	XMVECTOR objectMin = g_XMFltMax.v;
 	XMVECTOR objectMax = -g_XMFltMax.v;
-
-	std::vector<XMFLOAT3> unindexedPositions;
-	std::vector<XMFLOAT3> unindexedNormals;
-	std::vector<XMFLOAT4> unindexedColors;
-	std::vector<XMFLOAT2> unindexedUVs;
-
-	unsigned int positionsCPUOldSize = 0;
-	unsigned int normalsCPUOldSize = 0;
-	unsigned int colorsCPUOldSize = 0;
-	unsigned int texcoordsCPUOldSize = 0;
-	unsigned int indicesCPUOldSize = 0;
-
+	std::vector<MeshMeta> meshesMeta;
 	size_t facesCount = 0;
-	for (unsigned int group = 0; group < OBJMesh->group_count; group++)
+	size_t loadedVertexCount = 0;
+	size_t processingThreadCount = 0;
+
 	{
-		const fastObjGroup& currentGroup = OBJMesh->groups[group];
-
-		size_t currentFacesCount = currentGroup.face_count;
-		facesCount += currentFacesCount;
-
-		unindexedPositions.reserve(currentFacesCount * 3);
-		unindexedNormals.reserve(currentFacesCount * 3);
-		unindexedColors.reserve(currentFacesCount * 3);
-		unindexedUVs.reserve(currentFacesCount * 3);
-
-		decltype(unindexedPositions)::value_type tmpPosition = {};
-		decltype(unindexedNormals)::value_type tmpNormal = {};
-		decltype(unindexedUVs)::value_type tmpUV = {};
-		decltype(unindexedColors)::value_type tmpColor = {};
-
-		XMVECTOR min = g_XMFltMax.v;
-		XMVECTOR max = -g_XMFltMax.v;
-
-		int idx = 0;
-		for (unsigned int face = 0; face < currentGroup.face_count; face++)
+		rapidobj::Result OBJResult = rapidobj::ParseFile(
+			OBJPath,
+			rapidobj::MaterialLibrary::Ignore());
+		if (OBJResult.error)
 		{
-			// TODO: ensure triangulation
-			unsigned int fv = OBJMesh->face_vertices[currentGroup.face_offset + face];
+			PrintToOutput(
+				"Error loading %s: %s (line %zu: %s)\n",
+				OBJPath.c_str(),
+				OBJResult.error.code.message().c_str(),
+				OBJResult.error.line_num,
+				OBJResult.error.line.c_str());
+			ASSERT(false, "OBJ parsing failed")
+			return;
+		}
 
-			for (unsigned int vertex = 0; vertex < fv; vertex++)
+		if (!rapidobj::Triangulate(OBJResult))
+		{
+			PrintToOutput(
+				"Error triangulating %s: %s\n",
+				OBJPath.c_str(),
+				OBJResult.error.code.message().c_str());
+			ASSERT(false, "OBJ triangulation failed")
+			return;
+		}
+
+		std::vector<size_t> shapeJobs;
+		shapeJobs.reserve(OBJResult.shapes.size());
+		for (size_t shape = 0; shape < OBJResult.shapes.size(); ++shape)
+		{
+			if (!OBJResult.shapes[shape].mesh.indices.empty())
 			{
-				fastObjIndex attributeIndices =
-					OBJMesh->indices[currentGroup.index_offset + idx];
-
-				tmpPosition = { 0.0f, 0.0f, 0.0f };
-				if (attributeIndices.p)
-				{
-					tmpPosition =
-					{
-						OBJMesh->positions[3 * attributeIndices.p + 0],
-						OBJMesh->positions[3 * attributeIndices.p + 1],
-						OBJMesh->positions[3 * attributeIndices.p + 2]
-					};
-
-					tmpPosition.x *= scale;
-					tmpPosition.y *= scale;
-					tmpPosition.z *= scale;
-				}
-
-				unindexedPositions.push_back(tmpPosition);
-
-				min = XMVectorMin(min, XMLoadFloat3(&tmpPosition));
-				max = XMVectorMax(max, XMLoadFloat3(&tmpPosition));
-
-				tmpUV = { 0.0f, 0.0f };
-				if (attributeIndices.t)
-				{
-					tmpUV =
-					{
-						OBJMesh->texcoords[2 * attributeIndices.t + 0],
-						OBJMesh->texcoords[2 * attributeIndices.t + 1]
-					};
-				}
-
-				unindexedUVs.push_back(tmpUV);
-
-				tmpNormal = { 0.0f, 0.0f, 0.0f };
-				if (attributeIndices.n)
-				{
-					tmpNormal =
-					{
-						OBJMesh->normals[3 * attributeIndices.n + 0],
-						OBJMesh->normals[3 * attributeIndices.n + 1],
-						OBJMesh->normals[3 * attributeIndices.n + 2]
-					};
-					XMStoreFloat3(
-						&tmpNormal,
-						XMVector3Normalize(XMLoadFloat3(&tmpNormal)));
-				}
-
-				unindexedNormals.push_back(tmpNormal);
-
-				tmpColor = { 0.8f, 0.8f, 0.8f, 1.0f };
-				unindexedColors.push_back(tmpColor);
-
-				idx++;
+				shapeJobs.push_back(shape);
 			}
 		}
 
-		// optimize mesh data and perform indexing
-		meshopt_Stream streams[] =
+		if (shapeJobs.empty())
 		{
+			PrintToOutput("Error loading %s: OBJ contains no triangle meshes\n", OBJPath.c_str());
+			ASSERT(false, "OBJ contains no triangle meshes")
+			return;
+		}
+
+		// Start larger shapes first to keep the worker threads balanced.
+		std::sort(
+			shapeJobs.begin(),
+			shapeJobs.end(),
+			[&OBJResult](size_t lhs, size_t rhs)
 			{
-				unindexedPositions.data(),
-				sizeof(decltype(unindexedPositions)::value_type),
-				sizeof(decltype(unindexedPositions)::value_type)
-			},
+				return OBJResult.shapes[lhs].mesh.indices.size() >
+					OBJResult.shapes[rhs].mesh.indices.size();
+			});
+
+		std::vector<ProcessedOBJShape> processedShapes(OBJResult.shapes.size());
+		const size_t hardwareThreads = std::max<size_t>(1, std::thread::hardware_concurrency());
+		processingThreadCount = std::min({ shapeJobs.size(), hardwareThreads, MaxOBJProcessingThreads });
+		std::atomic_size_t nextJob = 0;
+
+		auto processShapes = [&]()
+		{
+			for (;;)
 			{
-				unindexedNormals.data(),
-				sizeof(decltype(unindexedNormals)::value_type),
-				sizeof(decltype(unindexedNormals)::value_type)
-			},
-			{
-				unindexedColors.data(),
-				sizeof(decltype(unindexedColors)::value_type),
-				sizeof(decltype(unindexedColors)::value_type)
-			},
-			{
-				unindexedUVs.data(),
-				sizeof(decltype(unindexedUVs)::value_type),
-				sizeof(decltype(unindexedUVs)::value_type)
+				const size_t job = nextJob.fetch_add(1, std::memory_order_relaxed);
+				if (job >= shapeJobs.size())
+				{
+					break;
+				}
+
+				const size_t shapeIndex = shapeJobs[job];
+				processedShapes[shapeIndex] = ProcessOBJShape(
+					OBJResult.shapes[shapeIndex],
+					OBJResult.attributes,
+					scale);
 			}
 		};
 
-		size_t indexCount = currentFacesCount * 3;
-		std::vector<unsigned int> remap(indexCount);
-		size_t uniqueVertexCount = meshopt_generateVertexRemapMulti(
-			remap.data(),
-			nullptr,
-			indexCount,
-			unindexedPositions.size(),
-			streams,
-			_countof(streams));
-
-		positionsCPUOldSize = static_cast<unsigned int>(positionsCPU.size());
-		normalsCPUOldSize = static_cast<unsigned int>(normalsCPU.size());
-		colorsCPUOldSize = static_cast<unsigned int>(colorsCPU.size());
-		texcoordsCPUOldSize = static_cast<unsigned int>(texcoordsCPU.size());
-
-		positionsCPU.resize(positionsCPUOldSize + uniqueVertexCount);
-		normalsCPU.resize(normalsCPUOldSize + uniqueVertexCount);
-		colorsCPU.resize(colorsCPUOldSize + uniqueVertexCount);
-		texcoordsCPU.resize(texcoordsCPUOldSize + uniqueVertexCount);
-		indicesCPU.resize(indicesCPUOldSize + indexCount);
-
-		meshopt_remapIndexBuffer(
-			indicesCPU.data() + indicesCPUOldSize,
-			nullptr,
-			indexCount,
-			remap.data());
-		meshopt_remapVertexBuffer(
-			unindexedPositions.data(),
-			unindexedPositions.data(),
-			unindexedPositions.size(),
-			sizeof(decltype(unindexedPositions)::value_type),
-			remap.data());
-		meshopt_remapVertexBuffer(
-			unindexedNormals.data(),
-			unindexedNormals.data(),
-			unindexedNormals.size(),
-			sizeof(decltype(unindexedNormals)::value_type),
-			remap.data());
-		meshopt_remapVertexBuffer(
-			unindexedColors.data(),
-			unindexedColors.data(),
-			unindexedColors.size(),
-			sizeof(decltype(unindexedColors)::value_type),
-			remap.data());
-		meshopt_remapVertexBuffer(
-			unindexedUVs.data(),
-			unindexedUVs.data(),
-			unindexedUVs.size(),
-			sizeof(decltype(unindexedUVs)::value_type),
-			remap.data());
-		meshopt_optimizeVertexCache(
-			indicesCPU.data() + indicesCPUOldSize,
-			indicesCPU.data() + indicesCPUOldSize,
-			indexCount,
-			unindexedPositions.size());
-
-		// generate meshlets for more efficient culling
-		// not for use with mesh shaders
-		const size_t maxVertices = 128;
-		const size_t maxTriangles = MESHLET_SIZE;
-		// 0.0 had better results overall
-		const float coneWeight = 0.0f;
-
-		size_t maxMeshlets = meshopt_buildMeshletsBound(
-			indexCount,
-			maxVertices,
-			maxTriangles);
-		std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
-		// indices into positionsCPU + offset
-		std::vector<unsigned int> meshletVertices(maxMeshlets * maxVertices);
-		std::vector<unsigned char> meshletTriangles(maxMeshlets * maxTriangles * 3);
-
-		size_t meshletCount = meshopt_buildMeshlets(
-			meshlets.data(),
-			meshletVertices.data(),
-			meshletTriangles.data(),
-			indicesCPU.data() + indicesCPUOldSize,
-			indexCount,
-			reinterpret_cast<float*>(unindexedPositions.data()),
-			uniqueVertexCount,
-			sizeof(decltype(unindexedPositions)::value_type),
-			maxVertices,
-			maxTriangles,
-			coneWeight);
-
-		const meshopt_Meshlet& last = meshlets[meshletCount - 1];
-
-		// trimming
-		meshletVertices.resize(last.vertex_offset + last.vertex_count);
-		meshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
-		meshlets.resize(meshletCount);
-
-		indicesCPU.resize(indicesCPUOldSize + meshletTriangles.size());
-
-		MeshMeta mesh = {};
-		for (const auto& meshlet : meshlets)
+		if (processingThreadCount == 1)
 		{
-			meshopt_optimizeMeshlet(
-				&meshletVertices[meshlet.vertex_offset],
-				&meshletTriangles[meshlet.triangle_offset],
-				meshlet.triangle_count,
-				meshlet.vertex_count);
-
-			meshopt_Bounds bounds = meshopt_computeMeshletBounds(
-				&meshletVertices[meshlet.vertex_offset],
-				&meshletTriangles[meshlet.triangle_offset],
-				meshlet.triangle_count,
-				reinterpret_cast<float*>(unindexedPositions.data()),
-				uniqueVertexCount,
-				sizeof(decltype(unindexedPositions)::value_type));
-			memcpy(&mesh.AABB.center, &bounds.center, sizeof(decltype(mesh.AABB.center)));
-			mesh.AABB.extents =
+			processShapes();
+		}
+		else
+		{
+			std::vector<std::future<void>> workers;
+			workers.reserve(processingThreadCount);
+			for (size_t worker = 0; worker < processingThreadCount; ++worker)
 			{
-				bounds.radius,
-				bounds.radius,
-				bounds.radius
-			};
-
-			mesh.indexCountPerInstance = meshlet.triangle_count * 3;
-			mesh.instanceCount = 1;
-			mesh.startIndexLocation = indicesCPUOldSize;
-			mesh.baseVertexLocation = positionsCPUOldSize;
-			mesh.startInstanceLocation = 0;
-
-			memcpy(&mesh.coneApex, &bounds.cone_apex, sizeof(decltype(mesh.coneApex)));
-			memcpy(&mesh.coneAxis, &bounds.cone_axis, sizeof(decltype(mesh.coneAxis)));
-			mesh.coneCutoff = bounds.cone_cutoff;
-
-			meshesMeta.push_back(mesh);
-
-			for (unsigned int vertex = 0; vertex < meshlet.triangle_count * 3; vertex++)
-			{
-				indicesCPU[indicesCPUOldSize + vertex] = meshletVertices[meshlet.vertex_offset + meshletTriangles[meshlet.triangle_offset + vertex]];
+				workers.push_back(std::async(std::launch::async, processShapes));
 			}
-
-			indicesCPUOldSize += meshlet.triangle_count * 3;
-		}
-
-		// trimming
-		indicesCPU.resize(indicesCPUOldSize);
-
-		objectMin = XMVectorMin(objectMin, min);
-		objectMax = XMVectorMax(objectMax, max);
-
-		// pack vertex attributes
-		// TODO: pack positions
-		for (size_t vertex = 0; vertex < uniqueVertexCount; vertex++)
-		{
-			auto& dst = positionsCPU[positionsCPUOldSize + vertex].position;
-			auto& src = unindexedPositions[vertex];
-			dst = src;
-		}
-
-		if (!unindexedNormals.empty())
-		{
-			for (size_t vertex = 0; vertex < uniqueVertexCount; vertex++)
+			for (std::future<void>& worker : workers)
 			{
-				auto& dst = normalsCPU[normalsCPUOldSize + vertex].packedNormal;
-				auto& src = unindexedNormals[vertex];
-				dst =
-					(meshopt_quantizeUnorm(src.x * 0.5f + 0.5f, 10) << 20) |
-					(meshopt_quantizeUnorm(src.y * 0.5f + 0.5f, 10) << 10) |
-					meshopt_quantizeUnorm(src.z * 0.5f + 0.5f, 10);
+				worker.get();
 			}
 		}
 
-		if (!unindexedUVs.empty())
+		size_t newVertexCount = 0;
+		size_t newIndexCount = 0;
+		size_t newMeshCount = 0;
+		for (const ProcessedOBJShape& shape : processedShapes)
 		{
-			for (size_t vertex = 0; vertex < uniqueVertexCount; vertex++)
-			{
-				auto& dst = texcoordsCPU[texcoordsCPUOldSize + vertex].packedUV;
-				auto& src = unindexedUVs[vertex];
-				dst |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.x)) << 16);
-				dst |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.y)));
-			}
+			newVertexCount += shape.positions.size();
+			newIndexCount += shape.indices.size();
+			newMeshCount += shape.meshes.size();
 		}
+		loadedVertexCount = newVertexCount;
 
-		if (!unindexedColors.empty())
+		positionsCPU.reserve(positionsCPU.size() + newVertexCount);
+		normalsCPU.reserve(normalsCPU.size() + newVertexCount);
+		colorsCPU.reserve(colorsCPU.size() + newVertexCount);
+		texcoordsCPU.reserve(texcoordsCPU.size() + newVertexCount);
+		indicesCPU.reserve(indicesCPU.size() + newIndexCount);
+		meshesMeta.reserve(newMeshCount);
+
+		for (ProcessedOBJShape& shape : processedShapes)
 		{
-			for (size_t vertex = 0; vertex < uniqueVertexCount; vertex++)
+			if (shape.positions.empty())
 			{
-				auto& dst = colorsCPU[colorsCPUOldSize + vertex].packedColor;
-				auto& src = unindexedColors[vertex];
-				dst[0] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.x)) << 16);
-				dst[0] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.y)));
-				dst[1] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.z)) << 16);
-				dst[1] |= (static_cast<unsigned int>(meshopt_quantizeHalf(src.w)));
+				continue;
 			}
-		}
 
-		unindexedPositions.clear();
-		unindexedNormals.clear();
-		unindexedColors.clear();
-		unindexedUVs.clear();
+			ASSERT(positionsCPU.size() <= static_cast<size_t>(std::numeric_limits<int>::max()))
+			ASSERT(indicesCPU.size() <= static_cast<size_t>(std::numeric_limits<unsigned int>::max()))
+			const int baseVertexLocation = static_cast<int>(positionsCPU.size());
+			const unsigned int startIndexLocation = static_cast<unsigned int>(indicesCPU.size());
+
+			for (MeshMeta& mesh : shape.meshes)
+			{
+				mesh.startIndexLocation += startIndexLocation;
+				mesh.baseVertexLocation = baseVertexLocation;
+				meshesMeta.push_back(mesh);
+			}
+
+			positionsCPU.insert(positionsCPU.end(), shape.positions.begin(), shape.positions.end());
+			normalsCPU.insert(normalsCPU.end(), shape.normals.begin(), shape.normals.end());
+			colorsCPU.insert(colorsCPU.end(), shape.colors.begin(), shape.colors.end());
+			texcoordsCPU.insert(texcoordsCPU.end(), shape.texcoords.begin(), shape.texcoords.end());
+			indicesCPU.insert(indicesCPU.end(), shape.indices.begin(), shape.indices.end());
+
+			objectMin = XMVectorMin(objectMin, XMLoadFloat3(&shape.min));
+			objectMax = XMVectorMax(objectMax, XMLoadFloat3(&shape.max));
+			facesCount += shape.facesCount;
+		}
 	}
 
-	fast_obj_destroy(OBJMesh);
+	const double loadSeconds = std::chrono::duration<double>(
+		std::chrono::steady_clock::now() - loadStart).count();
+	PrintToOutput(
+		"Parsed and processed %s: %zu triangles, %zu vertices, %zu meshlets on %zu thread(s) in %.3f s\n",
+		OBJPath.c_str(),
+		facesCount,
+		loadedVertexCount,
+		meshesMeta.size(),
+		processingThreadCount,
+		loadSeconds);
 
 #ifdef GPU_SOA_BUFFERS
 	indicesSOACPU.resize(indicesCPU.size());

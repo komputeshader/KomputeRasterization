@@ -37,6 +37,9 @@
     <Filter Include="Header Files\meshoptimizer">
       <UniqueIdentifier>{deb14474-a0d5-4472-9746-3f646aa95c0b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\rapidobj">
+      <UniqueIdentifier>{8d31a5c4-22fe-4e64-a9b7-5f7d0322a3a1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\imgui">
       <UniqueIdentifier>{1aedf856-1bac-4a0b-84ad-98b185075fbc}</UniqueIdentifier>
     </Filter>
@@ -93,52 +96,7 @@
     <ClCompile Include="Culler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meshoptimizer\src\allocator.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\clusterizer.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\indexanalyzer.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\indexcodec.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\indexgenerator.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\overdrawoptimizer.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\partition.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\quantization.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\rasterizer.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\simplifier.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\spatialorder.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\stripifier.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\vcacheoptimizer.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\vertexcodec.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\vertexfilter.cpp">
-      <Filter>Source Files\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="meshoptimizer\src\vfetchoptimizer.cpp">
+    <ClCompile Include="meshoptimizer\src\*.cpp">
       <Filter>Source Files\meshoptimizer</Filter>
     </ClCompile>
     <ClCompile Include="imgui\imgui.cpp">
@@ -212,11 +170,11 @@
     <ClInclude Include="Culler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fast_obj.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
     <ClInclude Include="meshoptimizer\src\meshoptimizer.h">
       <Filter>Header Files\meshoptimizer</Filter>
+    </ClInclude>
+    <ClInclude Include="rapidobj\include\rapidobj\rapidobj.hpp">
+      <Filter>Header Files\rapidobj</Filter>
     </ClInclude>
     <ClInclude Include="imgui\imconfig.h">
       <Filter>Header Files\imgui</Filter>
