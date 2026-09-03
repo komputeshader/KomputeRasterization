@@ -116,11 +116,11 @@ void Culler::Update()
 
 void Culler::Cull(
 	ID3D12GraphicsCommandList* commandList,
-	ComPtr<ID3D12Resource> visibleInstances,
-	ComPtr<ID3D12Resource>* culledCommands,
-	ComPtr<ID3D12Resource>* culledCommandsCounters)
+	ID3D12Resource* visibleInstances,
+	const ComPtr<ID3D12Resource> (&culledCommands)[MAX_FRUSTUMS_COUNT],
+	const ComPtr<ID3D12Resource> (&culledCommandsCounters)[MAX_FRUSTUMS_COUNT])
 {
-	PIXBeginEvent(commandList, 0, L"Culling");
+	PIXScopedEvent(commandList, 0, L"Culling");
 
 	CD3DX12_RESOURCE_BARRIER barriers[2 + 2 * MAX_FRUSTUMS_COUNT] = {};
 	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
@@ -161,7 +161,7 @@ void Culler::Cull(
 	}
 	barriers[_countof(barriers) - 2] =
 		CD3DX12_RESOURCE_BARRIER::Transition(
-			visibleInstances.Get(),
+			visibleInstances,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	barriers[_countof(barriers) - 1] =
@@ -207,7 +207,7 @@ void Culler::Cull(
 
 	// gererate commands
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
-		visibleInstances.Get(),
+		visibleInstances,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -246,36 +246,25 @@ void Culler::Cull(
 				D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
 	}
 	commandList->ResourceBarrier(2 * MAX_FRUSTUMS_COUNT, barriers);
-
-	PIXEndEvent(commandList);
 }
 
 void Culler::_createCullingCounters()
 {
 	// buffers with counters for culling
 	size_t bufferSize = Scene::MaxSceneMeshesMetaCount * sizeof(unsigned int) * MAX_FRUSTUMS_COUNT;
+	const auto elementsCount = static_cast<unsigned int>(
+		Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(
 		bufferSize,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.CounterOffsetInBytes = 0;
-	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT);
-	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.FirstElement = 0;
-	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT);
-	SRVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		elementsCount,
+		sizeof(unsigned int));
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		elementsCount,
+		sizeof(unsigned int));
 
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,

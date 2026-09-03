@@ -29,20 +29,16 @@ void InitializeResources()
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
 
 	// TODO: unused, remove?
-	D3D12_STATIC_SAMPLER_DESC sampler = {};
-	sampler.Filter = D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
-	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	sampler.MipLODBias = 0;
-	sampler.MaxAnisotropy = 0;
-	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	sampler.MinLOD = 0.0f;
-	sampler.MaxLOD = D3D12_FLOAT32_MAX;
-	sampler.ShaderRegister = 0;
-	sampler.RegisterSpace = 0;
-	sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	D3D12_STATIC_SAMPLER_DESC sampler = CD3DX12_STATIC_SAMPLER_DESC(
+		0,
+		D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 	computeRootSignatureDesc.Init_1_1(
@@ -71,19 +67,16 @@ void InitializeResources()
 		IID_PPV_ARGS(&HiZPSO)));
 	NAME_D3D12_OBJECT(HiZPSO);
 
-	HiZSamplerDesc.Filter = D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
-	HiZSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	HiZSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	HiZSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	HiZSamplerDesc.MipLODBias = 0;
-	HiZSamplerDesc.MaxAnisotropy = 0;
-	HiZSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	HiZSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-	HiZSamplerDesc.MinLOD = 0.0f;
-	HiZSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-	HiZSamplerDesc.ShaderRegister = 0;
-	HiZSamplerDesc.RegisterSpace = 0;
-	HiZSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	HiZSamplerDesc = CD3DX12_STATIC_SAMPLER_DESC(
+		0,
+		D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK);
 }
 
 AABB MergeAABBs(const AABB& a, const AABB& b)
@@ -414,7 +407,7 @@ void GenerateHiZ(
 	unsigned int arraySlice,
 	unsigned int arraySize)
 {
-	PIXBeginEvent(commandList, 0, L"Generate Hi Z");
+	PIXScopedEvent(commandList, 0, L"Generate Hi Z");
 
 	commandList->SetComputeRootSignature(HiZRS.Get());
 	commandList->SetPipelineState(HiZPSO.Get());
@@ -468,8 +461,6 @@ void GenerateHiZ(
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12CalcSubresource(mipsCount - 1, arraySlice, 0, mipsCount, arraySize));
 	commandList->ResourceBarrier(1, barriers);
-
-	PIXEndEvent(commandList);
 }
 
 void GPUBuffer::Initialize(
@@ -517,14 +508,9 @@ void GPUBuffer::Initialize(
 		_IBView.Format = DXGI_FORMAT_R32_UINT;
 	}
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.FirstElement = 0;
-	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(elementsCount);
-	SRVDesc.Buffer.StructureByteStride = strideInBytes;
-	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(elementsCount),
+		strideInBytes);
 	DX::Device->CreateShaderResourceView(
 		_buffer.Get(),
 		&SRVDesc,

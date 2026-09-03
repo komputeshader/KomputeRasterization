@@ -43,23 +43,19 @@ void Shadows::Initialize()
 
 void Shadows::_createHWRShadowMapResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = Settings::ShadowMapRes;
-	depthStencilDesc.Height = Settings::ShadowMapRes;
-	depthStencilDesc.DepthOrArraySize = MAX_CASCADES_COUNT;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optimizedClear = {};
-	optimizedClear.Format = DXGI_FORMAT_D32_FLOAT;
-	optimizedClear.DepthStencil.Depth = 0.0f;
-	optimizedClear.DepthStencil.Stencil = 0;
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_TYPELESS,
+		Settings::ShadowMapRes,
+		Settings::ShadowMapRes,
+		static_cast<UINT16>(MAX_CASCADES_COUNT),
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+	auto optimizedClear = CD3DX12_CLEAR_VALUE(
+		DXGI_FORMAT_D32_FLOAT,
+		0.0f,
+		0);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,
@@ -85,14 +81,9 @@ void Shadows::_createHWRShadowMapResources()
 			Descriptors::DS.GetCPUHandle(CascadeDSV + cascade));
 	}
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	SRVDesc.Texture2DArray.MostDetailedMip = 0;
-	SRVDesc.Texture2DArray.MipLevels = -1;
-	SRVDesc.Texture2DArray.ArraySize = MAX_CASCADES_COUNT;
-	SRVDesc.Texture2DArray.FirstArraySlice = 0;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2DArray(
+		DXGI_FORMAT_R32_FLOAT,
+		MAX_CASCADES_COUNT);
 	DX::Device->CreateShaderResourceView(
 		_shadowMapHWR.Get(),
 		&SRVDesc,
@@ -101,18 +92,15 @@ void Shadows::_createHWRShadowMapResources()
 
 void Shadows::_createSWRShadowMapResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = Settings::ShadowMapRes;
-	depthStencilDesc.Height = Settings::ShadowMapRes;
-	depthStencilDesc.DepthOrArraySize = MAX_CASCADES_COUNT;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_TYPELESS,
+		Settings::ShadowMapRes,
+		Settings::ShadowMapRes,
+		static_cast<UINT16>(MAX_CASCADES_COUNT),
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -125,26 +113,19 @@ void Shadows::_createSWRShadowMapResources()
 	NAME_D3D12_OBJECT(_shadowMapSWR);
 
 	// SRV
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	SRVDesc.Texture2DArray.MipLevels = 1;
-	SRVDesc.Texture2DArray.ArraySize = MAX_CASCADES_COUNT;
-	SRVDesc.Texture2DArray.FirstArraySlice = 0;
-	SRVDesc.Texture2DArray.MostDetailedMip = 0;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2DArray(
+		DXGI_FORMAT_R32_FLOAT,
+		MAX_CASCADES_COUNT,
+		1);
 	DX::Device->CreateShaderResourceView(
 		_shadowMapSWR.Get(),
 		&SRVDesc,
 		Descriptors::SV.GetCPUHandle(SWRShadowMapSRV));
 
 	// UAV
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_R32_UINT;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-	UAVDesc.Texture2DArray.ArraySize = 1;
-	UAVDesc.Texture2DArray.PlaneSlice = 0;
-	UAVDesc.Texture2DArray.MipSlice = 0;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2DArray(
+		DXGI_FORMAT_R32_UINT,
+		1);
 
 	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
 	{
@@ -166,19 +147,16 @@ void Shadows::_createSWRShadowMapResources()
 
 void Shadows::_createPrevFrameShadowMapResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = Settings::ShadowMapRes;
-	depthStencilDesc.Height = Settings::ShadowMapRes;
-	depthStencilDesc.DepthOrArraySize = MAX_CASCADES_COUNT;
-	// max mip count
-	depthStencilDesc.MipLevels = 0;
-	depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	// A mip count of 0 requests the maximum number of mips.
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_TYPELESS,
+		Settings::ShadowMapRes,
+		Settings::ShadowMapRes,
+		static_cast<UINT16>(MAX_CASCADES_COUNT),
+		0,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -191,13 +169,9 @@ void Shadows::_createPrevFrameShadowMapResources()
 	NAME_D3D12_OBJECT(_prevFrameShadowMap);
 
 	// whole resource SRV
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-	SRVDesc.Texture2DArray.MipLevels = -1;
-	SRVDesc.Texture2DArray.ArraySize = 1;
-	SRVDesc.Texture2DArray.MostDetailedMip = 0;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2DArray(
+		DXGI_FORMAT_R32_FLOAT,
+		1);
 	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
 	{
 		SRVDesc.Texture2DArray.FirstArraySlice = cascade;
@@ -211,11 +185,9 @@ void Shadows::_createPrevFrameShadowMapResources()
 	SRVDesc.Texture2DArray.MipLevels = 1;
 
 	// mips UAVs
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-	UAVDesc.Texture2DArray.ArraySize = 1;
-	UAVDesc.Texture2DArray.PlaneSlice = 0;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2DArray(
+		DXGI_FORMAT_R32_FLOAT,
+		1);
 
 	for (int cascade = 0; cascade < MAX_CASCADES_COUNT; cascade++)
 	{
@@ -300,20 +272,9 @@ void Shadows::_createPSO()
 		&ranges[1],
 		D3D12_SHADER_VISIBILITY_PIXEL);
 
-	D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
-	pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-	pointClampSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.MipLODBias = 0;
-	pointClampSampler.MaxAnisotropy = 0;
-	pointClampSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	pointClampSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	pointClampSampler.MinLOD = 0.0f;
-	pointClampSampler.MaxLOD = D3D12_FLOAT32_MAX;
-	pointClampSampler.ShaderRegister = 0;
-	pointClampSampler.RegisterSpace = 0;
-	pointClampSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	auto pointClampSampler = Utils::PointClampSampler(
+		0,
+		D3D12_SHADER_VISIBILITY_PIXEL);
 
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |

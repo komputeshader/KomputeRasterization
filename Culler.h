@@ -11,9 +11,9 @@ public:
 	void Update();
 	void Cull(
 		ID3D12GraphicsCommandList* commandList,
-		Microsoft::WRL::ComPtr<ID3D12Resource> visibleInstances,
-		Microsoft::WRL::ComPtr<ID3D12Resource>* culledCommands,
-		Microsoft::WRL::ComPtr<ID3D12Resource>* culledCommandsCounters);
+		ID3D12Resource* visibleInstances,
+		const Microsoft::WRL::ComPtr<ID3D12Resource> (&culledCommands)[MAX_FRUSTUMS_COUNT],
+		const Microsoft::WRL::ComPtr<ID3D12Resource> (&culledCommandsCounters)[MAX_FRUSTUMS_COUNT]);
 
 private:
 

@@ -143,13 +143,9 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 {
 	size_t bufferSize = Scene::MaxSceneInstancesCount * sizeof(Instance) * MAX_FRUSTUMS_COUNT;
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneInstancesCount);
-	SRVDesc.Buffer.StructureByteStride = sizeof(Instance);
-	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(Scene::MaxSceneInstancesCount),
+		sizeof(Instance));
 
 	// buffers for visible instances
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -157,14 +153,9 @@ void ForwardRenderer::_createVisibleInstancesBuffer()
 		bufferSize,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneInstancesCount * MAX_FRUSTUMS_COUNT);
-	UAVDesc.Buffer.StructureByteStride = sizeof(Instance);
-	UAVDesc.Buffer.CounterOffsetInBytes = 0;
-	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(Scene::MaxSceneInstancesCount * MAX_FRUSTUMS_COUNT),
+		sizeof(Instance));
 	for (int frame = 0; frame < DX::FramesCount; frame++)
 	{
 		SUCCESS(DX::Device->CreateCommittedResource(
@@ -205,21 +196,15 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
-	UAVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
-	UAVDesc.Buffer.CounterOffsetInBytes = 0;
-	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.FirstElement = 0;
-	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount),
+		sizeof(IndirectCommand));
+	auto counterSRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		1,
+		sizeof(D3D12_DISPATCH_ARGUMENTS));
+	auto commandSRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount),
+		sizeof(IndirectCommand));
 
 	static D3D12_DISPATCH_ARGUMENTS dispatch;
 	dispatch.ThreadGroupCountX = 0;
@@ -247,12 +232,9 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				L"_culledCommandsCountersUpload",
 				frame * MAX_FRUSTUMS_COUNT + frustum);
 
-			SRVDesc.Buffer.NumElements = 1;
-			SRVDesc.Buffer.StructureByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
-
 			DX::Device->CreateShaderResourceView(
 				_culledCommandsCounters[frame][frustum].Get(),
-				&SRVDesc,
+				&counterSRVDesc,
 				Descriptors::SV.GetCPUHandle(CulledCommandsCountersSRV + frustum + frame * PerFrameDescriptorsCount));
 
 			SUCCESS(DX::Device->CreateCommittedResource(
@@ -275,12 +257,9 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				&UAVDesc,
 				Descriptors::SV.GetCPUHandle(CulledCommandsUAV + frustum + frame * PerFrameDescriptorsCount));
 
-			SRVDesc.Buffer.NumElements = static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount);
-			SRVDesc.Buffer.StructureByteStride = sizeof(IndirectCommand);
-
 			DX::Device->CreateShaderResourceView(
 				_culledCommands[frame][frustum].Get(),
-				&SRVDesc,
+				&commandSRVDesc,
 				Descriptors::SV.GetCPUHandle(CulledCommandsSRV + frustum + frame * PerFrameDescriptorsCount));
 		}
 	}
@@ -288,19 +267,16 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 
 void ForwardRenderer::_createDepthBufferResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = _width;
-	depthStencilDesc.Height = _height;
-	depthStencilDesc.DepthOrArraySize = 1;
-	// 0 for max number of mips
-	depthStencilDesc.MipLevels = 0;
-	depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	// A mip count of 0 requests the maximum number of mips.
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_TYPELESS,
+		_width,
+		_height,
+		1,
+		0,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -313,19 +289,13 @@ void ForwardRenderer::_createDepthBufferResources()
 	NAME_D3D12_OBJECT(_prevFrameDepthBuffer);
 
 	// UAV
-	D3D12_UNORDERED_ACCESS_VIEW_DESC depthUAV = {};
-	depthUAV.Format = DXGI_FORMAT_R32_FLOAT;
-	depthUAV.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-	depthUAV.Texture2D.PlaneSlice = 0;
+	auto depthUAV = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_FLOAT);
 
 	// SRV
-	D3D12_SHADER_RESOURCE_VIEW_DESC depthSRV = {};
-	depthSRV.Format = DXGI_FORMAT_R32_FLOAT;
-	depthSRV.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	depthSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	depthSRV.Texture2D.MipLevels = 1;
-	depthSRV.Texture2D.PlaneSlice = 0;
-	depthSRV.Texture2D.ResourceMinLODClamp = 0.0f;
+	auto depthSRV = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_FLOAT,
+		1);
 
 	for (int mip = 0; mip < Settings::BackBufferMipsCount; mip++)
 	{
@@ -351,9 +321,8 @@ void ForwardRenderer::_createDepthBufferResources()
 			Descriptors::SV.GetCPUHandle(PrevFrameDepthMipsSRV + mip));
 	}
 
-	depthSRV.Format = DXGI_FORMAT_R32_FLOAT;
-	depthSRV.Texture2D.MostDetailedMip = 0;
-	depthSRV.Texture2D.MipLevels = -1;
+	depthSRV = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_FLOAT);
 	DX::Device->CreateShaderResourceView(
 		_prevFrameDepthBuffer.Get(),
 		&depthSRV,
@@ -459,7 +428,7 @@ void ForwardRenderer::GeneratePrevFrameDepthHiZ(
 
 void ForwardRenderer::Update()
 {
-	PIXBeginEvent(PIX_COLOR_DEFAULT, L"Update %llu", DX::FrameNumber);
+	PIXScopedEvent(PIX_COLOR_DEFAULT, L"Update %llu", DX::FrameNumber);
 
 	_timer.Tick();
 
@@ -471,13 +440,11 @@ void ForwardRenderer::Update()
 
 	_culler->Update();
 	_HWR->Update();
-
-	PIXEndEvent();
 }
 
 void ForwardRenderer::Draw()
 {
-	PIXBeginEvent(PIX_COLOR_DEFAULT, L"Draw %llu", DX::FrameNumber);
+	PIXScopedEvent(PIX_COLOR_DEFAULT, L"Draw %llu", DX::FrameNumber);
 
 	// GUI
 	_newFrameGUI();
@@ -513,7 +480,7 @@ void ForwardRenderer::Draw()
 		{
 			_culler->Cull(
 				COMPUTE_COMMAND_LIST.Get(),
-				_visibleInstances[DX::FrameIndex],
+				_visibleInstances[DX::FrameIndex].Get(),
 				_culledCommands[DX::FrameIndex],
 				_culledCommandsCounters[DX::FrameIndex]);
 		}
@@ -650,8 +617,6 @@ void ForwardRenderer::Draw()
 		DX::FrameFences[DX::FrameIndex].Get(),
 		DX::FrameFenceValues[DX::FrameIndex],
 		DX::FrameFenceEvents[DX::FrameIndex]);
-
-	PIXEndEvent();
 }
 
 void ForwardRenderer::_beginFrameRendering()
@@ -751,12 +716,10 @@ void ForwardRenderer::_softwareRasterization()
 
 void ForwardRenderer::_drawGUI()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw GUI");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"Draw GUI");
 
 	ImGui::Render();
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), COMMAND_LIST.Get());
-
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void ForwardRenderer::_rasterizerSwitch()

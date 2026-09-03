@@ -190,29 +190,19 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 			IID_PPV_ARGS(&_bigTrianglesDepth[depthBufferIdx])));
 		NAME_D3D12_OBJECT_INDEXED(_bigTrianglesDepth, depthBufferIdx);
 
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-		UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-		UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		UAVDesc.Buffer.FirstElement = 0;
-		UAVDesc.Buffer.NumElements = bigTrianglesPerFrame[depthBufferIdx];
-		UAVDesc.Buffer.StructureByteStride = sizeof(BigTriangleDepth);
-		UAVDesc.Buffer.CounterOffsetInBytes = 0;
-		UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+			bigTrianglesPerFrame[depthBufferIdx],
+			sizeof(BigTriangleDepth));
 		DX::Device->CreateUnorderedAccessView(
 			_bigTrianglesDepth[depthBufferIdx].Get(),
 			_bigTrianglesDepthCounters[depthBufferIdx].Get(),
 			&UAVDesc,
 			Descriptors::SV.GetCPUHandle(BigTrianglesDepthUAV + depthBufferIdx));
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-		SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		SRVDesc.Buffer.FirstElement = 0;
-		SRVDesc.Buffer.NumElements = bigTrianglesPerFrame[depthBufferIdx] * BIG_TRIANGLE_DEPTH_FIELDS;
 		// uint view for parallel reads in the BigTriangle*CS.hlsl
-		SRVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
-		SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+			bigTrianglesPerFrame[depthBufferIdx] * BIG_TRIANGLE_DEPTH_FIELDS,
+			sizeof(unsigned int));
 		DX::Device->CreateShaderResourceView(
 			_bigTrianglesDepth[depthBufferIdx].Get(),
 			&SRVDesc,
@@ -247,29 +237,19 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 		IID_PPV_ARGS(&_bigTrianglesOpaque)));
 	NAME_D3D12_OBJECT(_bigTrianglesOpaque);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = bigTrianglesPerFrame[0];
-	UAVDesc.Buffer.StructureByteStride = sizeof(BigTriangleOpaque);
-	UAVDesc.Buffer.CounterOffsetInBytes = 0;
-	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		bigTrianglesPerFrame[0],
+		sizeof(BigTriangleOpaque));
 	DX::Device->CreateUnorderedAccessView(
 		_bigTrianglesOpaque.Get(),
 		_bigTrianglesOpaqueCounter.Get(),
 		&UAVDesc,
 		Descriptors::SV.GetCPUHandle(BigTrianglesOpaqueUAV));
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	SRVDesc.Buffer.FirstElement = 0;
-	SRVDesc.Buffer.NumElements = bigTrianglesPerFrame[0] * BIG_TRIANGLE_OPAQUE_FIELDS;
 	// uint view for parallel reads in the BigTriangle*CS.hlsl
-	SRVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
-	SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	auto SRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
+		bigTrianglesPerFrame[0] * BIG_TRIANGLE_OPAQUE_FIELDS,
+		sizeof(unsigned int));
 	DX::Device->CreateShaderResourceView(
 		_bigTrianglesOpaque.Get(),
 		&SRVDesc,
@@ -279,7 +259,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 void SoftwareRasterization::_createStatsResources()
 {
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
+	auto desc = CD3DX12_RESOURCE_DESC::Buffer(
 		StatsCount * sizeof(unsigned int),
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -291,14 +271,9 @@ void SoftwareRasterization::_createStatsResources()
 		IID_PPV_ARGS(&_trianglesStats)));
 	NAME_D3D12_OBJECT(_trianglesStats);
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-	UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	UAVDesc.Buffer.FirstElement = 0;
-	UAVDesc.Buffer.NumElements = StatsCount;
-	UAVDesc.Buffer.StructureByteStride = sizeof(unsigned int);
-	UAVDesc.Buffer.CounterOffsetInBytes = 0;
-	UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		StatsCount,
+		sizeof(unsigned int));
 	DX::Device->CreateUnorderedAccessView(
 		_trianglesStats.Get(),
 		nullptr,
@@ -434,7 +409,8 @@ void SoftwareRasterization::_createDepthWGResources()
 	CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT* RSSubObj = SO.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
 	RSSubObj->SetRootSignature(_depthWGRS.Get());
 
-	ID3D12Device14* device = reinterpret_cast<ID3D12Device14*>(DX::Device.Get());
+	ComPtr<ID3D12Device14> device;
+	SUCCESS(DX::Device.As(&device));
 	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_depthWGStateObj)));
 
 	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
@@ -572,30 +548,12 @@ void SoftwareRasterization::_createOpaqueWGResources()
 			2);
 		computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
 
-		D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
-		D3D12_STATIC_SAMPLER_DESC* pointClampSampler = &samplers[0];
-		pointClampSampler->Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		pointClampSampler->AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler->AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler->AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		pointClampSampler->MipLODBias = 0;
-		pointClampSampler->MaxAnisotropy = 0;
-		pointClampSampler->ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		pointClampSampler->BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		pointClampSampler->MinLOD = 0.0f;
-		pointClampSampler->MaxLOD = D3D12_FLOAT32_MAX;
-		pointClampSampler->ShaderRegister = 0;
-		pointClampSampler->RegisterSpace = 0;
-		pointClampSampler->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-		D3D12_STATIC_SAMPLER_DESC* depthSampler = &samplers[1];
-		samplers[1] = samplers[0];
-		depthSampler->Filter = Utils::HiZSamplerDesc.Filter;
-		depthSampler->AddressU = Utils::HiZSamplerDesc.AddressU;
-		depthSampler->AddressV = Utils::HiZSamplerDesc.AddressV;
-		depthSampler->AddressW = Utils::HiZSamplerDesc.AddressW;
-		depthSampler->BorderColor = Utils::HiZSamplerDesc.BorderColor;
-		depthSampler->ShaderRegister = 1;
+		D3D12_STATIC_SAMPLER_DESC samplers[] =
+		{
+			Utils::PointClampSampler(0),
+			Utils::HiZSamplerDesc
+		};
+		samplers[1].ShaderRegister = 1;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 		computeRootSignatureDesc.Init_1_1(
@@ -615,7 +573,8 @@ void SoftwareRasterization::_createOpaqueWGResources()
 	CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT* RSSubObj = SO.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
 	RSSubObj->SetRootSignature(_opaqueWGRS.Get());
 
-	ID3D12Device14* device = reinterpret_cast<ID3D12Device14*>(DX::Device.Get());
+	ComPtr<ID3D12Device14> device;
+	SUCCESS(DX::Device.As(&device));
 	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_opaqueWGStateObj)));
 
 	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
@@ -874,7 +833,7 @@ void SoftwareRasterization::_beginFrame()
 
 void SoftwareRasterization::_drawDepth()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Depth");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Depth");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleDepthRS.Get());
 	COMMAND_LIST->SetPipelineState(_triangleDepthPSO.Get());
@@ -948,12 +907,11 @@ void SoftwareRasterization::_drawDepth()
 	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
 	//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_drawShadows()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleDepthRS.Get());
 	COMMAND_LIST->SetPipelineState(_triangleDepthPSO.Get());
@@ -1031,12 +989,11 @@ void SoftwareRasterization::_drawShadows()
 		//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 	}
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_drawDepthBigTriangles()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Depth Big Triangles");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Depth Big Triangles");
 
 	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -1083,12 +1040,11 @@ void SoftwareRasterization::_drawDepthBigTriangles()
 	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
 	//COMMAND_LIST->ResourceBarrier(1, barriers);
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_drawShadowsBigTriangles()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows Big Triangles");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows Big Triangles");
 
 	COMMAND_LIST->SetComputeRootSignature(_bigTriangleDepthRS.Get());
 	COMMAND_LIST->SetPipelineState(_bigTriangleDepthPSO.Get());
@@ -1130,7 +1086,6 @@ void SoftwareRasterization::_drawShadowsBigTriangles()
 			0);
 	}
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_finishDepthsRendering()
@@ -1167,7 +1122,7 @@ void SoftwareRasterization::_finishDepthsRendering()
 
 void SoftwareRasterization::_drawOpaque()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleOpaqueRS.Get());
 	COMMAND_LIST->SetPipelineState(_triangleOpaquePSO.Get());
@@ -1274,13 +1229,12 @@ void SoftwareRasterization::_drawOpaque()
 		nullptr,
 		0);
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 #ifdef USE_WORK_GRAPHS
 void SoftwareRasterization::_drawDepthWG()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Depth WG");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Depth WG");
 
 	int frustumIndex = 0;
 
@@ -1342,12 +1296,11 @@ void SoftwareRasterization::_drawDepthWG()
 	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
 	//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_drawShadowsWG()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows WG");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows WG");
 
 	COMMAND_LIST->SetComputeRootSignature(_depthWGRS.Get());
 
@@ -1410,12 +1363,11 @@ void SoftwareRasterization::_drawShadowsWG()
 		//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 	}
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void SoftwareRasterization::_drawOpaqueWG()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque WG");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque WG");
 
 	COMMAND_LIST->SetComputeRootSignature(_opaqueWGRS.Get());
 
@@ -1508,7 +1460,6 @@ void SoftwareRasterization::_drawOpaqueWG()
 		nullptr,
 		0);
 
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 #endif
 
@@ -1663,18 +1614,15 @@ void SoftwareRasterization::_clearBigTrianglesOpaqueCounter()
 
 void SoftwareRasterization::_createRenderTargetResources()
 {
-	D3D12_RESOURCE_DESC rtDesc = {};
-	rtDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	rtDesc.Alignment = 0;
-	rtDesc.Width = _width;
-	rtDesc.Height = _height;
-	rtDesc.DepthOrArraySize = 1;
-	rtDesc.MipLevels = 1;
-	rtDesc.Format = Settings::BackBufferFormat;
-	rtDesc.SampleDesc.Count = 1;
-	rtDesc.SampleDesc.Quality = 0;
-	rtDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	rtDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	auto rtDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		Settings::BackBufferFormat,
+		_width,
+		_height,
+		1,
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -1687,11 +1635,8 @@ void SoftwareRasterization::_createRenderTargetResources()
 	NAME_D3D12_OBJECT(_renderTarget);
 
 	// render target UAV
-	D3D12_UNORDERED_ACCESS_VIEW_DESC rtUAV = {};
-	rtUAV.Format = Settings::BackBufferFormat;
-	rtUAV.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-	rtUAV.Texture2D.MipSlice = 0;
-	rtUAV.Texture2D.PlaneSlice = 0;
+	auto rtUAV = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2D(
+		Settings::BackBufferFormat);
 
 	DX::Device->CreateUnorderedAccessView(
 		_renderTarget.Get(),
@@ -1708,18 +1653,15 @@ void SoftwareRasterization::_createRenderTargetResources()
 
 void SoftwareRasterization::_createDepthBufferResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = _width;
-	depthStencilDesc.Height = _height;
-	depthStencilDesc.DepthOrArraySize = 1;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_TYPELESS,
+		_width,
+		_height,
+		1,
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -1732,11 +1674,8 @@ void SoftwareRasterization::_createDepthBufferResources()
 	NAME_D3D12_OBJECT(_depthBuffer);
 
 	// depth UAV
-	D3D12_UNORDERED_ACCESS_VIEW_DESC depthUAV = {};
-	depthUAV.Format = DXGI_FORMAT_R32_UINT;
-	depthUAV.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-	depthUAV.Texture2D.PlaneSlice = 0;
-	depthUAV.Texture2D.MipSlice = 0;
+	auto depthUAV = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_UINT);
 
 	DX::Device->CreateUnorderedAccessView(
 		_depthBuffer.Get(),
@@ -1751,14 +1690,9 @@ void SoftwareRasterization::_createDepthBufferResources()
 		Descriptors::NonSV.GetCPUHandle(SWRDepthUAV));
 
 	// depth SRV
-	D3D12_SHADER_RESOURCE_VIEW_DESC depthSRV = {};
-	depthSRV.Format = DXGI_FORMAT_R32_FLOAT;
-	depthSRV.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	depthSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	depthSRV.Texture2D.MostDetailedMip = 0;
-	depthSRV.Texture2D.MipLevels = 1;
-	depthSRV.Texture2D.PlaneSlice = 0;
-	depthSRV.Texture2D.ResourceMinLODClamp = 0.0f;
+	auto depthSRV = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_FLOAT,
+		1);
 
 	DX::Device->CreateShaderResourceView(
 		_depthBuffer.Get(),
@@ -1999,30 +1933,12 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 		2);
 	computeRootParameters[12].InitAsDescriptorTable(1, &ranges[11]);
 
-	D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
-	D3D12_STATIC_SAMPLER_DESC* pointClampSampler = &samplers[0];
-	pointClampSampler->Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-	pointClampSampler->AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler->AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler->AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler->MipLODBias = 0;
-	pointClampSampler->MaxAnisotropy = 0;
-	pointClampSampler->ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	pointClampSampler->BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	pointClampSampler->MinLOD = 0.0f;
-	pointClampSampler->MaxLOD = D3D12_FLOAT32_MAX;
-	pointClampSampler->ShaderRegister = 0;
-	pointClampSampler->RegisterSpace = 0;
-	pointClampSampler->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	D3D12_STATIC_SAMPLER_DESC* depthSampler = &samplers[1];
-	samplers[1] = samplers[0];
-	depthSampler->Filter = Utils::HiZSamplerDesc.Filter;
-	depthSampler->AddressU = Utils::HiZSamplerDesc.AddressU;
-	depthSampler->AddressV = Utils::HiZSamplerDesc.AddressV;
-	depthSampler->AddressW = Utils::HiZSamplerDesc.AddressW;
-	depthSampler->BorderColor = Utils::HiZSamplerDesc.BorderColor;
-	depthSampler->ShaderRegister = 1;
+	D3D12_STATIC_SAMPLER_DESC samplers[] =
+	{
+		Utils::PointClampSampler(0),
+		Utils::HiZSamplerDesc
+	};
+	samplers[1].ShaderRegister = 1;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 	computeRootSignatureDesc.Init_1_1(
@@ -2085,20 +2001,7 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 		0);
 	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
 
-	D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
-	pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-	pointClampSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.MipLODBias = 0;
-	pointClampSampler.MaxAnisotropy = 0;
-	pointClampSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	pointClampSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	pointClampSampler.MinLOD = 0.0f;
-	pointClampSampler.MaxLOD = D3D12_FLOAT32_MAX;
-	pointClampSampler.ShaderRegister = 0;
-	pointClampSampler.RegisterSpace = 0;
-	pointClampSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	auto pointClampSampler = Utils::PointClampSampler(0);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
 	computeRootSignatureDesc.Init_1_1(

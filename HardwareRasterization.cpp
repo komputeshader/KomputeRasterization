@@ -51,25 +51,20 @@ void HardwareRasterization::Resize(
 
 void HardwareRasterization::_createDepthBufferResources()
 {
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = _width;
-	depthStencilDesc.Height = _height;
-	depthStencilDesc.DepthOrArraySize = 1;
-	// 0 for maximum number of mips
-	depthStencilDesc.MipLevels = 0;
-	depthStencilDesc.Format = _depthFormat;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optimizedClear = {};
-	optimizedClear.Format = _depthFormat;
-	optimizedClear.DepthStencil.Depth =
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f;
-	optimizedClear.DepthStencil.Stencil = 0;
+	// A mip count of 0 requests the maximum number of mips.
+	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		_depthFormat,
+		_width,
+		_height,
+		1,
+		0,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+	auto optimizedClear = CD3DX12_CLEAR_VALUE(
+		_depthFormat,
+		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
+		0);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,
@@ -188,7 +183,7 @@ void HardwareRasterization::_beginFrame()
 
 void HardwareRasterization::_drawDepth()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Depth");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"Draw Depth");
 
 	COMMAND_LIST->SetGraphicsRootSignature(_HWRRS.Get());
 	COMMAND_LIST->SetPipelineState(_depthPSO.Get());
@@ -249,13 +244,11 @@ void HardwareRasterization::_drawDepth()
 	{
 		_renderer->PreparePrevFrameDepth(_depthBuffer.Get());
 	}
-
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_drawShadows()
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Shadows");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"Draw Shadows");
 
 	CD3DX12_RESOURCE_BARRIER barriers[1] = {};
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -334,13 +327,11 @@ void HardwareRasterization::_drawShadows()
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		COMMAND_LIST->ResourceBarrier(1, barriers);
 	}
-
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 {
-	PIXBeginEvent(COMMAND_LIST.Get(), 0, L"Draw Opaque");
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"Draw Opaque");
 
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
@@ -407,8 +398,6 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 			}
 		}
 	}
-
-	PIXEndEvent(COMMAND_LIST.Get());
 }
 
 void HardwareRasterization::_endFrame()
@@ -433,20 +422,9 @@ void HardwareRasterization::_createHWRRS()
 		&ranges[1],
 		D3D12_SHADER_VISIBILITY_PIXEL);
 
-	D3D12_STATIC_SAMPLER_DESC pointClampSampler = {};
-	pointClampSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-	pointClampSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	pointClampSampler.MipLODBias = 0;
-	pointClampSampler.MaxAnisotropy = 0;
-	pointClampSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	pointClampSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	pointClampSampler.MinLOD = 0.0f;
-	pointClampSampler.MaxLOD = D3D12_FLOAT32_MAX;
-	pointClampSampler.ShaderRegister = 0;
-	pointClampSampler.RegisterSpace = 0;
-	pointClampSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	auto pointClampSampler = Utils::PointClampSampler(
+		0,
+		D3D12_SHADER_VISIBILITY_PIXEL);
 
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |

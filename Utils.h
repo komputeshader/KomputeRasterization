@@ -80,6 +80,25 @@ extern Microsoft::WRL::ComPtr<ID3D12RootSignature> HiZRS;
 extern Microsoft::WRL::ComPtr<ID3D12PipelineState> HiZPSO;
 extern D3D12_STATIC_SAMPLER_DESC HiZSamplerDesc;
 
+inline CD3DX12_STATIC_SAMPLER_DESC PointClampSampler(
+	unsigned int shaderRegister,
+	D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+{
+	return CD3DX12_STATIC_SAMPLER_DESC(
+		shaderRegister,
+		D3D12_FILTER_MIN_MAG_MIP_POINT,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
+		0.0f,
+		D3D12_FLOAT32_MAX,
+		visibility);
+}
+
 inline void GetAssetsPath(_Out_writes_(pathSize) wchar_t* path, unsigned int pathSize)
 {
 	ASSERT(path)
