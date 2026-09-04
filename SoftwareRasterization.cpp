@@ -124,8 +124,11 @@ void SoftwareRasterization::Resize(
 	_createResetBuffer();
 
 #ifdef USE_WORK_GRAPHS
-	_createDepthWGResources();
-	_createOpaqueWGResources();
+	if (DX::WorkGraphsSupported)
+	{
+		_createDepthWGResources();
+		_createOpaqueWGResources();
+	}
 #endif
 }
 
@@ -319,6 +322,12 @@ void SoftwareRasterization::_createMDIResources()
 #ifdef USE_WORK_GRAPHS
 void SoftwareRasterization::_createDepthWGResources()
 {
+	static_assert(
+		MESHLET_SIZE % SWR_WG_TRIANGLE_THREADS_X == 0,
+		"Work graph triangle groups must cover every meshlet triangle.");
+	ASSERT(
+		Scene::MaxSceneMeshesMetaCount <= static_cast<size_t>(SWR_WG_MAX_COMMANDS),
+		"The scene has more mesh commands than the work graph dispatch can represent.");
 	Utils::CompileDXILLibraryFromFile(
 		L"DepthWG.hlsl",
 		L"lib_6_8",
@@ -414,38 +423,50 @@ void SoftwareRasterization::_createDepthWGResources()
 	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_depthWGStateObj)));
 
 	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
-	_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps));
+	SUCCESS(_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps)));
 	_depthWG = WGStateObjProps->GetProgramIdentifier(workGraphName);
 
 	ComPtr<ID3D12WorkGraphProperties> WGProps;
-	_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps));
+	SUCCESS(_depthWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps)));
+	const UINT workGraphIndex = WGProps->GetWorkGraphIndex(workGraphName);
+	ASSERT(workGraphIndex != UINT_MAX, "Depth work graph was not found in the state object.");
+	_depthWGEntrypointIndex = WGProps->GetEntrypointIndex(
+		workGraphIndex,
+		{ L"RasterizationDispatchNode", 0 });
+	ASSERT(_depthWGEntrypointIndex != UINT_MAX, "Depth work graph entrypoint was not found.");
+	ASSERT(
+		WGProps->GetEntrypointRecordSizeInBytes(workGraphIndex, _depthWGEntrypointIndex) == 0,
+		"Depth work graph entrypoint unexpectedly requires a CPU record.");
 	D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memoryReqs = {};
 	WGProps->GetWorkGraphMemoryRequirements(
-		WGProps->GetWorkGraphIndex(workGraphName),
+		workGraphIndex,
 		&memoryReqs);
 
 	D3D12_GPU_VIRTUAL_ADDRESS_RANGE WGBackMemRange = {};
 	WGBackMemRange.SizeInBytes = memoryReqs.MaxSizeInBytes;
 
-	CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
-	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
-		WGBackMemRange.SizeInBytes,
-		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-	SUCCESS(device->CreateCommittedResource(
-		&prop,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		D3D12_RESOURCE_STATE_COMMON,
-		nullptr,
-		IID_PPV_ARGS(&_depthWGBackMem)));
-
-	WGBackMemRange.StartAddress = _depthWGBackMem->GetGPUVirtualAddress();
+	if (WGBackMemRange.SizeInBytes > 0)
+	{
+		CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
+		D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
+			WGBackMemRange.SizeInBytes,
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		SUCCESS(device->CreateCommittedResource(
+			&prop,
+			D3D12_HEAP_FLAG_NONE,
+			&desc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&_depthWGBackMem)));
+		NAME_D3D12_OBJECT(_depthWGBackMem);
+		WGBackMemRange.StartAddress = _depthWGBackMem->GetGPUVirtualAddress();
+	}
 
 	_depthProgramDesc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
 	_depthProgramDesc.WorkGraph.ProgramIdentifier = _depthWG;
 	_depthProgramDesc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
 	_depthProgramDesc.WorkGraph.BackingMemory = WGBackMemRange;
+	_depthWGNeedsInitialization = true;
 }
 
 void SoftwareRasterization::_createOpaqueWGResources()
@@ -578,38 +599,50 @@ void SoftwareRasterization::_createOpaqueWGResources()
 	SUCCESS(device->CreateStateObject(SO, IID_PPV_ARGS(&_opaqueWGStateObj)));
 
 	ComPtr<ID3D12StateObjectProperties1> WGStateObjProps;
-	_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps));
+	SUCCESS(_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGStateObjProps)));
 	_opaqueWG = WGStateObjProps->GetProgramIdentifier(workGraphName);
 
 	ComPtr<ID3D12WorkGraphProperties> WGProps;
-	_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps));
+	SUCCESS(_opaqueWGStateObj->QueryInterface(IID_PPV_ARGS(&WGProps)));
+	const UINT workGraphIndex = WGProps->GetWorkGraphIndex(workGraphName);
+	ASSERT(workGraphIndex != UINT_MAX, "Opaque work graph was not found in the state object.");
+	_opaqueWGEntrypointIndex = WGProps->GetEntrypointIndex(
+		workGraphIndex,
+		{ L"RasterizationDispatchNode", 0 });
+	ASSERT(_opaqueWGEntrypointIndex != UINT_MAX, "Opaque work graph entrypoint was not found.");
+	ASSERT(
+		WGProps->GetEntrypointRecordSizeInBytes(workGraphIndex, _opaqueWGEntrypointIndex) == 0,
+		"Opaque work graph entrypoint unexpectedly requires a CPU record.");
 	D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memoryReqs = {};
 	WGProps->GetWorkGraphMemoryRequirements(
-		WGProps->GetWorkGraphIndex(workGraphName),
+		workGraphIndex,
 		&memoryReqs);
 
 	D3D12_GPU_VIRTUAL_ADDRESS_RANGE WGBackMemRange = {};
 	WGBackMemRange.SizeInBytes = memoryReqs.MaxSizeInBytes;
 
-	CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
-	D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
-		WGBackMemRange.SizeInBytes,
-		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-	SUCCESS(device->CreateCommittedResource(
-		&prop,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		D3D12_RESOURCE_STATE_COMMON,
-		nullptr,
-		IID_PPV_ARGS(&_opaqueWGBackMem)));
-
-	WGBackMemRange.StartAddress = _opaqueWGBackMem->GetGPUVirtualAddress();
+	if (WGBackMemRange.SizeInBytes > 0)
+	{
+		CD3DX12_HEAP_PROPERTIES prop(D3D12_HEAP_TYPE_DEFAULT);
+		D3D12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(
+			WGBackMemRange.SizeInBytes,
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		SUCCESS(device->CreateCommittedResource(
+			&prop,
+			D3D12_HEAP_FLAG_NONE,
+			&desc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&_opaqueWGBackMem)));
+		NAME_D3D12_OBJECT(_opaqueWGBackMem);
+		WGBackMemRange.StartAddress = _opaqueWGBackMem->GetGPUVirtualAddress();
+	}
 
 	_opaqueProgramDesc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
 	_opaqueProgramDesc.WorkGraph.ProgramIdentifier = _opaqueWG;
 	_opaqueProgramDesc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
 	_opaqueProgramDesc.WorkGraph.BackingMemory = WGBackMemRange;
+	_opaqueWGNeedsInitialization = true;
 }
 #endif
 
@@ -703,64 +736,69 @@ void SoftwareRasterization::Update()
 
 void SoftwareRasterization::DrawDepths()
 {
-	if (Settings::SWRWGEnabled)
-	{
+	bool useWorkGraphs = false;
 #ifdef USE_WORK_GRAPHS
-		_beginFrame();
+	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported;
+#endif
+
+	_beginFrame();
+#ifdef USE_WORK_GRAPHS
+	if (useWorkGraphs)
+	{
 		_drawDepthWG();
 		_drawShadowsWG();
 		_drawDepthBigTriangles();
 		_drawShadowsBigTriangles();
-		_finishDepthsRendering();
-#endif
 	}
 	else
+#endif
 	{
-		_beginFrame();
 		_drawDepth();
 		_drawShadows();
 		_drawDepthBigTriangles();
 		_drawShadowsBigTriangles();
-		_finishDepthsRendering();
 	}
+	_finishDepthsRendering();
 }
 
 void SoftwareRasterization::DrawOpaque()
 {
-	if (Settings::SWRWGEnabled)
-	{
+	bool useWorkGraphs = false;
 #ifdef USE_WORK_GRAPHS
+	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported;
+	if (useWorkGraphs)
+	{
 		_drawOpaqueWG();
-		_endFrame();
-#endif
 	}
 	else
+#endif
 	{
 		_drawOpaque();
-		_endFrame();
 	}
+	_endFrame();
 }
 
 void SoftwareRasterization::_beginFrame()
 {
 	CD3DX12_RESOURCE_BARRIER* barriers =
 		(CD3DX12_RESOURCE_BARRIER*)alloca((5 + 2 * Settings::FrustumsCount) * sizeof(CD3DX12_RESOURCE_BARRIER));
-	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+	UINT barrierCount = 0;
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_trianglesStats.Get(),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_COPY_DEST);
-	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_bigTrianglesOpaqueCounter.Get(),
 		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
 		D3D12_RESOURCE_STATE_COPY_DEST);
 	for (int frustum = 0; frustum < Settings::FrustumsCount; frustum++)
 	{
-		barriers[1 + frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
+		barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 			_bigTrianglesDepthCounters[frustum].Get(),
 			D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
 			D3D12_RESOURCE_STATE_COPY_DEST);
 	}
-	COMMAND_LIST->ResourceBarrier(1 + Settings::FrustumsCount, barriers);
+	COMMAND_LIST->ResourceBarrier(barrierCount, barriers);
 
 	_clearStatistics();
 	for (int frustum = 0; frustum < Settings::FrustumsCount; frustum++)
@@ -769,38 +807,39 @@ void SoftwareRasterization::_beginFrame()
 	}
 	_clearBigTrianglesOpaqueCounter();
 
-	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barrierCount = 0;
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_depthBuffer.Get(),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		Shadows::Sun.GetShadowMapSWR(),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_trianglesStats.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_bigTrianglesOpaque.Get(),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition(
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 		_bigTrianglesOpaqueCounter.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	for (int frustum = 0; frustum < Settings::FrustumsCount; frustum++)
 	{
-		barriers[5 + 2 * frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
+		barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 			_bigTrianglesDepth[frustum].Get(),
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		barriers[5 + 2 * frustum + 1] = CD3DX12_RESOURCE_BARRIER::Transition(
+		barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::Transition(
 			_bigTrianglesDepthCounters[frustum].Get(),
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	}
-	COMMAND_LIST->ResourceBarrier(5 + 2 * Settings::FrustumsCount, barriers);
+	COMMAND_LIST->ResourceBarrier(barrierCount, barriers);
 
 	unsigned int clearValue[] = { 0, 0, 0, 0 };
 	COMMAND_LIST->ClearUnorderedAccessViewUint(
@@ -850,9 +889,7 @@ void SoftwareRasterization::_drawDepth()
 #endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		3,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		4, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -864,33 +901,13 @@ void SoftwareRasterization::_drawDepth()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
-	if (Settings::CullingEnabled)
-	{
-		COMMAND_LIST->ExecuteIndirect(
-			_dispatchCS.Get(),
-			1,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0,
-			nullptr,
-			0);
-	}
-	else
-	{
-		for (const auto& prefab : Scene::CurrentScene->prefabs)
-		{
-			for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
-			{
-				const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-
-				_drawIndexedInstanced(
-					currentMesh.indexCountPerInstance,
-					currentMesh.instanceCount,
-					currentMesh.startIndexLocation,
-					currentMesh.baseVertexLocation,
-					currentMesh.startInstanceLocation);
-			}
-		}
-	}
+	COMMAND_LIST->ExecuteIndirect(
+		_dispatchCS.Get(),
+		1,
+		_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
+		0,
+		nullptr,
+		0);
 
 	//CD3DX12_RESOURCE_BARRIER barriers[2] = {};
 	//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -931,9 +948,7 @@ void SoftwareRasterization::_drawShadows()
 #endif
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			3,
-			Settings::CullingEnabled
-			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
-			: Scene::CurrentScene->instancesGPU.GetSRV());
+			Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			4, Descriptors::SV.GetGPUHandle(PrevFrameShadowMapSRV + cascade - 1));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -945,34 +960,13 @@ void SoftwareRasterization::_drawShadows()
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
-		if (Settings::CullingEnabled)
-		{
-			COMMAND_LIST->ExecuteIndirect(
-				_dispatchCS.Get(),
-				1,
-				_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
-				0,
-				nullptr,
-				0);
-		}
-		else
-		{
-			for (const auto& prefab : Scene::CurrentScene->prefabs)
-			{
-				for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
-				{
-					const auto& currentMesh =
-						Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-
-					_drawIndexedInstanced(
-						currentMesh.indexCountPerInstance,
-						currentMesh.instanceCount,
-						currentMesh.startIndexLocation,
-						currentMesh.baseVertexLocation,
-						currentMesh.startInstanceLocation);
-				}
-			}
-		}
+		COMMAND_LIST->ExecuteIndirect(
+			_dispatchCS.Get(),
+			1,
+			_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
+			0,
+			nullptr,
+			0);
 
 		//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
 		//	_bigTriangles[cascade].Get(),
@@ -1018,9 +1012,7 @@ void SoftwareRasterization::_drawDepthBigTriangles()
 		1, Descriptors::SV.GetGPUHandle(BigTrianglesDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		2,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		3, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
 
@@ -1071,9 +1063,7 @@ void SoftwareRasterization::_drawShadowsBigTriangles()
 			1, Descriptors::SV.GetGPUHandle(BigTrianglesDepthSRV + cascade));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			2,
-			Settings::CullingEnabled
-			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
-			: Scene::CurrentScene->instancesGPU.GetSRV());
+			Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			3, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
 
@@ -1145,9 +1135,7 @@ void SoftwareRasterization::_drawOpaque()
 #endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		6,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		7,
 		Settings::PerTriangleHiZRasterizationCullingEnabled
@@ -1164,33 +1152,13 @@ void SoftwareRasterization::_drawOpaque()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		12, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
-	if (Settings::CullingEnabled)
-	{
-		COMMAND_LIST->ExecuteIndirect(
-			_dispatchCS.Get(),
-			1,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0,
-			nullptr,
-			0);
-	}
-	else
-	{
-		for (const auto& prefab : Scene::CurrentScene->prefabs)
-		{
-			for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
-			{
-				const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
-
-				_drawIndexedInstanced(
-					currentMesh.indexCountPerInstance,
-					currentMesh.instanceCount,
-					currentMesh.startIndexLocation,
-					currentMesh.baseVertexLocation,
-					currentMesh.startInstanceLocation);
-			}
-		}
-	}
+	COMMAND_LIST->ExecuteIndirect(
+		_dispatchCS.Get(),
+		1,
+		_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
+		0,
+		nullptr,
+		0);
 
 	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
 	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -1211,9 +1179,7 @@ void SoftwareRasterization::_drawOpaque()
 		1, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		2,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		3, Descriptors::SV.GetGPUHandle(SWRDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1241,7 +1207,7 @@ void SoftwareRasterization::_drawDepthWG()
 	COMMAND_LIST->SetComputeRootSignature(_depthWGRS.Get());
 
 	COMMAND_LIST->SetComputeRootConstantBufferView(
-		0, _depthSceneCB->GetGPUVirtualAddress() + frustumIndex +  DX::FrameIndex * _depthSceneCBFrameSize);
+		0, _depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize);
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		1, Descriptors::SV.GetGPUHandle(CulledCommandsCountersSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1257,9 +1223,7 @@ void SoftwareRasterization::_drawDepthWG()
 #endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		5,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + frustumIndex + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		6, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1269,32 +1233,22 @@ void SoftwareRasterization::_drawDepthWG()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		9, Descriptors::SV.GetGPUHandle(PrevFrameDepthSRV));
 
-	ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
+	ComPtr<ID3D12GraphicsCommandList10> commandList;
+	SUCCESS(COMMAND_LIST.As(&commandList));
 
+	_depthProgramDesc.WorkGraph.Flags = _depthWGNeedsInitialization
+		? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE
+		: D3D12_SET_WORK_GRAPH_FLAG_NONE;
 	commandList->SetProgram(&_depthProgramDesc);
+	_depthWGNeedsInitialization = false;
 
 	D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
 	dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
-	dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+	dispatchDesc.NodeCPUInput.EntrypointIndex = _depthWGEntrypointIndex;
 	dispatchDesc.NodeCPUInput.NumRecords = 1;
 	dispatchDesc.NodeCPUInput.pRecords = nullptr;
 	dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
 	commandList->DispatchGraph(&dispatchDesc);
-
-	//CD3DX12_RESOURCE_BARRIER barriers[2] = {};
-	//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
-	//	_bigTriangles[0].Get(),
-	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-	//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-	//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
-	//barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
-	//	_bigTrianglesCounters[0].Get(),
-	//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-	//	D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-	//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-	//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
-	//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 
 }
 
@@ -1303,8 +1257,14 @@ void SoftwareRasterization::_drawShadowsWG()
 	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows WG");
 
 	COMMAND_LIST->SetComputeRootSignature(_depthWGRS.Get());
+	ComPtr<ID3D12GraphicsCommandList10> commandList;
+	SUCCESS(COMMAND_LIST.As(&commandList));
+	_depthProgramDesc.WorkGraph.Flags = _depthWGNeedsInitialization
+		? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE
+		: D3D12_SET_WORK_GRAPH_FLAG_NONE;
+	commandList->SetProgram(&_depthProgramDesc);
+	_depthWGNeedsInitialization = false;
 
-	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
 	for (int cascade = 1; cascade <= Settings::CascadesCount; cascade++)
 	{
 		COMMAND_LIST->SetComputeRootConstantBufferView(
@@ -1324,9 +1284,7 @@ void SoftwareRasterization::_drawShadowsWG()
 #endif
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			5,
-			Settings::CullingEnabled
-			? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount)
-			: Scene::CurrentScene->instancesGPU.GetSRV());
+			Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + cascade + DX::FrameIndex * PerFrameDescriptorsCount));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			6, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1336,31 +1294,14 @@ void SoftwareRasterization::_drawShadowsWG()
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			9, Descriptors::SV.GetGPUHandle(PrevFrameShadowMapSRV + cascade - 1));
 
-		ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
-
-		commandList->SetProgram(&_depthProgramDesc);
-
 		D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
 		dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
-		dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+		dispatchDesc.NodeCPUInput.EntrypointIndex = _depthWGEntrypointIndex;
 		dispatchDesc.NodeCPUInput.NumRecords = 1;
 		dispatchDesc.NodeCPUInput.pRecords = nullptr;
 		dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
 		commandList->DispatchGraph(&dispatchDesc);
 
-		//barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	_bigTriangles[cascade].Get(),
-		//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
-		//barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	_bigTrianglesCounters[cascade].Get(),
-		//	D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		//	D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-		//	D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		//	D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY);
-		//COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
 	}
 
 }
@@ -1394,9 +1335,7 @@ void SoftwareRasterization::_drawOpaqueWG()
 #endif
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		9,
 		Settings::PerTriangleHiZRasterizationCullingEnabled
@@ -1411,13 +1350,18 @@ void SoftwareRasterization::_drawOpaqueWG()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		13, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
-	ID3D12GraphicsCommandList10* commandList = (ID3D12GraphicsCommandList10*)COMMAND_LIST.Get();
+	ComPtr<ID3D12GraphicsCommandList10> commandList;
+	SUCCESS(COMMAND_LIST.As(&commandList));
 
+	_opaqueProgramDesc.WorkGraph.Flags = _opaqueWGNeedsInitialization
+		? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE
+		: D3D12_SET_WORK_GRAPH_FLAG_NONE;
 	commandList->SetProgram(&_opaqueProgramDesc);
+	_opaqueWGNeedsInitialization = false;
 
 	D3D12_DISPATCH_GRAPH_DESC dispatchDesc = {};
 	dispatchDesc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
-	dispatchDesc.NodeCPUInput.EntrypointIndex = 0;
+	dispatchDesc.NodeCPUInput.EntrypointIndex = _opaqueWGEntrypointIndex;
 	dispatchDesc.NodeCPUInput.NumRecords = 1;
 	dispatchDesc.NodeCPUInput.pRecords = nullptr;
 	dispatchDesc.NodeCPUInput.RecordStrideInBytes = 0;
@@ -1441,10 +1385,7 @@ void SoftwareRasterization::_drawOpaqueWG()
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		1, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
-		2,
-		Settings::CullingEnabled
-		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
-		: Scene::CurrentScene->instancesGPU.GetSRV());
+		2, Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		3, Descriptors::SV.GetGPUHandle(SWRDepthSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(

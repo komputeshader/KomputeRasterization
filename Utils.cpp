@@ -243,12 +243,8 @@ void CompileDXILLibraryFromFile(
 		operationResult.GetAddressOf());
 	ASSERT(SUCCEEDED(hr), "Failed to compile.")
 
-	operationResult->GetStatus(&hr);
-	if (SUCCEEDED(hr))
-	{
-		hr = operationResult->GetResult((IDxcBlob**)ppCode);
-		ASSERT(SUCCEEDED(hr), "Failed to retrieve compiled code.")
-	}
+	HRESULT compileStatus = E_FAIL;
+	SUCCESS(operationResult->GetStatus(&compileStatus));
 
 	ComPtr<IDxcBlobEncoding> errors;
 	if (SUCCEEDED(operationResult->GetErrorBuffer(errors.GetAddressOf())))
@@ -259,6 +255,9 @@ void CompileDXILLibraryFromFile(
 			OutputDebugStringA((char*)errorText);
 		}
 	}
+
+	SUCCESS(compileStatus);
+	SUCCESS(operationResult->GetResult(reinterpret_cast<IDxcBlob**>(ppCode)));
 }
 #endif
 

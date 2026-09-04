@@ -37,6 +37,7 @@ size_t UploadFenceValue;
 
 DXGI_ADAPTER_DESC1 AdapterDesc;
 D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
+bool WorkGraphsSupported = false;
 
 int FrameNumber;
 int FrameIndex;
@@ -185,12 +186,13 @@ void CreateDevice()
 	}
 
 #ifdef USE_WORK_GRAPHS
-	D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options;
-	SUCCESS(Device->CheckFeatureSupport(
+	D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options = {};
+	const HRESULT workGraphsSupportResult = Device->CheckFeatureSupport(
 		D3D12_FEATURE_D3D12_OPTIONS21,
 		&Options,
-		sizeof(Options)));
-	ASSERT(Options.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED, "Device does not report support for work graphs.")
+		sizeof(Options));
+	WorkGraphsSupported = SUCCEEDED(workGraphsSupportResult) &&
+		Options.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 #endif
 }
 

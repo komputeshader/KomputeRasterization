@@ -5,6 +5,7 @@ StructuredBuffer<uint3> DispatchArgument : register(t0);
 struct RasterizationDispatch
 {
 	uint3 dispatchGrid : SV_DispatchGrid;
+	uint commandCount;
 };
 
 [Shader("node")]
@@ -15,14 +16,16 @@ struct RasterizationDispatch
 void RasterizationDispatchNode(
 	[MaxRecords(1)] NodeOutput<RasterizationDispatch> TriangleRasterizationNode)
 {
+	uint commandCount = min(DispatchArgument[0].x, (uint)SWR_WG_MAX_COMMANDS);
+	uint dispatchY = min(
+		(commandCount + SWR_WG_MAX_DISPATCH_GRID_X - 1) / SWR_WG_MAX_DISPATCH_GRID_X,
+		(uint)SWR_WG_MAX_DISPATCH_GRID_Y);
+	uint dispatchX = dispatchY > 0 ? (commandCount + dispatchY - 1) / dispatchY : 0;
+
 	GroupNodeOutputRecords<RasterizationDispatch> output =
 		TriangleRasterizationNode.GetGroupNodeOutputRecords(1);
-
-	output[0].dispatchGrid = uint3(
-		DispatchArgument[0].x,
-		SWR_WG_THREAD_GROUPS_Y,
-		1);
-
+	output[0].dispatchGrid = uint3(dispatchX, dispatchY, SWR_WG_THREAD_GROUPS_Y);
+	output[0].commandCount = commandCount;
 	output.OutputComplete();
 }
 
@@ -60,8 +63,10 @@ groupshared uint2 StatisticsSM;
 
 [Shader("node")]
 [NodeLaunch("broadcasting")]
-// TODO: fix it somehow?
-[NodeMaxDispatchGrid(10000, 1, 1)]
+[NodeMaxDispatchGrid(
+	SWR_WG_MAX_DISPATCH_GRID_X,
+	SWR_WG_MAX_DISPATCH_GRID_Y,
+	SWR_WG_THREAD_GROUPS_Y)]
 [numthreads(SWR_WG_TRIANGLE_THREADS_X, SWR_WG_TRIANGLE_THREADS_Y, SWR_WG_TRIANGLE_THREADS_Z)]
 void TriangleRasterizationNode(
 	DispatchNodeInputRecord<RasterizationDispatch> input,
@@ -69,9 +74,15 @@ void TriangleRasterizationNode(
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint groupIndex : SV_GroupIndex)
 {
+	uint commandIndex = groupID.x + groupID.y * input.Get().dispatchGrid.x;
+	if (commandIndex >= input.Get().commandCount)
+	{
+		return;
+	}
+
 	if (groupIndex == 0)
 	{
-		Command = Commands[groupID.x];
+		Command = Commands[commandIndex];
 		StatisticsSM = uint2(0, 0);
 	}
 
@@ -81,11 +92,11 @@ void TriangleRasterizationNode(
 	//for (uint meshletChunkIndex = 0; meshletChunkIndex < WG_TRIANGLES_PER_THREAD; meshletChunkIndex++)
 	//{
 		[branch]
-		if ((groupThreadID.x + groupID.y * SWR_WG_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
+		if ((groupThreadID.x + groupID.z * SWR_WG_TRIANGLE_THREADS_X) * 3 < Command.args.indexCountPerInstance)
 		{
 			uint i0, i1, i2;
 			GetTriangleIndices(
-				Command.args.startIndexLocation + (groupThreadID.x + groupID.y * SWR_WG_TRIANGLE_THREADS_X) * 3,
+				Command.args.startIndexLocation + (groupThreadID.x + groupID.z * SWR_WG_TRIANGLE_THREADS_X) * 3,
 				i0, i1, i2);
 
 			float3 p0, p1, p2;

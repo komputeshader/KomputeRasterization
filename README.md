@@ -8,7 +8,7 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 ## System requirements
 * Windows 10, 64-bit.
 * DirectX 12 compatible GPU.
-* In order to build the Work Graphs codepath, a GPU supporting shader model 6.8 is required (comment out the USE_WORK_GRAPHS macro otherwise).
+* The Work Graphs codepath requires shader model 6.8 and a GPU/driver reporting D3D12 Work Graphs support. Unsupported systems automatically use the compute-shader rasterizer.
 
 ## How to build and run
 * `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`

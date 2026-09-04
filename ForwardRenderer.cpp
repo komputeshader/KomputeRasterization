@@ -275,7 +275,7 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 				sizeof(D3D12_DISPATCH_ARGUMENTS),
 				_culledCommandsCounters[frame][frustum],
 				_culledCommandsCountersUpload[frame][frustum],
-				D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+				culledCommandsReadState,
 				true);
 			SetNameIndexed(
 				_culledCommandsCounters[frame][frustum].Get(),
@@ -517,8 +517,10 @@ void ForwardRenderer::Draw()
 	bool perTriangleHiZRasterizationCullingEnabled =
 		softwareRasterizationEnabled &&
 		Settings::PerTriangleHiZRasterizationCullingEnabled;
+	const bool culledCommandsRequired =
+		Settings::CullingEnabled || softwareRasterizationEnabled;
 
-	if (Settings::CullingEnabled)
+	if (culledCommandsRequired)
 	{
 		DX::WaitForFence(
 			DX::ComputeFences[DX::FrameIndex].Get(),
@@ -536,7 +538,8 @@ void ForwardRenderer::Draw()
 			_depthsFence.Get(),
 			_depthsFenceValue);
 
-		if (!Settings::FreezeCulling)
+		if (!Settings::FreezeCulling ||
+			softwareRasterizationEnabled && !Settings::CullingEnabled)
 		{
 			_culler->Cull(
 				COMPUTE_COMMAND_LIST.Get(),
@@ -605,7 +608,7 @@ void ForwardRenderer::Draw()
 		(Settings::CameraHiZCullingEnabled ||
 			Settings::ShadowsHiZCullingEnabled))
 	{
-		if (Settings::CullingEnabled)
+		if (culledCommandsRequired)
 		{
 			SUCCESS(COMPUTE_COMMAND_LIST->Reset(
 				DX::ComputeCommandAllocators[DX::FrameIndex].Get(),
@@ -1057,7 +1060,17 @@ void ForwardRenderer::_newFrameGUI()
 
 		if (Settings::SWREnabled)
 		{
-			ImGui::Checkbox("Use Work Graphs", &Settings::SWRWGEnabled);
+#ifdef USE_WORK_GRAPHS
+			if (DX::WorkGraphsSupported)
+			{
+				ImGui::Checkbox("Use Work Graphs", &Settings::SWRWGEnabled);
+			}
+			else
+			{
+				Settings::SWRWGEnabled = false;
+				ImGui::TextDisabled("Work Graphs are not supported by this GPU");
+			}
+#endif
 		}
 		else
 		{

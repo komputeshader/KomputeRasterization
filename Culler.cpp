@@ -77,10 +77,14 @@ void Culler::Update()
 	cullingData.totalInstancesCount = static_cast<unsigned int>(Scene::CurrentScene->instancesCPU.size());
 	cullingData.totalMeshesCount = static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size());
 	cullingData.cascadesCount = Settings::CascadesCount;
-	cullingData.frustumCullingEnabled = Settings::FrustumCullingEnabled ? 1 : 0;
-	cullingData.cameraHiZCullingEnabled = Settings::CameraHiZCullingEnabled ? 1 : 0;
-	cullingData.shadowsHiZCullingEnabled = Settings::ShadowsHiZCullingEnabled ? 1 : 0;
-	cullingData.clusterBackfaceCullingEnabled = Settings::ClusterBackfaceCullingEnabled ? 1 : 0;
+	cullingData.frustumCullingEnabled =
+		Settings::CullingEnabled && Settings::FrustumCullingEnabled ? 1 : 0;
+	cullingData.cameraHiZCullingEnabled =
+		Settings::CullingEnabled && Settings::CameraHiZCullingEnabled ? 1 : 0;
+	cullingData.shadowsHiZCullingEnabled =
+		Settings::CullingEnabled && Settings::ShadowsHiZCullingEnabled ? 1 : 0;
+	cullingData.clusterBackfaceCullingEnabled =
+		Settings::CullingEnabled && Settings::ClusterBackfaceCullingEnabled ? 1 : 0;
 	cullingData.depthResolution =
 	{
 		static_cast<float>(Settings::RenderWidth),
@@ -119,13 +123,16 @@ void Culler::Cull(
 	const ComPtr<ID3D12Resource> (&culledCommandsCounters)[MAX_FRUSTUMS_COUNT])
 {
 	PIXScopedEvent(commandList, 0, L"Culling");
+	const D3D12_RESOURCE_STATES culledCommandsCounterReadState =
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
 	CD3DX12_RESOURCE_BARRIER barriers[2 + 2 * MAX_FRUSTUMS_COUNT] = {};
 	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
 	{
 		barriers[frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
 			culledCommandsCounters[frustum].Get(),
-			D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+			culledCommandsCounterReadState,
 			D3D12_RESOURCE_STATE_COPY_DEST);
 	}
 	commandList->ResourceBarrier(MAX_FRUSTUMS_COUNT, barriers);
@@ -240,7 +247,7 @@ void Culler::Cull(
 			CD3DX12_RESOURCE_BARRIER::Transition(
 				culledCommandsCounters[frustum].Get(),
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+				culledCommandsCounterReadState);
 	}
 	commandList->ResourceBarrier(2 * MAX_FRUSTUMS_COUNT, barriers);
 }

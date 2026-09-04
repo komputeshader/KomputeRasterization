@@ -40,6 +40,7 @@ extern size_t UploadFenceValue;
 void WaitForFence(ID3D12Fence* fence, size_t fenceValue, HANDLE fenceEvent);
 
 extern D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
+extern bool WorkGraphsSupported;
 
 void GetHardwareAdapter(
 	IDXGIFactory1* pFactory,

@@ -120,15 +120,19 @@ private:
 	Microsoft::WRL::ComPtr<ID3DBlob> _depthWGLibrary;
 	Microsoft::WRL::ComPtr<ID3D12StateObject> _depthWGStateObj;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _depthWGRS;
-	D3D12_PROGRAM_IDENTIFIER _depthWG;
-	D3D12_SET_PROGRAM_DESC _depthProgramDesc;
+	D3D12_PROGRAM_IDENTIFIER _depthWG = {};
+	D3D12_SET_PROGRAM_DESC _depthProgramDesc = {};
+	UINT _depthWGEntrypointIndex = UINT_MAX;
+	bool _depthWGNeedsInitialization = true;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthWGBackMem;
 
 	Microsoft::WRL::ComPtr<ID3DBlob> _opaqueWGLibrary;
 	Microsoft::WRL::ComPtr<ID3D12StateObject> _opaqueWGStateObj;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _opaqueWGRS;
-	D3D12_PROGRAM_IDENTIFIER _opaqueWG;
-	D3D12_SET_PROGRAM_DESC _opaqueProgramDesc;
+	D3D12_PROGRAM_IDENTIFIER _opaqueWG = {};
+	D3D12_SET_PROGRAM_DESC _opaqueProgramDesc = {};
+	UINT _opaqueWGEntrypointIndex = UINT_MAX;
+	bool _opaqueWGNeedsInitialization = true;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _opaqueWGBackMem;
 #endif
 

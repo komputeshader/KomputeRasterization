@@ -66,6 +66,12 @@
 #define WG_TRIANGLES_PER_THREAD ((MESHLET_SIZE) / (SWR_WG_TRIANGLE_THREADS_X))
 #define SWR_WG_THREAD_GROUPS_Y ((MESHLET_SIZE) / (SWR_WG_TRIANGLE_THREADS_X))
 
+// a broadcasting node dispatch is limited to 65535 groups per dimension and 2^24 - 1 groups in total
+// use Y to extend the command range and reserve Z for configurations where a meshlet needs more than one triangle group
+#define SWR_WG_MAX_DISPATCH_GRID_X 65535
+#define SWR_WG_MAX_DISPATCH_GRID_Y (256 / (SWR_WG_THREAD_GROUPS_Y))
+#define SWR_WG_MAX_COMMANDS ((SWR_WG_MAX_DISPATCH_GRID_X) * (SWR_WG_MAX_DISPATCH_GRID_Y))
+
 #define SWR_WG_BIG_TRIANGLE_THREADS_X 8
 #define SWR_WG_BIG_TRIANGLE_THREADS_Y 8
 #define SWR_WG_BIG_TRIANGLE_THREADS_Z 1
