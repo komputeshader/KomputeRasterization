@@ -139,8 +139,9 @@ void main(
 	Instance instance = Instances[dispatchThreadID.x];
 	MeshMeta meshMeta = MeshesMeta[instance.meshID];
 	meshMeta.aabb = TransformAABB(meshMeta.aabb, instance.worldTransform);
-	// TODO: cone axis should be rotated properly
 	meshMeta.coneApex = mul(instance.worldTransform, float4(meshMeta.coneApex, 1.0)).xyz;
+	// no need to normalize it
+	meshMeta.coneAxis = mul(instance.worldTransform, float4(meshMeta.coneAxis, 0.0)).xyz;
 
 	uint writeIndex = meshMeta.startInstanceLocation;
 

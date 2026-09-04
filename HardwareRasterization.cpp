@@ -22,7 +22,7 @@ struct SceneCB
 };
 static_assert(
 	(sizeof(SceneCB) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 void HardwareRasterization::Resize(
 	ForwardRenderer* renderer,

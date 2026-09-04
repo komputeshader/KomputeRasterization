@@ -173,6 +173,27 @@ void CreateDevice()
 	}
 	NAME_D3D12_OBJECT(Device);
 
+#if defined(_DEBUG)
+	ComPtr<ID3D12InfoQueue> infoQueue;
+	if (SUCCEEDED(Device.As(&infoQueue)))
+	{
+		D3D12_MESSAGE_SEVERITY deniedSeverities[] =
+		{
+			D3D12_MESSAGE_SEVERITY_INFO
+		};
+		D3D12_MESSAGE_ID deniedMessageIDs[] =
+		{
+			D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED
+		};
+		D3D12_INFO_QUEUE_FILTER filter = {};
+		filter.DenyList.NumSeverities = _countof(deniedSeverities);
+		filter.DenyList.pSeverityList = deniedSeverities;
+		filter.DenyList.NumIDs = _countof(deniedMessageIDs);
+		filter.DenyList.pIDList = deniedMessageIDs;
+		SUCCESS(infoQueue->PushStorageFilter(&filter));
+	}
+#endif
+
 	Adapter->GetDesc1(&AdapterDesc);
 
 	RSFeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;

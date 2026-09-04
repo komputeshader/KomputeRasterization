@@ -193,18 +193,18 @@ void CompileDXILLibraryFromFile(
 	if (hmodDxil == 0)
 	{
 		hmodDxil = LoadLibrary(L"dxil.dll");
-		ASSERT(hmodDxil != 0, "dxil.dll missing or wrong architecture")
+		ASSERT(hmodDxil != 0, "dxil.dll missing or wrong architecture.")
 	}
 
 	if (hmod == 0)
 	{
 		hmod = LoadLibrary(L"dxcompiler.dll");
-		ASSERT(hmod != 0, "dxcompiler.dll missing or wrong architecture")
+		ASSERT(hmod != 0, "dxcompiler.dll missing or wrong architecture.")
 
 		if (pDxcCreateInstanceProc == nullptr)
 		{
 			pDxcCreateInstanceProc = (DxcCreateInstanceProc)GetProcAddress(hmod, "DxcCreateInstance");
-			ASSERT(pDxcCreateInstanceProc, "Unable to find dxcompiler!DxcCreateInstance")
+			ASSERT(pDxcCreateInstanceProc, "Unable to find dxcompiler!DxcCreateInstance.")
 		}
 	}
 

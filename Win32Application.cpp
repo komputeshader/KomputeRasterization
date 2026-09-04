@@ -63,11 +63,11 @@ namespace
 	void AssertClientSize(HWND window, unsigned int width, unsigned int height)
 	{
 		RECT clientRect = {};
-		ASSERT(GetClientRect(window, &clientRect), "Failed to query the window client size")
+		ASSERT(GetClientRect(window, &clientRect), "Failed to query the window client size.")
 		ASSERT(
 			static_cast<unsigned int>(clientRect.right - clientRect.left) == width &&
 			static_cast<unsigned int>(clientRect.bottom - clientRect.top) == height,
-			"The window client size does not match the configured backbuffer size")
+			"The window client size does not match the configured backbuffer size.")
 	}
 }
 
@@ -119,7 +119,7 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 		nullptr, // We aren't using menus.
 		hInstance,
 		pSample);
-	ASSERT(m_hwnd, "Failed to create the application window")
+	ASSERT(m_hwnd, "Failed to create the application window.")
 
 	// CW_USEDEFAULT normally selects the primary monitor, but correct the frame
 	// and native render size against the monitor Windows actually chose.
@@ -203,7 +203,7 @@ LRESULT CALLBACK Win32Application::WindowProc(
 	{
 		unsigned int x = LOWORD(lParam);
 		unsigned int y = HIWORD(lParam);
-		if (pSample && !ImGuiCapturesMouse() && static_cast<unsigned char>(wParam) == MK_RBUTTON)
+		if (pSample && !ImGuiCapturesMouse() && (wParam & MK_RBUTTON) != 0)
 		{
 			pSample->MouseMove(x, y);
 		}

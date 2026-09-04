@@ -118,7 +118,7 @@ void InitializeResources();
 
 inline unsigned int DispatchSize(unsigned int groupSize, unsigned int elementsCount)
 {
-	assert(groupSize != 0 && "DispatchSize : groupSize cannot be 0");
+	assert(groupSize != 0 && "DispatchSize : groupSize cannot be 0.");
 
 	return (elementsCount + groupSize - 1) / groupSize;
 }

@@ -32,7 +32,7 @@ struct CullingCB
 };
 static_assert(
 	(sizeof(CullingCB) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 Culler::Culler()
 {

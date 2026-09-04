@@ -20,7 +20,7 @@ struct ShadowsConstantBuffer
 };
 static_assert(
 	(sizeof(ShadowsConstantBuffer) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 void Shadows::Initialize()
 {

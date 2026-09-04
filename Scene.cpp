@@ -378,7 +378,7 @@ void Scene::_loadObj(
 				OBJResult.error.code.message().c_str(),
 				OBJResult.error.line_num,
 				OBJResult.error.line.c_str());
-			ASSERT(false, "OBJ parsing failed")
+			ASSERT(false, "OBJ parsing failed.")
 			return;
 		}
 
@@ -388,7 +388,7 @@ void Scene::_loadObj(
 				"Error triangulating %s: %s\n",
 				OBJPath.c_str(),
 				OBJResult.error.code.message().c_str());
-			ASSERT(false, "OBJ triangulation failed")
+			ASSERT(false, "OBJ triangulation failed.")
 			return;
 		}
 
@@ -405,7 +405,7 @@ void Scene::_loadObj(
 		if (shapeJobs.empty())
 		{
 			PrintToOutput("Error loading %s: OBJ contains no triangle meshes\n", OBJPath.c_str());
-			ASSERT(false, "OBJ contains no triangle meshes")
+			ASSERT(false, "OBJ contains no triangle meshes.")
 			return;
 		}
 

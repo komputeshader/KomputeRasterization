@@ -141,7 +141,7 @@ struct DepthSceneCB
 };
 static_assert(
 	(sizeof(DepthSceneCB) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 enum ScenesIndices
 {

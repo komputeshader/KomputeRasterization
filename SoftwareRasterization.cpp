@@ -21,7 +21,7 @@ struct SWRDepthSceneCB
 };
 static_assert(
 	(sizeof(SWRDepthSceneCB) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 struct SWRSceneCB
 {
@@ -46,7 +46,7 @@ struct SWRSceneCB
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
-	"Constant Buffer size must be 256-byte aligned");
+	"Constant Buffer size must be 256-byte aligned.");
 
 struct BigTriangleDepth
 {

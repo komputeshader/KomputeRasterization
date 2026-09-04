@@ -32,7 +32,7 @@ namespace
 
 		outCPUHandle->ptr = 0;
 		outGPUHandle->ptr = 0;
-		ASSERT(false, "ImGui ran out of reserved texture descriptors")
+		ASSERT(false, "ImGui ran out of reserved texture descriptors.")
 	}
 
 	void FreeGUITextureDescriptor(
@@ -46,16 +46,16 @@ namespace
 			{
 				ASSERT(
 					Descriptors::SV.GetGPUHandle(GUIFontTextureSRV + index).ptr == gpuHandle.ptr,
-					"ImGui CPU and GPU descriptor handles do not match")
+					"ImGui CPU and GPU descriptor handles do not match.")
 				ASSERT(
 					GUITextureDescriptorsInUse[index],
-					"ImGui attempted to free an unused texture descriptor")
+					"ImGui attempted to free an unused texture descriptor.")
 				GUITextureDescriptorsInUse[index] = false;
 				return;
 			}
 		}
 
-		ASSERT(false, "ImGui attempted to free an unknown texture descriptor")
+		ASSERT(false, "ImGui attempted to free an unknown texture descriptor.")
 	}
 }
 
@@ -322,7 +322,7 @@ void ForwardRenderer::_createDepthBufferResources()
 	const unsigned int backBufferMipsCount = Utils::MipsCount(_width, _height);
 	ASSERT(
 		backBufferMipsCount <= Settings::MaxBackBufferMipsCount,
-		"The backbuffer exceeds D3D12's maximum texture dimensions")
+		"The backbuffer exceeds D3D12's maximum texture dimensions.")
 
 	auto depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		DXGI_FORMAT_R32_TYPELESS,
@@ -534,9 +534,12 @@ void ForwardRenderer::Draw()
 
 		ID3D12DescriptorHeap* ppHeaps[] = { Descriptors::SV.GetHeap() };
 		COMPUTE_COMMAND_LIST->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		DX::ComputeCommandQueue->Wait(
-			_depthsFence.Get(),
-			_depthsFenceValue);
+		if (_depthsFenceValue != 0)
+		{
+			SUCCESS(DX::ComputeCommandQueue->Wait(
+				_depthsFence.Get(),
+				_depthsFenceValue));
+		}
 
 		if (!Settings::FreezeCulling ||
 			softwareRasterizationEnabled && !Settings::CullingEnabled)
@@ -566,9 +569,14 @@ void ForwardRenderer::Draw()
 	}
 	else
 	{
-		DX::CommandQueue->Wait(
-			DX::ComputeFences[DX::LastFrameIndex].Get(),
-			DX::ComputeFenceValues[DX::LastFrameIndex]);
+		const size_t computeFenceValue =
+			DX::ComputeFenceValues[DX::LastFrameIndex];
+		if (computeFenceValue != 0)
+		{
+			SUCCESS(DX::CommandQueue->Wait(
+				DX::ComputeFences[DX::LastFrameIndex].Get(),
+				computeFenceValue));
+		}
 	}
 
 	_beginFrameRendering();
