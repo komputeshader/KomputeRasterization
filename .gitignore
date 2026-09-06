@@ -1,16 +1,16 @@
-/.vs/
+.vs/
 
-/Debug/
-/Release/
-/x86/
-/x64/
-/ARM/
-/ARM64/
-/KomputeR.*/
+[Dd]ebug/
+[Rr]elease/
+x86/
+x64/
+ARM/
+ARM64/
+KomputeR.*/
 
-/packages/
+packages/
 
-/imgui.ini
+imgui.ini
 .DS_Store
 xcuserdata/
 *.xcuserstate

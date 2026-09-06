@@ -28,16 +28,22 @@ private:
 
 	void _loadAssets();
 	void _createDepthBufferResources();
+	void _createOverdrawResources();
 
 	void _createHWRRS();
+	void _createOverdrawRS();
 	void _createDepthPassPSO();
 	void _createOpaquePassPSO();
+	void _createOverdrawPassPSO();
+	void _createOverdrawDisplayRS();
+	void _createOverdrawDisplayPSO();
 	void _createMDIStuff();
 
 	void _beginFrame();
 	void _drawDepth();
 	void _drawShadows();
 	void _drawOpaque(ID3D12Resource* renderTarget);
+	void _drawOverdraw(ID3D12Resource* renderTarget);
 	void _endFrame();
 
 	CD3DX12_VIEWPORT _viewport;
@@ -45,8 +51,13 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthBuffer;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _HWRRS;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> _overdrawRS;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> _overdrawDisplayRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _opaquePSO;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _depthPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> _overdrawPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> _overdrawDisplayPSO;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _overdrawBuffer;
 	DXGI_FORMAT _depthFormat = DXGI_FORMAT_D32_FLOAT;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthSceneCB;
@@ -57,6 +68,7 @@ private:
 
 	// MDI stuff
 	Microsoft::WRL::ComPtr<ID3D12CommandSignature> _commandSignature;
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> _overdrawCommandSignature;
 
 	int _width;
 	int _height;

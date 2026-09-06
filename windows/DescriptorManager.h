@@ -14,6 +14,8 @@ enum CBVSRVUAVIndices
 	CullingCountersUAV,
 	GUIFontTextureSRV,
 	HWRShadowMapSRV = GUIFontTextureSRV + GUITextureDescriptorsCount,
+	HWROverdrawSRV,
+	HWROverdrawUAV,
 	VertexPositionsSRV,
 	VertexNormalsSRV = VertexPositionsSRV + ScenesCount,
 	VertexColorsSRV = VertexNormalsSRV + ScenesCount,

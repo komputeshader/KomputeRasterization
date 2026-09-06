@@ -138,14 +138,13 @@ Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
 	const std::string& entrypoint,
 	const std::string& target);
 
-#ifdef USE_WORK_GRAPHS
-void CompileDXILLibraryFromFile(
+void CompileDXILFromFile(
 	const std::wstring& filename,
+	const std::wstring& entrypoint,
 	const std::wstring& target,
 	DxcDefine* defines,
 	unsigned int definesCount,
 	ID3DBlob** ppCode);
-#endif
 
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,

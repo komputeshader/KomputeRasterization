@@ -175,9 +175,9 @@ ComPtr<ID3DBlob> CompileShader(
 	return byteCode;
 }
 
-#ifdef USE_WORK_GRAPHS
-void CompileDXILLibraryFromFile(
+void CompileDXILFromFile(
 	const std::wstring& filename,
+	const std::wstring& entrypoint,
 	const std::wstring& target,
 	DxcDefine* defines,
 	unsigned int definesCount,
@@ -235,7 +235,7 @@ void CompileDXILLibraryFromFile(
 	hr = compiler->Compile(
 		source.Get(),
 		filename.c_str(),
-		nullptr,
+		entrypoint.empty() ? nullptr : entrypoint.c_str(),
 		target.c_str(),
 		args, cArgs,
 		defines, definesCount,
@@ -259,7 +259,6 @@ void CompileDXILLibraryFromFile(
 	SUCCESS(compileStatus);
 	SUCCESS(operationResult->GetResult(reinterpret_cast<IDxcBlob**>(ppCode)));
 }
-#endif
 
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,

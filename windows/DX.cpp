@@ -37,6 +37,7 @@ size_t UploadFenceValue;
 
 DXGI_ADAPTER_DESC1 AdapterDesc;
 D3D12_FEATURE_DATA_ROOT_SIGNATURE RSFeatureData;
+bool WaveOpsSupported = false;
 bool WorkGraphsSupported = false;
 
 int FrameNumber;
@@ -205,6 +206,20 @@ void CreateDevice()
 	{
 		RSFeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
+
+	D3D12_FEATURE_DATA_D3D12_OPTIONS1 options1 = {};
+	D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
+	WaveOpsSupported =
+		SUCCEEDED(Device->CheckFeatureSupport(
+			D3D12_FEATURE_D3D12_OPTIONS1,
+			&options1,
+			sizeof(options1))) &&
+		options1.WaveOps &&
+		SUCCEEDED(Device->CheckFeatureSupport(
+			D3D12_FEATURE_SHADER_MODEL,
+			&shaderModel,
+			sizeof(shaderModel))) &&
+		shaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_0;
 
 #ifdef USE_WORK_GRAPHS
 	D3D12_FEATURE_DATA_D3D12_OPTIONS21 Options = {};

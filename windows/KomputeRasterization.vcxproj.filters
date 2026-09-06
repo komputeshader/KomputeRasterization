@@ -246,6 +246,18 @@
     <None Include="shaders\Common.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="shaders\DrawOverdrawDisplayPS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawDisplayVS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawPS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawVS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
     <None Include="shaders\TypesAndConstants.hlsli">
       <Filter>Shaders</Filter>
     </None>

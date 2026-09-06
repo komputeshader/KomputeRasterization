@@ -522,6 +522,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="shaders\DrawOverdrawDisplayPS.hlsl" />
+    <None Include="shaders\DrawOverdrawDisplayVS.hlsl" />
+    <None Include="shaders\DrawOverdrawPS.hlsl" />
+    <None Include="shaders\DrawOverdrawVS.hlsl" />
     <None Include="shaders\Rasterization.hlsli">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

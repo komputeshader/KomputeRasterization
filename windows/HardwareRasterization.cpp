@@ -46,6 +46,10 @@ void HardwareRasterization::Resize(
 		static_cast<LONG>(_height));
 
 	_createDepthBufferResources();
+	if (DX::WaveOpsSupported)
+	{
+		_createOverdrawResources();
+	}
 	_loadAssets();
 }
 
@@ -80,11 +84,63 @@ void HardwareRasterization::_createDepthBufferResources()
 		Descriptors::DS.GetCPUHandle(HWRDepthDSV));
 }
 
+void HardwareRasterization::_createOverdrawResources()
+{
+	const unsigned int quadWidth = (_width + 1) / 2;
+	const unsigned int quadHeight = (_height + 1) / 2;
+	auto overdrawDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_UINT,
+		quadWidth,
+		quadHeight,
+		1,
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	SUCCESS(DX::Device->CreateCommittedResource(
+		&prop,
+		D3D12_HEAP_FLAG_NONE,
+		&overdrawDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(&_overdrawBuffer)));
+	NAME_D3D12_OBJECT(_overdrawBuffer);
+
+	auto overdrawUAV = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_UINT);
+	DX::Device->CreateUnorderedAccessView(
+		_overdrawBuffer.Get(),
+		nullptr,
+		&overdrawUAV,
+		Descriptors::SV.GetCPUHandle(HWROverdrawUAV));
+	DX::Device->CreateUnorderedAccessView(
+		_overdrawBuffer.Get(),
+		nullptr,
+		&overdrawUAV,
+		Descriptors::NonSV.GetCPUHandle(HWROverdrawUAV));
+
+	auto overdrawSRV = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(
+		DXGI_FORMAT_R32_UINT,
+		1);
+	DX::Device->CreateShaderResourceView(
+		_overdrawBuffer.Get(),
+		&overdrawSRV,
+		Descriptors::SV.GetCPUHandle(HWROverdrawSRV));
+}
+
 void HardwareRasterization::_loadAssets()
 {
 	_createHWRRS();
 	_createDepthPassPSO();
 	_createOpaquePassPSO();
+	if (DX::WaveOpsSupported)
+	{
+		_createOverdrawRS();
+		_createOverdrawPassPSO();
+		_createOverdrawDisplayRS();
+		_createOverdrawDisplayPSO();
+	}
 	_createMDIStuff();
 
 	// depth pass + cascades
@@ -119,6 +175,15 @@ void HardwareRasterization::_createMDIStuff()
 		_HWRRS.Get(),
 		IID_PPV_ARGS(&_commandSignature)));
 	NAME_D3D12_OBJECT(_commandSignature);
+
+	if (DX::WaveOpsSupported)
+	{
+		SUCCESS(DX::Device->CreateCommandSignature(
+			&commandSignatureDesc,
+			_overdrawRS.Get(),
+			IID_PPV_ARGS(&_overdrawCommandSignature)));
+		NAME_D3D12_OBJECT(_overdrawCommandSignature);
+	}
 }
 
 void HardwareRasterization::Update()
@@ -170,7 +235,14 @@ void HardwareRasterization::DrawDepths()
 void HardwareRasterization::DrawOpaque(ID3D12Resource* renderTarget)
 {
 	_beginFrame();
-	_drawOpaque(renderTarget);
+	if (Settings::ShowOverdraw && DX::WaveOpsSupported)
+	{
+		_drawOverdraw(renderTarget);
+	}
+	else
+	{
+		_drawOpaque(renderTarget);
+	}
 	_endFrame();
 }
 
@@ -399,6 +471,101 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 	}
 }
 
+void HardwareRasterization::_drawOverdraw(ID3D12Resource* renderTarget)
+{
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"Draw Quad Overshading");
+
+	unsigned int clearValue[] = { 0, 0, 0, 0 };
+	COMMAND_LIST->ClearUnorderedAccessViewUint(
+		Descriptors::SV.GetGPUHandle(HWROverdrawUAV),
+		Descriptors::NonSV.GetCPUHandle(HWROverdrawUAV),
+		_overdrawBuffer.Get(),
+		clearValue,
+		0,
+		nullptr);
+	auto uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(_overdrawBuffer.Get());
+	COMMAND_LIST->ResourceBarrier(1, &uavBarrier);
+
+	COMMAND_LIST->SetGraphicsRootSignature(_overdrawRS.Get());
+	COMMAND_LIST->SetPipelineState(_overdrawPSO.Get());
+	COMMAND_LIST->RSSetViewports(1, &_viewport);
+	COMMAND_LIST->RSSetScissorRects(1, &_scissorRect);
+	COMMAND_LIST->IASetVertexBuffers(0, 1, &Scene::CurrentScene->positionsGPU.GetVBView());
+	COMMAND_LIST->SetGraphicsRootConstantBufferView(
+		0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SceneCB));
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(
+		2,
+		Settings::CullingEnabled
+		? Descriptors::SV.GetGPUHandle(VisibleInstancesSRV + DX::FrameIndex * PerFrameDescriptorsCount)
+		: Scene::CurrentScene->instancesGPU.GetSRV());
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(
+		3,
+		Descriptors::SV.GetGPUHandle(HWROverdrawUAV));
+	COMMAND_LIST->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
+
+	if (Settings::CullingEnabled)
+	{
+		COMMAND_LIST->ExecuteIndirect(
+			_overdrawCommandSignature.Get(),
+			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
+			_renderer->GetCulledCommands(DX::FrameIndex, 0),
+			0,
+			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
+			0);
+	}
+	else
+	{
+		for (const auto& prefab : Scene::CurrentScene->prefabs)
+		{
+			for (unsigned int mesh = 0; mesh < prefab.meshesCount; mesh++)
+			{
+				const auto& currentMesh = Scene::CurrentScene->meshesMetaCPU[prefab.meshesOffset + mesh];
+				unsigned int commandData[] =
+				{
+					currentMesh.startInstanceLocation
+				};
+				COMMAND_LIST->SetGraphicsRoot32BitConstants(1, _countof(commandData), commandData, 0);
+				COMMAND_LIST->DrawIndexedInstanced(
+					currentMesh.indexCountPerInstance,
+					currentMesh.instanceCount,
+					currentMesh.startIndexLocation,
+					currentMesh.baseVertexLocation,
+					0);
+			}
+		}
+	}
+
+	CD3DX12_RESOURCE_BARRIER barriers[] =
+	{
+		CD3DX12_RESOURCE_BARRIER::Transition(
+			_overdrawBuffer.Get(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
+		CD3DX12_RESOURCE_BARRIER::Transition(
+			renderTarget,
+			D3D12_RESOURCE_STATE_PRESENT,
+			D3D12_RESOURCE_STATE_RENDER_TARGET)
+	};
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
+
+	COMMAND_LIST->SetGraphicsRootSignature(_overdrawDisplayRS.Get());
+	COMMAND_LIST->SetPipelineState(_overdrawDisplayPSO.Get());
+	COMMAND_LIST->SetGraphicsRootDescriptorTable(
+		0,
+		Descriptors::SV.GetGPUHandle(HWROverdrawSRV));
+	auto RTVHandle = Descriptors::RT.GetCPUHandle(ForwardRendererRTV + DX::FrameIndex);
+	COMMAND_LIST->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
+	float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	COMMAND_LIST->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
+	COMMAND_LIST->DrawInstanced(3, 1, 0, 0);
+
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		_overdrawBuffer.Get(),
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	COMMAND_LIST->ResourceBarrier(1, &barrier);
+}
+
 void HardwareRasterization::_endFrame()
 {
 
@@ -441,6 +608,41 @@ void HardwareRasterization::_createHWRRS()
 
 	Utils::CreateRS(rootSignatureDesc, _HWRRS);
 	NAME_D3D12_OBJECT(_HWRRS);
+}
+
+void HardwareRasterization::_createOverdrawRS()
+{
+	CD3DX12_ROOT_PARAMETER1 rootParameters[4] = {};
+	rootParameters[0].InitAsConstantBufferView(0);
+	rootParameters[1].InitAsConstants(1, 1);
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[2] = {};
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	rootParameters[2].InitAsDescriptorTable(
+		1,
+		&ranges[0],
+		D3D12_SHADER_VISIBILITY_VERTEX);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+	rootParameters[3].InitAsDescriptorTable(
+		1,
+		&ranges[1],
+		D3D12_SHADER_VISIBILITY_PIXEL);
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),
+		rootParameters,
+		0,
+		nullptr,
+		rootSignatureFlags);
+
+	Utils::CreateRS(rootSignatureDesc, _overdrawRS);
+	NAME_D3D12_OBJECT(_overdrawRS);
 }
 
 void HardwareRasterization::_createDepthPassPSO()
@@ -558,4 +760,118 @@ void HardwareRasterization::_createOpaquePassPSO()
 	psoDesc.SampleDesc.Count = 1;
 	SUCCESS(DX::Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&_opaquePSO)));
 	NAME_D3D12_OBJECT(_opaquePSO);
+}
+
+void HardwareRasterization::_createOverdrawPassPSO()
+{
+	ComPtr<ID3DBlob> vertexShader;
+	Utils::CompileDXILFromFile(
+		L"shaders\\DrawOverdrawVS.hlsl",
+		L"main",
+		L"vs_6_0",
+		nullptr,
+		0,
+		vertexShader.GetAddressOf());
+	ComPtr<ID3DBlob> pixelShader;
+	Utils::CompileDXILFromFile(
+		L"shaders\\DrawOverdrawPS.hlsl",
+		L"main",
+		L"ps_6_0",
+		nullptr,
+		0,
+		pixelShader.GetAddressOf());
+
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{
+			"POSITION",
+			0,
+			DXGI_FORMAT_R32G32B32_FLOAT,
+			0,
+			0,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		}
+	};
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+	psoDesc.pRootSignature = _overdrawRS.Get();
+	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+	psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	// The reference mode bypasses fine depth so every launched shading quad contributes.
+	psoDesc.DepthStencilState.DepthEnable = FALSE;
+	psoDesc.DepthStencilState.StencilEnable = FALSE;
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 0;
+	psoDesc.SampleDesc.Count = 1;
+	SUCCESS(DX::Device->CreateGraphicsPipelineState(
+		&psoDesc,
+		IID_PPV_ARGS(&_overdrawPSO)));
+	NAME_D3D12_OBJECT(_overdrawPSO);
+}
+
+void HardwareRasterization::_createOverdrawDisplayRS()
+{
+	CD3DX12_ROOT_PARAMETER1 rootParameters[1] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 range = {};
+	range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	rootParameters[0].InitAsDescriptorTable(
+		1,
+		&range,
+		D3D12_SHADER_VISIBILITY_PIXEL);
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(
+		_countof(rootParameters),
+		rootParameters,
+		0,
+		nullptr,
+		rootSignatureFlags);
+
+	Utils::CreateRS(rootSignatureDesc, _overdrawDisplayRS);
+	NAME_D3D12_OBJECT(_overdrawDisplayRS);
+}
+
+void HardwareRasterization::_createOverdrawDisplayPSO()
+{
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
+		L"shaders\\DrawOverdrawDisplayVS.hlsl",
+		nullptr,
+		"main",
+		"vs_5_0");
+	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
+		L"shaders\\DrawOverdrawDisplayPS.hlsl",
+		nullptr,
+		"main",
+		"ps_5_0");
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = _overdrawDisplayRS.Get();
+	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+	psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState.DepthEnable = FALSE;
+	psoDesc.DepthStencilState.StencilEnable = FALSE;
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = Settings::BackBufferFormat;
+	psoDesc.SampleDesc.Count = 1;
+	SUCCESS(DX::Device->CreateGraphicsPipelineState(
+		&psoDesc,
+		IID_PPV_ARGS(&_overdrawDisplayPSO)));
+	NAME_D3D12_OBJECT(_overdrawDisplayPSO);
 }

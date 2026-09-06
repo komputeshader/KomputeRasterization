@@ -32,6 +32,7 @@ public:
 	static bool AsyncComputeEnabled;
 	static bool SWRWGEnabled;
 	static bool ShowMeshlets;
+	static bool ShowOverdraw;
 	static bool FreezeCulling;
 	static const float CameraNearZ;
 	static const float CameraFarZ;

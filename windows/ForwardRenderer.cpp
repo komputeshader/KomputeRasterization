@@ -1083,6 +1083,15 @@ void ForwardRenderer::_newFrameGUI()
 		else
 		{
 			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
+			if (DX::WaveOpsSupported)
+			{
+				ImGui::Checkbox("Show Quad Overshading", &Settings::ShowOverdraw);
+			}
+			else
+			{
+				Settings::ShowOverdraw = false;
+				ImGui::TextDisabled("Quad overshading requires Shader Model 6 wave operations");
+			}
 		}
 
 		ImGui::Checkbox(

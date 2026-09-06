@@ -31,6 +31,7 @@ Mac:
 ## Papers and other resources used
 * [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf)
 * [Optimizing the Graphics Pipeline with Compute](https://frostbite-wp-prd.s3.amazonaws.com/wp-content/uploads/2016/03/29204330/GDC_2016_Compute.pdf)
+* The Windows HWR **Show Quad Overshading** view is based on Stephen Hill's [Overdraw in Overdrive](https://blog.selfshadow.com/publications/overdraw-in-overdrive/)
 * Models downloaded from Morgan McGuire's [Computer Graphics Archive](https://casual-effects.com/data)
 * Mesh loading is done with [Rapidobj](https://github.com/guybrush77/rapidobj)
 * Mesh processing is done with [Meshoptimizer](https://github.com/zeux/meshoptimizer)

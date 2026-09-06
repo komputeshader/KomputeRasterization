@@ -11,6 +11,7 @@
 #include "d3dx12.h"
 #include <dxgi1_6.h>
 #include <D3Dcompiler.h>
+#include <dxcapi.h>
 #include <DirectXMath.h>
 
 //#define USE_PIX
@@ -22,10 +23,6 @@
 #include <shellapi.h>
 
 #include "CPUGPUCommon.h"
-
-#ifdef USE_WORK_GRAPHS
-#include "dxcapi.h"
-#endif
 
 static const float SkyColor[] =
 {

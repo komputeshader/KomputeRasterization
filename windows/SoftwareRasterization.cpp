@@ -328,8 +328,9 @@ void SoftwareRasterization::_createDepthWGResources()
 	ASSERT(
 		Scene::MaxSceneMeshesMetaCount <= static_cast<size_t>(SWR_WG_MAX_COMMANDS),
 		"The scene has more mesh commands than the work graph dispatch can represent.");
-	Utils::CompileDXILLibraryFromFile(
+	Utils::CompileDXILFromFile(
 		L"shaders\\DepthWG.hlsl",
+		L"",
 		L"lib_6_8",
 		nullptr,
 		0,
@@ -473,8 +474,9 @@ void SoftwareRasterization::_createOpaqueWGResources()
 {
 	DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 
-	Utils::CompileDXILLibraryFromFile(
+	Utils::CompileDXILFromFile(
 		L"shaders\\OpaqueWG.hlsl",
+		L"",
 		L"lib_6_8",
 		defines,
 		_countof(defines),
