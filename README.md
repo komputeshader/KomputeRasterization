@@ -13,10 +13,19 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 ## How to build and run
 * `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`
   * In the case you have cloned repo without the `--recursive` flag, perform the `git submodule update --init --recursive`.
-* Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `KomputeRasterization/Buddha/` folder.
-* Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `KomputeRasterization/powerplant/` folder.
-* Open `KomputeRasterization.sln` with Visual Studio.
+* Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `assets/buddha/` folder.
+* Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `assets/powerplant/` folder.
+
+Windows:
+
+* Open `windows/KomputeRasterization.sln` with Visual Studio.
 * Right-click the solution and select **Restore NuGet Packages**. The required packages and versions are declared in `packages.config`.
+* Build and run.
+
+Mac:
+
+* Open `mac/KomputeRasterization.xcodeproj` with Xcode.
+* Select the `KomputeRasterization` scheme.
 * Build and run.
 
 ## Papers and other resources used

@@ -11,8 +11,8 @@
 #include <limits>
 #include <thread>
 
-#include "meshoptimizer/src/meshoptimizer.h"
-#include "rapidobj/include/rapidobj/rapidobj.hpp"
+#include "../third_party/meshoptimizer/src/meshoptimizer.h"
+#include "../third_party/rapidobj/include/rapidobj/rapidobj.hpp"
 
 Scene* Scene::CurrentScene;
 Scene Scene::PlantScene;
@@ -303,7 +303,7 @@ void Scene::LoadBuddha()
 
 	lightDirection = { -1.0f, 1.0f, -1.0f };
 
-	_loadObj("Buddha//buddha.obj", 50.0f, 100.0f, 10, 10);
+	_loadObj("../assets/buddha/buddha.obj", 50.0f, 100.0f, 10, 10);
 
 	_createVBResources(Buddha);
 	_createIBResources(Buddha);
@@ -338,7 +338,7 @@ void Scene::LoadPlant()
 
 	lightDirection = { 1.0f, 1.0f, 1.0f };
 
-	_loadObj("powerplant//powerplant.obj", 0.0f, 0.01f, 3, 1, XM_PIDIV2);
+	_loadObj("../assets/powerplant/powerplant.obj", 0.0f, 0.01f, 3, 1, XM_PIDIV2);
 
 	_createVBResources(Plant);
 	_createIBResources(Plant);

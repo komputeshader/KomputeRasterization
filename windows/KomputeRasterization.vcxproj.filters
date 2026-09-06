@@ -13,10 +13,7 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Assets">
-      <UniqueIdentifier>{ba8a27fe-ac3b-448e-a7ab-c0d34a785eb5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Assets\Shaders">
+    <Filter Include="Shaders">
       <UniqueIdentifier>{72a0ef1f-c05c-4759-bd29-3da8c4b5a282}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Utils">
@@ -25,10 +22,10 @@
     <Filter Include="Source Files\Utils">
       <UniqueIdentifier>{5bb67f9c-dc9d-4784-aa94-cc7309707b34}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Assets\Shaders\Culling">
+    <Filter Include="Shaders\Culling">
       <UniqueIdentifier>{3be773db-f338-4951-9d4e-bce080e69dd5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Assets\Shaders\SoftwareRasterization">
+    <Filter Include="Shaders\SoftwareRasterization">
       <UniqueIdentifier>{26e898f3-a94a-4ee4-8195-28e793bc6271}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\meshoptimizer">
@@ -96,28 +93,28 @@
     <ClCompile Include="Culler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="meshoptimizer\src\*.cpp">
+    <ClCompile Include="..\third_party\meshoptimizer\src\*.cpp">
       <Filter>Source Files\meshoptimizer</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui_demo.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui_draw.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui_tables.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui_widgets.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_dx12.cpp">
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_dx12.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_win32.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
   </ItemGroup>
@@ -170,34 +167,34 @@
     <ClInclude Include="Culler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="meshoptimizer\src\meshoptimizer.h">
+    <ClInclude Include="..\third_party\meshoptimizer\src\meshoptimizer.h">
       <Filter>Header Files\meshoptimizer</Filter>
     </ClInclude>
-    <ClInclude Include="rapidobj\include\rapidobj\rapidobj.hpp">
+    <ClInclude Include="..\third_party\rapidobj\include\rapidobj\rapidobj.hpp">
       <Filter>Header Files\rapidobj</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imconfig.h">
+    <ClInclude Include="..\third_party\imgui\imconfig.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imgui.h">
+    <ClInclude Include="..\third_party\imgui\imgui.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imgui_internal.h">
+    <ClInclude Include="..\third_party\imgui\imgui_internal.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imstb_rectpack.h">
+    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imstb_textedit.h">
+    <ClInclude Include="..\third_party\imgui\imstb_textedit.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imstb_truetype.h">
+    <ClInclude Include="..\third_party\imgui\imstb_truetype.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\backends\imgui_impl_dx12.h">
+    <ClInclude Include="..\third_party\imgui\backends\imgui_impl_dx12.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\backends\imgui_impl_win32.h">
+    <ClInclude Include="..\third_party\imgui\backends\imgui_impl_win32.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
     <ClInclude Include="CPUGPUCommon.h">
@@ -205,58 +202,58 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="BigTriangleDepthCS.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\BigTriangleDepthCS.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
-    <FxCompile Include="TriangleDepthCS.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\TriangleDepthCS.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
-    <FxCompile Include="ClearCS.hlsl">
-      <Filter>Assets\Shaders\Culling</Filter>
+    <FxCompile Include="shaders\ClearCS.hlsl">
+      <Filter>Shaders\Culling</Filter>
     </FxCompile>
-    <FxCompile Include="CullingCS.hlsl">
-      <Filter>Assets\Shaders\Culling</Filter>
+    <FxCompile Include="shaders\CullingCS.hlsl">
+      <Filter>Shaders\Culling</Filter>
     </FxCompile>
-    <FxCompile Include="GenerateCommandsCS.hlsl">
-      <Filter>Assets\Shaders\Culling</Filter>
+    <FxCompile Include="shaders\GenerateCommandsCS.hlsl">
+      <Filter>Shaders\Culling</Filter>
     </FxCompile>
-    <FxCompile Include="BigTriangleOpaqueCS.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\BigTriangleOpaqueCS.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
-    <FxCompile Include="TriangleOpaqueCS.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\TriangleOpaqueCS.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
-    <FxCompile Include="GenerateHiZMipCS.hlsl">
-      <Filter>Assets\Shaders</Filter>
+    <FxCompile Include="shaders\GenerateHiZMipCS.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="DrawDepthVS.hlsl">
-      <Filter>Assets\Shaders</Filter>
+    <FxCompile Include="shaders\DrawDepthVS.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="DrawOpaquePS.hlsl">
-      <Filter>Assets\Shaders</Filter>
+    <FxCompile Include="shaders\DrawOpaquePS.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="DrawOpaqueVS.hlsl">
-      <Filter>Assets\Shaders</Filter>
+    <FxCompile Include="shaders\DrawOpaqueVS.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="DepthWG.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\DepthWG.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
-    <FxCompile Include="OpaqueWG.hlsl">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\OpaqueWG.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Common.hlsli">
-      <Filter>Assets\Shaders</Filter>
+    <None Include="shaders\Common.hlsli">
+      <Filter>Shaders</Filter>
     </None>
-    <None Include="TypesAndConstants.hlsli">
-      <Filter>Assets\Shaders</Filter>
+    <None Include="shaders\TypesAndConstants.hlsli">
+      <Filter>Shaders</Filter>
     </None>
-    <None Include="Rasterization.hlsli">
-      <Filter>Assets\Shaders\SoftwareRasterization</Filter>
+    <None Include="shaders\Rasterization.hlsli">
+      <Filter>Shaders\SoftwareRasterization</Filter>
     </None>
-    <None Include="CullingCommon.hlsli">
-      <Filter>Assets\Shaders\Culling</Filter>
+    <None Include="shaders\CullingCommon.hlsli">
+      <Filter>Shaders\Culling</Filter>
     </None>
     <None Include="packages.config" />
   </ItemGroup>

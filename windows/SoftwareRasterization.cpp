@@ -329,7 +329,7 @@ void SoftwareRasterization::_createDepthWGResources()
 		Scene::MaxSceneMeshesMetaCount <= static_cast<size_t>(SWR_WG_MAX_COMMANDS),
 		"The scene has more mesh commands than the work graph dispatch can represent.");
 	Utils::CompileDXILLibraryFromFile(
-		L"DepthWG.hlsl",
+		L"shaders\\DepthWG.hlsl",
 		L"lib_6_8",
 		nullptr,
 		0,
@@ -474,7 +474,7 @@ void SoftwareRasterization::_createOpaqueWGResources()
 	DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 
 	Utils::CompileDXILLibraryFromFile(
-		L"OpaqueWG.hlsl",
+		L"shaders\\OpaqueWG.hlsl",
 		L"lib_6_8",
 		defines,
 		_countof(defines),
@@ -1734,7 +1734,7 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 	NAME_D3D12_OBJECT(_triangleDepthRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"TriangleDepthCS.hlsl",
+		L"shaders\\TriangleDepthCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");
@@ -1780,7 +1780,7 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 	NAME_D3D12_OBJECT(_bigTriangleDepthRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"BigTriangleDepthCS.hlsl",
+		L"shaders\\BigTriangleDepthCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");
@@ -1892,7 +1892,7 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 
 	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"TriangleOpaqueCS.hlsl",
+		L"shaders\\TriangleOpaqueCS.hlsl",
 		defines,
 		"main",
 		"cs_5_0");
@@ -1955,7 +1955,7 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 
 	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"BigTriangleOpaqueCS.hlsl",
+		L"shaders\\BigTriangleOpaqueCS.hlsl",
 		defines,
 		"main",
 		"cs_5_0");

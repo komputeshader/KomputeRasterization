@@ -11,6 +11,13 @@
 /packages/
 
 /imgui.ini
+.DS_Store
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+/mac/build/
 
-/buddha/
-/powerplant/
+/assets/buddha/
+/assets/powerplant/

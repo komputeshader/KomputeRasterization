@@ -293,7 +293,7 @@ void Shadows::_createPSO()
 	NAME_D3D12_OBJECT(_shadowsRS);
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
-		L"DrawDepthVS.hlsl",
+		L"shaders\\DrawDepthVS.hlsl",
 		nullptr,
 		"main",
 		"vs_5_0");

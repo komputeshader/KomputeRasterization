@@ -474,7 +474,7 @@ void HardwareRasterization::_createDepthPassPSO()
 	psoDesc.SampleDesc.Count = 1;
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
-		L"DrawDepthVS.hlsl",
+		L"shaders\\DrawDepthVS.hlsl",
 		nullptr,
 		"main",
 		"vs_5_0");
@@ -487,14 +487,14 @@ void HardwareRasterization::_createDepthPassPSO()
 void HardwareRasterization::_createOpaquePassPSO()
 {
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
-		L"DrawOpaqueVS.hlsl",
+		L"shaders\\DrawOpaqueVS.hlsl",
 		nullptr,
 		"main",
 		"vs_5_0");
 
 	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
 	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
-		L"DrawOpaquePS.hlsl",
+		L"shaders\\DrawOpaquePS.hlsl",
 		defines,
 		"main",
 		"ps_5_0");

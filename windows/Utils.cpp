@@ -53,7 +53,7 @@ void InitializeResources()
 	NAME_D3D12_OBJECT(HiZRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"GenerateHiZMipCS.hlsl",
+		L"shaders\\GenerateHiZMipCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");
@@ -230,11 +230,11 @@ void CompileDXILLibraryFromFile(
 	ASSERT(SUCCEEDED(hr), "Failed to instantiate compiler.")
 
 	ComPtr<IDxcOperationResult> operationResult;
-	LPCWSTR args[] = { L"" };
-	UINT cArgs = 0;
+	LPCWSTR args[] = { L"-I", L"shaders" };
+	UINT cArgs = _countof(args);
 	hr = compiler->Compile(
 		source.Get(),
-		nullptr,
+		filename.c_str(),
 		nullptr,
 		target.c_str(),
 		args, cArgs,

@@ -1,0 +1,708 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C00000000000000000000001 /* Application.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* Application.mm */; };
+		C00000000000000000000002 /* Camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000002 /* Camera.cpp */; };
+		C00000000000000000000003 /* Context.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* Context.mm */; };
+		C00000000000000000000004 /* Culler.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* Culler.mm */; };
+		C00000000000000000000006 /* ForwardRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000006 /* ForwardRenderer.mm */; };
+		C00000000000000000000007 /* HardwareRasterization.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000007 /* HardwareRasterization.mm */; };
+		C00000000000000000000009 /* Profiler.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000009 /* Profiler.mm */; };
+		C0000000000000000000000A /* Scene.mm in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000A /* Scene.mm */; };
+		C0000000000000000000000B /* Settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000B /* Settings.cpp */; };
+		C0000000000000000000000C /* Shadows.mm in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000C /* Shadows.mm */; };
+		C0000000000000000000000D /* SoftwareRasterization.mm in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000D /* SoftwareRasterization.mm */; };
+		C0000000000000000000000E /* Timer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000E /* Timer.cpp */; };
+		C0000000000000000000000F /* Utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000F /* Utils.cpp */; };
+		C00000000000000000000010 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000010 /* main.mm */; };
+		C10000000000000000000001 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* imgui.cpp */; };
+		C10000000000000000000002 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* imgui_draw.cpp */; };
+		C10000000000000000000003 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* imgui_tables.cpp */; };
+		C10000000000000000000004 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* imgui_widgets.cpp */; };
+		C10000000000000000000005 /* imgui_impl_metal.mm in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* imgui_impl_metal.mm */; };
+		C10000000000000000000006 /* imgui_impl_osx.mm in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* imgui_impl_osx.mm */; };
+		C11000000000000000000001 /* allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000001 /* allocator.cpp */; };
+		C11000000000000000000002 /* clusterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000002 /* clusterizer.cpp */; };
+		C11000000000000000000003 /* indexanalyzer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000003 /* indexanalyzer.cpp */; };
+		C11000000000000000000004 /* indexcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000004 /* indexcodec.cpp */; };
+		C11000000000000000000005 /* indexgenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000005 /* indexgenerator.cpp */; };
+		C11000000000000000000006 /* meshletcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000006 /* meshletcodec.cpp */; };
+		C11000000000000000000007 /* meshletutils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000007 /* meshletutils.cpp */; };
+		C11000000000000000000008 /* opacitymap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000008 /* opacitymap.cpp */; };
+		C11000000000000000000009 /* overdrawoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000009 /* overdrawoptimizer.cpp */; };
+		C1100000000000000000000A /* partition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000A /* partition.cpp */; };
+		C1100000000000000000000B /* quantization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000B /* quantization.cpp */; };
+		C1100000000000000000000C /* rasterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000C /* rasterizer.cpp */; };
+		C1100000000000000000000D /* simplifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000D /* simplifier.cpp */; };
+		C1100000000000000000000E /* spatialorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000E /* spatialorder.cpp */; };
+		C1100000000000000000000F /* stripifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2100000000000000000000F /* stripifier.cpp */; };
+		C11000000000000000000010 /* tangentspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000010 /* tangentspace.cpp */; };
+		C11000000000000000000011 /* vcacheoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000011 /* vcacheoptimizer.cpp */; };
+		C11000000000000000000012 /* vertexcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000012 /* vertexcodec.cpp */; };
+		C11000000000000000000013 /* vertexfilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000013 /* vertexfilter.cpp */; };
+		C11000000000000000000014 /* vfetchoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B21000000000000000000014 /* vfetchoptimizer.cpp */; };
+		C20000000000000000000004 /* CullingCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000004 /* CullingCS.metal */; };
+		C20000000000000000000005 /* GenerateCommandsCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000005 /* GenerateCommandsCS.metal */; };
+		C20000000000000000000006 /* DrawDepthVS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000006 /* DrawDepthVS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C20000000000000000000007 /* DrawOpaqueVS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000007 /* DrawOpaqueVS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C20000000000000000000008 /* DrawOpaquePS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000008 /* DrawOpaquePS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C20000000000000000000009 /* ClearCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000009 /* ClearCS.metal */; };
+		C2000000000000000000000B /* TriangleDepthCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B3000000000000000000000B /* TriangleDepthCS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C2000000000000000000000C /* BigTriangleDepthCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B3000000000000000000000C /* BigTriangleDepthCS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C2000000000000000000000D /* TriangleOpaqueCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B3000000000000000000000D /* TriangleOpaqueCS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C2000000000000000000000E /* BigTriangleOpaqueCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B3000000000000000000000E /* BigTriangleOpaqueCS.metal */; settings = {COMPILER_FLAGS = "-fno-fast-math"; }; };
+		C2000000000000000000000F /* GenerateHiZMipCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B3000000000000000000000F /* GenerateHiZMipCS.metal */; };
+		C20000000000000000000010 /* DrawOpaque.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000010 /* DrawOpaque.metal */; };
+		C20000000000000000000011 /* DrawShadowVS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000011 /* DrawShadowVS.metal */; };
+		C20000000000000000000012 /* TriangleShadowCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000012 /* TriangleShadowCS.metal */; };
+		C20000000000000000000013 /* BigTriangleShadowCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000013 /* BigTriangleShadowCS.metal */; };
+		C30000000000000000000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000001 /* Cocoa.framework */; };
+		C30000000000000000000002 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000002 /* Metal.framework */; };
+		C30000000000000000000003 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000003 /* MetalKit.framework */; };
+		C30000000000000000000004 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000004 /* QuartzCore.framework */; };
+		C30000000000000000000005 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000005 /* GameController.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B00000000000000000000001 /* Application.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Application.mm; sourceTree = "<group>"; };
+		B00000000000000000000002 /* Camera.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Camera.cpp; sourceTree = "<group>"; };
+		B00000000000000000000003 /* Context.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Context.mm; sourceTree = "<group>"; };
+		B00000000000000000000004 /* Culler.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Culler.mm; sourceTree = "<group>"; };
+		B00000000000000000000006 /* ForwardRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ForwardRenderer.mm; sourceTree = "<group>"; };
+		B00000000000000000000007 /* HardwareRasterization.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HardwareRasterization.mm; sourceTree = "<group>"; };
+		B00000000000000000000009 /* Profiler.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Profiler.mm; sourceTree = "<group>"; };
+		B0000000000000000000000A /* Scene.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Scene.mm; sourceTree = "<group>"; };
+		B0000000000000000000000B /* Settings.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Settings.cpp; sourceTree = "<group>"; };
+		B0000000000000000000000C /* Shadows.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Shadows.mm; sourceTree = "<group>"; };
+		B0000000000000000000000D /* SoftwareRasterization.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SoftwareRasterization.mm; sourceTree = "<group>"; };
+		B0000000000000000000000E /* Timer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Timer.cpp; sourceTree = "<group>"; };
+		B0000000000000000000000F /* Utils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Utils.cpp; sourceTree = "<group>"; };
+		B00000000000000000000010 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		B10000000000000000000001 /* Application.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Application.h; sourceTree = "<group>"; };
+		B10000000000000000000002 /* CPUGPUCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CPUGPUCommon.h; sourceTree = "<group>"; };
+		B10000000000000000000003 /* Camera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Camera.h; sourceTree = "<group>"; };
+		B10000000000000000000004 /* Common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
+		B10000000000000000000005 /* Context.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Context.h; sourceTree = "<group>"; };
+		B10000000000000000000006 /* Culler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Culler.h; sourceTree = "<group>"; };
+		B10000000000000000000007 /* DescriptorManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DescriptorManager.h; sourceTree = "<group>"; };
+		B10000000000000000000008 /* ForwardRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ForwardRenderer.h; sourceTree = "<group>"; };
+		B10000000000000000000009 /* HardwareRasterization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HardwareRasterization.h; sourceTree = "<group>"; };
+		B1000000000000000000000B /* Profiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Profiler.h; sourceTree = "<group>"; };
+		B1000000000000000000000C /* Scene.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Scene.h; sourceTree = "<group>"; };
+		B1000000000000000000000D /* Settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Settings.h; sourceTree = "<group>"; };
+		B1000000000000000000000E /* Shadows.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Shadows.h; sourceTree = "<group>"; };
+		B1000000000000000000000F /* SoftwareRasterization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SoftwareRasterization.h; sourceTree = "<group>"; };
+		B10000000000000000000010 /* Timer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Timer.h; sourceTree = "<group>"; };
+		B10000000000000000000011 /* Utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Utils.h; sourceTree = "<group>"; };
+		B20000000000000000000001 /* imgui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui.cpp; sourceTree = "<group>"; };
+		B20000000000000000000002 /* imgui_draw.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_draw.cpp; sourceTree = "<group>"; };
+		B20000000000000000000003 /* imgui_tables.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_tables.cpp; sourceTree = "<group>"; };
+		B20000000000000000000004 /* imgui_widgets.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_widgets.cpp; sourceTree = "<group>"; };
+		B20000000000000000000005 /* imgui_impl_metal.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_metal.mm; path = "backends/imgui_impl_metal.mm"; sourceTree = "<group>"; };
+		B20000000000000000000006 /* imgui_impl_osx.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_osx.mm; path = "backends/imgui_impl_osx.mm"; sourceTree = "<group>"; };
+		B20000000000000000000007 /* imgui.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imgui.h; sourceTree = "<group>"; };
+		B20000000000000000000008 /* imconfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imconfig.h; sourceTree = "<group>"; };
+		B20000000000000000000009 /* imgui_internal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = imgui_internal.h; sourceTree = "<group>"; };
+		B2000000000000000000000A /* imgui_impl_metal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = imgui_impl_metal.h; path = "backends/imgui_impl_metal.h"; sourceTree = "<group>"; };
+		B2000000000000000000000B /* imgui_impl_osx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = imgui_impl_osx.h; path = "backends/imgui_impl_osx.h"; sourceTree = "<group>"; };
+		B21000000000000000000001 /* allocator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = allocator.cpp; sourceTree = "<group>"; };
+		B21000000000000000000002 /* clusterizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = clusterizer.cpp; sourceTree = "<group>"; };
+		B21000000000000000000003 /* indexanalyzer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = indexanalyzer.cpp; sourceTree = "<group>"; };
+		B21000000000000000000004 /* indexcodec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = indexcodec.cpp; sourceTree = "<group>"; };
+		B21000000000000000000005 /* indexgenerator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = indexgenerator.cpp; sourceTree = "<group>"; };
+		B21000000000000000000006 /* meshletcodec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = meshletcodec.cpp; sourceTree = "<group>"; };
+		B21000000000000000000007 /* meshletutils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = meshletutils.cpp; sourceTree = "<group>"; };
+		B21000000000000000000008 /* opacitymap.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = opacitymap.cpp; sourceTree = "<group>"; };
+		B21000000000000000000009 /* overdrawoptimizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = overdrawoptimizer.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000A /* partition.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = partition.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000B /* quantization.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = quantization.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000C /* rasterizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = rasterizer.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000D /* simplifier.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = simplifier.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000E /* spatialorder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = spatialorder.cpp; sourceTree = "<group>"; };
+		B2100000000000000000000F /* stripifier.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = stripifier.cpp; sourceTree = "<group>"; };
+		B21000000000000000000010 /* tangentspace.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tangentspace.cpp; sourceTree = "<group>"; };
+		B21000000000000000000011 /* vcacheoptimizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vcacheoptimizer.cpp; sourceTree = "<group>"; };
+		B21000000000000000000012 /* vertexcodec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vertexcodec.cpp; sourceTree = "<group>"; };
+		B21000000000000000000013 /* vertexfilter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vertexfilter.cpp; sourceTree = "<group>"; };
+		B21000000000000000000014 /* vfetchoptimizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vfetchoptimizer.cpp; sourceTree = "<group>"; };
+		B21100000000000000000001 /* meshoptimizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = meshoptimizer.h; sourceTree = "<group>"; };
+		B22000000000000000000001 /* rapidobj.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = rapidobj.hpp; path = "include/rapidobj/rapidobj.hpp"; sourceTree = "<group>"; };
+		B30000000000000000000001 /* TypesAndConstants.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TypesAndConstants.metal; sourceTree = "<group>"; };
+		B30000000000000000000002 /* Common.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Common.metal; sourceTree = "<group>"; };
+		B30000000000000000000003 /* CullingCommon.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CullingCommon.metal; sourceTree = "<group>"; };
+		B30000000000000000000004 /* CullingCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CullingCS.metal; sourceTree = "<group>"; };
+		B30000000000000000000005 /* GenerateCommandsCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GenerateCommandsCS.metal; sourceTree = "<group>"; };
+		B30000000000000000000006 /* DrawDepthVS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawDepthVS.metal; sourceTree = "<group>"; };
+		B30000000000000000000007 /* DrawOpaqueVS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawOpaqueVS.metal; sourceTree = "<group>"; };
+		B30000000000000000000008 /* DrawOpaquePS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawOpaquePS.metal; sourceTree = "<group>"; };
+		B30000000000000000000009 /* ClearCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ClearCS.metal; sourceTree = "<group>"; };
+		B3000000000000000000000A /* Rasterization.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Rasterization.metal; sourceTree = "<group>"; };
+		B3000000000000000000000B /* TriangleDepthCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TriangleDepthCS.metal; sourceTree = "<group>"; };
+		B3000000000000000000000C /* BigTriangleDepthCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BigTriangleDepthCS.metal; sourceTree = "<group>"; };
+		B3000000000000000000000D /* TriangleOpaqueCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TriangleOpaqueCS.metal; sourceTree = "<group>"; };
+		B3000000000000000000000E /* BigTriangleOpaqueCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BigTriangleOpaqueCS.metal; sourceTree = "<group>"; };
+		B3000000000000000000000F /* GenerateHiZMipCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GenerateHiZMipCS.metal; sourceTree = "<group>"; };
+		B30000000000000000000010 /* DrawOpaque.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawOpaque.metal; sourceTree = "<group>"; };
+		B30000000000000000000011 /* DrawShadowVS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawShadowVS.metal; sourceTree = "<group>"; };
+		B30000000000000000000012 /* TriangleShadowCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TriangleShadowCS.metal; sourceTree = "<group>"; };
+		B30000000000000000000013 /* BigTriangleShadowCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BigTriangleShadowCS.metal; sourceTree = "<group>"; };
+		B40000000000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = "System/Library/Frameworks/Cocoa.framework"; sourceTree = SDKROOT; };
+		B40000000000000000000002 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = "System/Library/Frameworks/Metal.framework"; sourceTree = SDKROOT; };
+		B40000000000000000000003 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = "System/Library/Frameworks/MetalKit.framework"; sourceTree = SDKROOT; };
+		B40000000000000000000004 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = "System/Library/Frameworks/QuartzCore.framework"; sourceTree = SDKROOT; };
+		B40000000000000000000005 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = "System/Library/Frameworks/GameController.framework"; sourceTree = SDKROOT; };
+		B50000000000000000000001 /* KomputeRasterization.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KomputeRasterization.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B60000000000000000000001 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = assets; path = "../assets"; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D00000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C30000000000000000000001 /* Cocoa.framework in Frameworks */,
+				C30000000000000000000002 /* Metal.framework in Frameworks */,
+				C30000000000000000000003 /* MetalKit.framework in Frameworks */,
+				C30000000000000000000004 /* QuartzCore.framework in Frameworks */,
+				C30000000000000000000005 /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000001 /* Sources */,
+				A00000000000000000000002 /* Headers */,
+				A00000000000000000000003 /* Shaders */,
+				A00000000000000000000004 /* Third Party */,
+				B60000000000000000000001 /* assets */,
+				A00000000000000000000008 /* Frameworks */,
+				A00000000000000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000001 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B00000000000000000000001 /* Application.mm */,
+				B00000000000000000000002 /* Camera.cpp */,
+				B00000000000000000000003 /* Context.mm */,
+				B00000000000000000000004 /* Culler.mm */,
+				B00000000000000000000006 /* ForwardRenderer.mm */,
+				B00000000000000000000007 /* HardwareRasterization.mm */,
+				B00000000000000000000009 /* Profiler.mm */,
+				B0000000000000000000000A /* Scene.mm */,
+				B0000000000000000000000B /* Settings.cpp */,
+				B0000000000000000000000C /* Shadows.mm */,
+				B0000000000000000000000D /* SoftwareRasterization.mm */,
+				B0000000000000000000000E /* Timer.cpp */,
+				B0000000000000000000000F /* Utils.cpp */,
+				B00000000000000000000010 /* main.mm */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000002 /* Headers */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000001 /* Application.h */,
+				B10000000000000000000002 /* CPUGPUCommon.h */,
+				B10000000000000000000003 /* Camera.h */,
+				B10000000000000000000004 /* Common.h */,
+				B10000000000000000000005 /* Context.h */,
+				B10000000000000000000006 /* Culler.h */,
+				B10000000000000000000007 /* DescriptorManager.h */,
+				B10000000000000000000008 /* ForwardRenderer.h */,
+				B10000000000000000000009 /* HardwareRasterization.h */,
+				B1000000000000000000000B /* Profiler.h */,
+				B1000000000000000000000C /* Scene.h */,
+				B1000000000000000000000D /* Settings.h */,
+				B1000000000000000000000E /* Shadows.h */,
+				B1000000000000000000000F /* SoftwareRasterization.h */,
+				B10000000000000000000010 /* Timer.h */,
+				B10000000000000000000011 /* Utils.h */,
+			);
+			name = Headers;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				B30000000000000000000001 /* TypesAndConstants.metal */,
+				B30000000000000000000002 /* Common.metal */,
+				B30000000000000000000003 /* CullingCommon.metal */,
+				B30000000000000000000004 /* CullingCS.metal */,
+				B30000000000000000000005 /* GenerateCommandsCS.metal */,
+				B30000000000000000000006 /* DrawDepthVS.metal */,
+				B30000000000000000000011 /* DrawShadowVS.metal */,
+				B30000000000000000000007 /* DrawOpaqueVS.metal */,
+				B30000000000000000000008 /* DrawOpaquePS.metal */,
+				B30000000000000000000009 /* ClearCS.metal */,
+				B3000000000000000000000A /* Rasterization.metal */,
+				B3000000000000000000000B /* TriangleDepthCS.metal */,
+				B3000000000000000000000C /* BigTriangleDepthCS.metal */,
+				B30000000000000000000012 /* TriangleShadowCS.metal */,
+				B30000000000000000000013 /* BigTriangleShadowCS.metal */,
+				B3000000000000000000000D /* TriangleOpaqueCS.metal */,
+				B3000000000000000000000E /* BigTriangleOpaqueCS.metal */,
+				B3000000000000000000000F /* GenerateHiZMipCS.metal */,
+				B30000000000000000000010 /* DrawOpaque.metal */,
+			);
+			name = Shaders;
+			path = shaders;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000004 /* Third Party */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000005 /* ImGui */,
+				A00000000000000000000006 /* meshoptimizer */,
+				A00000000000000000000007 /* RapidObj */,
+			);
+			name = "Third Party";
+			path = "../third_party";
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* ImGui */ = {
+			isa = PBXGroup;
+			children = (
+				B20000000000000000000001 /* imgui.cpp */,
+				B20000000000000000000002 /* imgui_draw.cpp */,
+				B20000000000000000000003 /* imgui_tables.cpp */,
+				B20000000000000000000004 /* imgui_widgets.cpp */,
+				B20000000000000000000005 /* imgui_impl_metal.mm */,
+				B20000000000000000000006 /* imgui_impl_osx.mm */,
+				B20000000000000000000007 /* imgui.h */,
+				B20000000000000000000008 /* imconfig.h */,
+				B20000000000000000000009 /* imgui_internal.h */,
+				B2000000000000000000000A /* imgui_impl_metal.h */,
+				B2000000000000000000000B /* imgui_impl_osx.h */,
+			);
+			name = ImGui;
+			path = imgui;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000006 /* meshoptimizer */ = {
+			isa = PBXGroup;
+			children = (
+				B21000000000000000000001 /* allocator.cpp */,
+				B21000000000000000000002 /* clusterizer.cpp */,
+				B21000000000000000000003 /* indexanalyzer.cpp */,
+				B21000000000000000000004 /* indexcodec.cpp */,
+				B21000000000000000000005 /* indexgenerator.cpp */,
+				B21000000000000000000006 /* meshletcodec.cpp */,
+				B21000000000000000000007 /* meshletutils.cpp */,
+				B21000000000000000000008 /* opacitymap.cpp */,
+				B21000000000000000000009 /* overdrawoptimizer.cpp */,
+				B2100000000000000000000A /* partition.cpp */,
+				B2100000000000000000000B /* quantization.cpp */,
+				B2100000000000000000000C /* rasterizer.cpp */,
+				B2100000000000000000000D /* simplifier.cpp */,
+				B2100000000000000000000E /* spatialorder.cpp */,
+				B2100000000000000000000F /* stripifier.cpp */,
+				B21000000000000000000010 /* tangentspace.cpp */,
+				B21000000000000000000011 /* vcacheoptimizer.cpp */,
+				B21000000000000000000012 /* vertexcodec.cpp */,
+				B21000000000000000000013 /* vertexfilter.cpp */,
+				B21000000000000000000014 /* vfetchoptimizer.cpp */,
+				B21100000000000000000001 /* meshoptimizer.h */,
+			);
+			name = meshoptimizer;
+			path = "meshoptimizer/src";
+			sourceTree = "<group>";
+		};
+		A00000000000000000000007 /* RapidObj */ = {
+			isa = PBXGroup;
+			children = (
+				B22000000000000000000001 /* rapidobj.hpp */,
+			);
+			name = RapidObj;
+			path = rapidobj;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000008 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B40000000000000000000001 /* Cocoa.framework */,
+				B40000000000000000000002 /* Metal.framework */,
+				B40000000000000000000003 /* MetalKit.framework */,
+				B40000000000000000000004 /* QuartzCore.framework */,
+				B40000000000000000000005 /* GameController.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B50000000000000000000001 /* KomputeRasterization.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9B0000000000000000000000 /* KomputeRasterization */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E200000000000000000000002 /* Build configuration list for PBXNativeTarget "KomputeRasterization" */;
+			buildPhases = (
+				D00000000000000000000001 /* Sources */,
+				D00000000000000000000002 /* Frameworks */,
+				D00000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KomputeRasterization;
+			productName = KomputeRasterization;
+			productReference = B50000000000000000000001 /* KomputeRasterization.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9A0000000000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					9B0000000000000000000000 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = E200000000000000000000001 /* Build configuration list for PBXProject "KomputeRasterization" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A00000000000000000000000;
+			productRefGroup = A00000000000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9B0000000000000000000000 /* KomputeRasterization */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D00000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D00000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C20000000000000000000004 /* CullingCS.metal in Sources */,
+				C20000000000000000000005 /* GenerateCommandsCS.metal in Sources */,
+				C20000000000000000000006 /* DrawDepthVS.metal in Sources */,
+				C20000000000000000000011 /* DrawShadowVS.metal in Sources */,
+				C20000000000000000000007 /* DrawOpaqueVS.metal in Sources */,
+				C20000000000000000000008 /* DrawOpaquePS.metal in Sources */,
+				C20000000000000000000009 /* ClearCS.metal in Sources */,
+				C2000000000000000000000B /* TriangleDepthCS.metal in Sources */,
+				C2000000000000000000000C /* BigTriangleDepthCS.metal in Sources */,
+				C20000000000000000000012 /* TriangleShadowCS.metal in Sources */,
+				C20000000000000000000013 /* BigTriangleShadowCS.metal in Sources */,
+				C2000000000000000000000D /* TriangleOpaqueCS.metal in Sources */,
+				C2000000000000000000000E /* BigTriangleOpaqueCS.metal in Sources */,
+				C2000000000000000000000F /* GenerateHiZMipCS.metal in Sources */,
+				C20000000000000000000010 /* DrawOpaque.metal in Sources */,
+				C00000000000000000000001 /* Application.mm in Sources */,
+				C00000000000000000000002 /* Camera.cpp in Sources */,
+				C00000000000000000000003 /* Context.mm in Sources */,
+				C00000000000000000000004 /* Culler.mm in Sources */,
+				C00000000000000000000006 /* ForwardRenderer.mm in Sources */,
+				C00000000000000000000007 /* HardwareRasterization.mm in Sources */,
+				C00000000000000000000009 /* Profiler.mm in Sources */,
+				C0000000000000000000000A /* Scene.mm in Sources */,
+				C0000000000000000000000B /* Settings.cpp in Sources */,
+				C0000000000000000000000C /* Shadows.mm in Sources */,
+				C0000000000000000000000D /* SoftwareRasterization.mm in Sources */,
+				C0000000000000000000000E /* Timer.cpp in Sources */,
+				C0000000000000000000000F /* Utils.cpp in Sources */,
+				C00000000000000000000010 /* main.mm in Sources */,
+				C10000000000000000000001 /* imgui.cpp in Sources */,
+				C10000000000000000000002 /* imgui_draw.cpp in Sources */,
+				C10000000000000000000003 /* imgui_tables.cpp in Sources */,
+				C10000000000000000000004 /* imgui_widgets.cpp in Sources */,
+				C10000000000000000000005 /* imgui_impl_metal.mm in Sources */,
+				C10000000000000000000006 /* imgui_impl_osx.mm in Sources */,
+				C11000000000000000000001 /* allocator.cpp in Sources */,
+				C11000000000000000000002 /* clusterizer.cpp in Sources */,
+				C11000000000000000000003 /* indexanalyzer.cpp in Sources */,
+				C11000000000000000000004 /* indexcodec.cpp in Sources */,
+				C11000000000000000000005 /* indexgenerator.cpp in Sources */,
+				C11000000000000000000006 /* meshletcodec.cpp in Sources */,
+				C11000000000000000000007 /* meshletutils.cpp in Sources */,
+				C11000000000000000000008 /* opacitymap.cpp in Sources */,
+				C11000000000000000000009 /* overdrawoptimizer.cpp in Sources */,
+				C1100000000000000000000A /* partition.cpp in Sources */,
+				C1100000000000000000000B /* quantization.cpp in Sources */,
+				C1100000000000000000000C /* rasterizer.cpp in Sources */,
+				C1100000000000000000000D /* simplifier.cpp in Sources */,
+				C1100000000000000000000E /* spatialorder.cpp in Sources */,
+				C1100000000000000000000F /* stripifier.cpp in Sources */,
+				C11000000000000000000010 /* tangentspace.cpp in Sources */,
+				C11000000000000000000011 /* vcacheoptimizer.cpp in Sources */,
+				C11000000000000000000012 /* vertexcodec.cpp in Sources */,
+				C11000000000000000000013 /* vertexfilter.cpp in Sources */,
+				C11000000000000000000014 /* vfetchoptimizer.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		E00000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"MAC_SOURCE_DIR=\\\"$(SRCROOT)\\\"",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E00000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"MAC_SOURCE_DIR=\\\"$(SRCROOT)\\\"",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		E00000000000000000000003 /* ASan */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_ADDRESS_SANITIZER = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"MAC_SOURCE_DIR=\\\"$(SRCROOT)\\\"",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(inherited)",
+					"-fsanitize=address",
+					"-fno-omit-frame-pointer",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = ASan;
+		};
+		E10000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SRCROOT)/../third_party/imgui",
+					"$(SRCROOT)/../third_party/imgui/backends",
+					"$(SRCROOT)/../third_party/meshoptimizer/src",
+					"$(SRCROOT)/../third_party/rapidobj/include",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = KomputeRasterization;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.komputeshader.KomputeRasterization;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E10000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SRCROOT)/../third_party/imgui",
+					"$(SRCROOT)/../third_party/imgui/backends",
+					"$(SRCROOT)/../third_party/meshoptimizer/src",
+					"$(SRCROOT)/../third_party/rapidobj/include",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = KomputeRasterization;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.komputeshader.KomputeRasterization;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E10000000000000000000003 /* ASan */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_ADDRESS_SANITIZER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SRCROOT)/../third_party/imgui",
+					"$(SRCROOT)/../third_party/imgui/backends",
+					"$(SRCROOT)/../third_party/meshoptimizer/src",
+					"$(SRCROOT)/../third_party/rapidobj/include",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = KomputeRasterization;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_NSHighResolutionCapable = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-fsanitize=address",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.komputeshader.KomputeRasterization;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = ASan;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E200000000000000000000001 /* Build configuration list for PBXProject "KomputeRasterization" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E00000000000000000000001 /* Debug */,
+				E00000000000000000000002 /* Release */,
+				E00000000000000000000003 /* ASan */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E200000000000000000000002 /* Build configuration list for PBXNativeTarget "KomputeRasterization" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E10000000000000000000001 /* Debug */,
+				E10000000000000000000002 /* Release */,
+				E10000000000000000000003 /* ASan */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9A0000000000000000000000 /* Project object */;
+}

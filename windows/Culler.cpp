@@ -309,7 +309,7 @@ void Culler::_createClearPSO()
 	NAME_D3D12_OBJECT(_clearRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"ClearCS.hlsl",
+		L"shaders\\ClearCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");
@@ -373,7 +373,7 @@ void Culler::_createCullingPSO()
 	NAME_D3D12_OBJECT(_cullingRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"CullingCS.hlsl",
+		L"shaders\\CullingCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");
@@ -420,7 +420,7 @@ void Culler::_createGenerateCommandsPSO()
 	NAME_D3D12_OBJECT(_generateHWRCommandsRS);
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
-		L"GenerateCommandsCS.hlsl",
+		L"shaders\\GenerateCommandsCS.hlsl",
 		nullptr,
 		"main",
 		"cs_5_0");

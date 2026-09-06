@@ -1,7 +1,7 @@
 #ifndef TYPES_AND_CONSTANTS_HLSL
 #define TYPES_AND_CONSTANTS_HLSL
 
-#include "CPUGPUCommon.h"
+#include "../CPUGPUCommon.h"
 
 static const float3 SkyColor = float3(136.0, 198.0, 252.0) / 255.0;
 

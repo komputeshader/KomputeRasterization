@@ -1,9 +1,9 @@
 [submodule "meshoptimizer"]
-	path = meshoptimizer
+	path = third_party/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer.git
 [submodule "imgui"]
-	path = imgui
+	path = third_party/imgui
 	url = https://github.com/ocornut/imgui.git
 [submodule "rapidobj"]
-	path = rapidobj
+	path = third_party/rapidobj
 	url = https://github.com/guybrush77/rapidobj.git

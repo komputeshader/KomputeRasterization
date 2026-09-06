@@ -118,20 +118,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>.\imgui\backends;.\imgui;$(IncludePath)</IncludePath>
-    <SourcePath>.\imgui;.\imgui\backends;$(SourcePath)</SourcePath>
+    <IncludePath>..\third_party\imgui\backends;..\third_party\imgui;$(IncludePath)</IncludePath>
+    <SourcePath>..\third_party\imgui;..\third_party\imgui\backends;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">
-    <IncludePath>.\imgui\backends;.\imgui;$(IncludePath)</IncludePath>
-    <SourcePath>.\imgui;.\imgui\backends;$(SourcePath)</SourcePath>
+    <IncludePath>..\third_party\imgui\backends;..\third_party\imgui;$(IncludePath)</IncludePath>
+    <SourcePath>..\third_party\imgui;..\third_party\imgui\backends;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>.\imgui\backends;.\imgui;$(IncludePath)</IncludePath>
-    <SourcePath>.\imgui;.\imgui\backends;$(SourcePath)</SourcePath>
+    <IncludePath>..\third_party\imgui\backends;..\third_party\imgui;$(IncludePath)</IncludePath>
+    <SourcePath>..\third_party\imgui;..\third_party\imgui\backends;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
-    <IncludePath>.\imgui\backends;.\imgui;$(IncludePath)</IncludePath>
-    <SourcePath>.\imgui;.\imgui\backends;$(SourcePath)</SourcePath>
+    <IncludePath>..\third_party\imgui\backends;..\third_party\imgui;$(IncludePath)</IncludePath>
+    <SourcePath>..\third_party\imgui;..\third_party\imgui\backends;$(SourcePath)</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -288,14 +288,14 @@
     <ClCompile Include="Culler.cpp" />
     <ClCompile Include="DX.cpp" />
     <ClCompile Include="ForwardRenderer.cpp" />
-    <ClCompile Include="imgui\backends\imgui_impl_dx12.cpp" />
-    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp" />
-    <ClCompile Include="imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui_tables.cpp" />
-    <ClCompile Include="imgui\imgui_widgets.cpp" />
-    <ClCompile Include="meshoptimizer\src\*.cpp" />
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\*.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DescriptorManager.cpp" />
@@ -315,16 +315,16 @@
     <ClInclude Include="Culler.h" />
     <ClInclude Include="DX.h" />
     <ClInclude Include="ForwardRenderer.h" />
-    <ClInclude Include="imgui\backends\imgui_impl_dx12.h" />
-    <ClInclude Include="imgui\backends\imgui_impl_win32.h" />
-    <ClInclude Include="imgui\imconfig.h" />
-    <ClInclude Include="imgui\imgui.h" />
-    <ClInclude Include="imgui\imgui_internal.h" />
-    <ClInclude Include="imgui\imstb_rectpack.h" />
-    <ClInclude Include="imgui\imstb_textedit.h" />
-    <ClInclude Include="imgui\imstb_truetype.h" />
-    <ClInclude Include="meshoptimizer\src\meshoptimizer.h" />
-    <ClInclude Include="rapidobj\include\rapidobj\rapidobj.hpp" />
+    <ClInclude Include="..\third_party\imgui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\third_party\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\third_party\imgui\imconfig.h" />
+    <ClInclude Include="..\third_party\imgui\imgui.h" />
+    <ClInclude Include="..\third_party\imgui\imgui_internal.h" />
+    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\third_party\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\third_party\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\third_party\meshoptimizer\src\meshoptimizer.h" />
+    <ClInclude Include="..\third_party\rapidobj\include\rapidobj\rapidobj.hpp" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Common.h" />
@@ -340,7 +340,7 @@
     <ClInclude Include="Win32Application.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="CullingCS.hlsl">
+    <FxCompile Include="shaders\CullingCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -367,7 +367,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CullingCommon.hlsli">
+    <None Include="shaders\CullingCommon.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
@@ -378,7 +378,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </None>
     <None Include="packages.config" />
-    <None Include="TypesAndConstants.hlsli">
+    <None Include="shaders\TypesAndConstants.hlsli">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugAsan|Win32'">true</ExcludedFromBuild>
@@ -391,7 +391,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="DrawDepthVS.hlsl">
+    <FxCompile Include="shaders\DrawDepthVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -409,7 +409,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="DrawOpaquePS.hlsl">
+    <FxCompile Include="shaders\DrawOpaquePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -431,7 +431,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="DrawOpaqueVS.hlsl">
+    <FxCompile Include="shaders\DrawOpaqueVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -449,7 +449,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="DepthWG.hlsl">
+    <FxCompile Include="shaders\DepthWG.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
@@ -468,7 +468,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="OpaqueWG.hlsl">
+    <FxCompile Include="shaders\OpaqueWG.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
@@ -478,7 +478,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="TriangleDepthCS.hlsl">
+    <FxCompile Include="shaders\TriangleDepthCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -507,7 +507,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Common.hlsli">
+    <None Include="shaders\Common.hlsli">
       <FileType>Document</FileType>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">true</TreatOutputAsContent>
@@ -522,7 +522,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="Rasterization.hlsli">
+    <None Include="shaders\Rasterization.hlsli">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugAsan|Win32'">true</ExcludedFromBuild>
@@ -535,7 +535,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="TriangleOpaqueCS.hlsl">
+    <FxCompile Include="shaders\TriangleOpaqueCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -568,7 +568,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="BigTriangleDepthCS.hlsl">
+    <FxCompile Include="shaders\BigTriangleDepthCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -597,7 +597,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="BigTriangleOpaqueCS.hlsl">
+    <FxCompile Include="shaders\BigTriangleOpaqueCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -630,7 +630,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="ClearCS.hlsl">
+    <FxCompile Include="shaders\ClearCS.hlsl">
       <FileType>Document</FileType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">5.0</ShaderModel>
@@ -649,7 +649,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="GenerateCommandsCS.hlsl">
+    <FxCompile Include="shaders\GenerateCommandsCS.hlsl">
       <FileType>Document</FileType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">5.0</ShaderModel>
@@ -670,7 +670,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="GenerateHiZMipCS.hlsl">
+    <FxCompile Include="shaders\GenerateHiZMipCS.hlsl">
       <FileType>Document</FileType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='DebugAsan|x64'">Compute</ShaderType>
