@@ -13,5 +13,6 @@ bool Settings::ClusterBackfaceCullingEnabled = true;
 bool Settings::SWREnabled = false;
 bool Settings::AsyncComputeEnabled = true;
 bool Settings::ShowMeshlets = false;
+bool Settings::ShowOverdraw = false;
 bool Settings::FreezeCulling = false;
 std::string Settings::AssetsPath;

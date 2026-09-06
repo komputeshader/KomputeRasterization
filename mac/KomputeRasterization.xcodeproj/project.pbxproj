@@ -62,6 +62,7 @@
 		C20000000000000000000011 /* DrawShadowVS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000011 /* DrawShadowVS.metal */; };
 		C20000000000000000000012 /* TriangleShadowCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000012 /* TriangleShadowCS.metal */; };
 		C20000000000000000000013 /* BigTriangleShadowCS.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000013 /* BigTriangleShadowCS.metal */; };
+		C20000000000000000000014 /* DrawOverdraw.metal in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000014 /* DrawOverdraw.metal */; };
 		C30000000000000000000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000001 /* Cocoa.framework */; };
 		C30000000000000000000002 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000002 /* Metal.framework */; };
 		C30000000000000000000003 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B40000000000000000000003 /* MetalKit.framework */; };
@@ -152,6 +153,7 @@
 		B30000000000000000000011 /* DrawShadowVS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawShadowVS.metal; sourceTree = "<group>"; };
 		B30000000000000000000012 /* TriangleShadowCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = TriangleShadowCS.metal; sourceTree = "<group>"; };
 		B30000000000000000000013 /* BigTriangleShadowCS.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BigTriangleShadowCS.metal; sourceTree = "<group>"; };
+		B30000000000000000000014 /* DrawOverdraw.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = DrawOverdraw.metal; sourceTree = "<group>"; };
 		B40000000000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = "System/Library/Frameworks/Cocoa.framework"; sourceTree = SDKROOT; };
 		B40000000000000000000002 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = "System/Library/Frameworks/Metal.framework"; sourceTree = SDKROOT; };
 		B40000000000000000000003 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = "System/Library/Frameworks/MetalKit.framework"; sourceTree = SDKROOT; };
@@ -256,6 +258,7 @@
 				B3000000000000000000000E /* BigTriangleOpaqueCS.metal */,
 				B3000000000000000000000F /* GenerateHiZMipCS.metal */,
 				B30000000000000000000010 /* DrawOpaque.metal */,
+				B30000000000000000000014 /* DrawOverdraw.metal */,
 			);
 			name = Shaders;
 			path = shaders;
@@ -431,6 +434,7 @@
 				C2000000000000000000000E /* BigTriangleOpaqueCS.metal in Sources */,
 				C2000000000000000000000F /* GenerateHiZMipCS.metal in Sources */,
 				C20000000000000000000010 /* DrawOpaque.metal in Sources */,
+				C20000000000000000000014 /* DrawOverdraw.metal in Sources */,
 				C00000000000000000000001 /* Application.mm in Sources */,
 				C00000000000000000000002 /* Camera.cpp in Sources */,
 				C00000000000000000000003 /* Context.mm in Sources */,

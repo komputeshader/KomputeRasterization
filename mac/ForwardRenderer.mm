@@ -355,6 +355,7 @@ void ForwardRenderer::_newFrameGUI()
 		if (!Settings::SWREnabled)
 		{
 			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
+			ImGui::Checkbox("Show Quad Overshading", &Settings::ShowOverdraw);
 		}
 
 		ImGui::Checkbox("Frustum Culling", &Settings::FrustumCullingEnabled);

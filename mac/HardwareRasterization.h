@@ -38,6 +38,13 @@ public:
 
 private:
 
+	id<MTLRenderCommandEncoder> _drawOverdraw(
+		id<MTLCommandBuffer> commandBuffer,
+		MTLRenderPassDescriptor* renderPass,
+		const Scene& scene,
+		const Culler& culler,
+		FrameStatistics& statistics);
+
 	struct Resources;
 	std::unique_ptr<Resources> _resources;
 

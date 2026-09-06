@@ -15,6 +15,9 @@ struct HardwareRasterization::Resources
 	id<MTLRenderPipelineState> depthPipeline = nil;
 	id<MTLRenderPipelineState> shadowPipeline = nil;
 	id<MTLRenderPipelineState> opaquePipeline = nil;
+	id<MTLRenderPipelineState> overdrawPipeline = nil;
+	id<MTLRenderPipelineState> overdrawDisplayPipeline = nil;
+	id<MTLBuffer> overdrawBuffer = nil;
 	id<MTLDepthStencilState> depthWriteState = nil;
 	id<MTLDepthStencilState> depthEqualState = nil;
 	id<MTLTexture> depthTexture = nil;
@@ -64,6 +67,31 @@ namespace
 		}
 
 		descriptor.supportIndirectCommandBuffers = YES;
+		NSError* error = nil;
+		id<MTLRenderPipelineState> pipeline = [Context::Device
+			newRenderPipelineStateWithDescriptor:descriptor
+			error:&error];
+		ASSERT(pipeline, "%s", error.localizedDescription.UTF8String)
+
+		return pipeline;
+	}
+
+	id<MTLRenderPipelineState> MakeOverdrawPipeline(bool display)
+	{
+		MTLRenderPipelineDescriptor* descriptor = [MTLRenderPipelineDescriptor new];
+		descriptor.label = display ? @"Quad overshading display" : @"Quad overshading count";
+		descriptor.vertexFunction = Context::GetFunction(display ? "FullscreenVS" : "DrawDepthVS");
+		descriptor.fragmentFunction = Context::GetFunction(display ? "DrawOverdrawDisplayPS" : "DrawOverdrawPS");
+		if (display)
+		{
+			descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		}
+		else
+		{
+			descriptor.vertexDescriptor = VertexDescriptor(true);
+			descriptor.supportIndirectCommandBuffers = YES;
+		}
+
 		NSError* error = nil;
 		id<MTLRenderPipelineState> pipeline = [Context::Device
 			newRenderPipelineStateWithDescriptor:descriptor
@@ -144,6 +172,8 @@ void HardwareRasterization::Initialize(uint32_t width, uint32_t height)
 	_resources->depthPipeline = MakePipeline(true);
 	_resources->shadowPipeline = MakePipeline(true, true);
 	_resources->opaquePipeline = MakePipeline(false);
+	_resources->overdrawPipeline = MakeOverdrawPipeline(false);
+	_resources->overdrawDisplayPipeline = MakeOverdrawPipeline(true);
 
 	id<MTLFunction> opaqueFragment = Context::GetFunction("DrawOpaquePSICB");
 	_resources->shadowArgumentEncoder = [opaqueFragment newArgumentEncoderWithBufferIndex:8];
@@ -169,6 +199,10 @@ void HardwareRasterization::Resize(uint32_t width, uint32_t height)
 	_height = std::max(height, 1u);
 	_resources->depthTexture = Context::CreateTexture2D(
 		MTLPixelFormatDepth32Float, _width, _height, 1, 1, MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead, @"Hardware camera depth");
+	const NSUInteger quadWidth = (_width + 1) / 2;
+	const NSUInteger quadHeight = (_height + 1) / 2;
+	_resources->overdrawBuffer = Context::CreateBuffer(
+		nullptr, quadWidth * quadHeight * sizeof(uint32_t), MTLResourceStorageModePrivate, @"Hardware quad overshading");
 }
 
 void HardwareRasterization::DrawDepths(
@@ -233,6 +267,11 @@ id<MTLRenderCommandEncoder> HardwareRasterization::DrawOpaque(
 	const Shadows& shadows,
 	FrameStatistics& statistics)
 {
+	if (Settings::ShowOverdraw)
+	{
+		return _drawOverdraw(commandBuffer, pass, scene, culler, statistics);
+	}
+
 	pass.depthAttachment.texture = _resources->depthTexture;
 	pass.depthAttachment.loadAction = MTLLoadActionLoad;
 	pass.depthAttachment.storeAction = MTLStoreActionStore;
@@ -271,6 +310,52 @@ id<MTLRenderCommandEncoder> HardwareRasterization::DrawOpaque(
 
 	Draw(encoder, scene, culler, 0);
 	statistics.FinishMeasure(encoder);
+
+	return encoder;
+}
+
+id<MTLRenderCommandEncoder> HardwareRasterization::_drawOverdraw(
+	id<MTLCommandBuffer> commandBuffer,
+	MTLRenderPassDescriptor* pass,
+	const Scene& scene,
+	const Culler& culler,
+	FrameStatistics& statistics)
+{
+	id<MTLBlitCommandEncoder> clear = [commandBuffer blitCommandEncoder];
+	clear.label = @"Clear quad overshading";
+	[clear fillBuffer:_resources->overdrawBuffer
+		range:NSMakeRange(0, _resources->overdrawBuffer.length)
+		value:0];
+	[clear endEncoding];
+
+	// Match the Windows reference view: keep geometry culling, bypass pixel depth.
+	MTLRenderPassDescriptor* countPass = [MTLRenderPassDescriptor renderPassDescriptor];
+	countPass.renderTargetWidth = _width;
+	countPass.renderTargetHeight = _height;
+	countPass.defaultRasterSampleCount = 1;
+	id<MTLRenderCommandEncoder> encoder = [commandBuffer renderCommandEncoderWithDescriptor:countPass];
+	encoder.label = @"Hardware quad overshading";
+	[encoder setRenderPipelineState:_resources->overdrawPipeline];
+	ConfigureRasterizer(encoder);
+	BindGeometry(encoder, scene, culler, true);
+	const simd_float4x4 vp = scene.camera.GetVP();
+	[encoder setVertexBytes:&vp length:sizeof(vp) atIndex:Bindings::Constants];
+	const uint32_t quadWidth = (_width + 1) / 2;
+	[encoder setFragmentBytes:&quadWidth length:sizeof(quadWidth) atIndex:Bindings::Constants];
+	[encoder setFragmentBuffer:_resources->overdrawBuffer offset:0 atIndex:Bindings::Counters];
+	statistics.BeginMeasure(encoder);
+	Draw(encoder, scene, culler, 0);
+	statistics.FinishMeasure(encoder);
+	[encoder endEncoding];
+
+	// Tracked resources synchronize the clear, count, and display encoders.
+	pass.depthAttachment.texture = nil;
+	encoder = [commandBuffer renderCommandEncoderWithDescriptor:pass];
+	encoder.label = @"Quad overshading display";
+	[encoder setRenderPipelineState:_resources->overdrawDisplayPipeline];
+	[encoder setFragmentBytes:&quadWidth length:sizeof(quadWidth) atIndex:Bindings::Constants];
+	[encoder setFragmentBuffer:_resources->overdrawBuffer offset:0 atIndex:Bindings::Counters];
+	[encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
 
 	return encoder;
 }

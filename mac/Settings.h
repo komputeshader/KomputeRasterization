@@ -41,6 +41,7 @@ public:
 	static bool SWREnabled;
 	static bool AsyncComputeEnabled;
 	static bool ShowMeshlets;
+	static bool ShowOverdraw;
 	static bool FreezeCulling;
 
 	static std::string AssetsPath;
