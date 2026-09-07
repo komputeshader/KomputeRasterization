@@ -5,6 +5,19 @@ It comes with two scenes, the Buddha - about 100M of really small triangles, and
 
 Demo attemps to distribute load over threads  with the notion of a big triangle - how big the triangle's screen area should be to rasterize it with a single thread, or to offload it to a multiple-threads rasterizer, or a hardware rasterizer?
 
+## Features
+* Fully GPU-driven rendering using indirect draws and compute dispatches.
+* Compute-based software rasterization of depth, opaque geometry, and cascaded shadow maps.
+* Adaptive triangle processing: small triangles use a single-thread path, while large triangles are divided into configurable tiles and processed cooperatively.
+* Runtime comparison between software and hardware rasterization by overdraw visualization and GPU performance/statistics reporting.
+* Compares true overdraw - compute threads vs. pixel shader 2x2 quad threads (ordinary + helper ones).
+* Traditional compute-shader and DirectX 12 Work Graphs paths on Windows.
+* Meshlet frustum, backface-cone, and temporal Hi-Z occlusion culling for the camera and shadow cascades.
+* Optional per-triangle Hi-Z culling during software rasterization.
+* Configurable scanline or bounding-box traversal, with optional top-left fill rules.
+* Adjustable cascaded shadow maps, with meshlet and cascade debug views.
+* Windows DirectX 12 and macOS Metal versions.
+
 ## System requirements
 * Windows 10, 64-bit.
 * DirectX 12 compatible GPU.
@@ -29,10 +42,10 @@ Mac:
 * Build and run.
 
 ## Papers and other resources used
-* [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf)
-* [Optimizing the Graphics Pipeline with Compute](https://frostbite-wp-prd.s3.amazonaws.com/wp-content/uploads/2016/03/29204330/GDC_2016_Compute.pdf)
-* The Windows and Metal HWR **Show Quad Overshading** views are based on Stephen Hill's [Overdraw in Overdrive](https://blog.selfshadow.com/publications/overdraw-in-overdrive/)
-* Models downloaded from Morgan McGuire's [Computer Graphics Archive](https://casual-effects.com/data)
-* Mesh loading is done with [Rapidobj](https://github.com/guybrush77/rapidobj)
-* Mesh processing is done with [Meshoptimizer](https://github.com/zeux/meshoptimizer)
-* GUI is done using the [IMGUI](https://github.com/ocornut/imgui)
+* [A Parallel Algorithm for Polygon Rasterization](https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf).
+* [Optimizing the Graphics Pipeline with Compute](https://frostbite-wp-prd.s3.amazonaws.com/wp-content/uploads/2016/03/29204330/GDC_2016_Compute.pdf).
+* The **Show Overdraw** views are based on Stephen Hill's [Overdraw in Overdrive](https://blog.selfshadow.com/publications/overdraw-in-overdrive/).
+* Models downloaded from Morgan McGuire's [Computer Graphics Archive](https://casual-effects.com/data).
+* Mesh loading is done with [Rapidobj](https://github.com/guybrush77/rapidobj).
+* Mesh processing is done with [Meshoptimizer](https://github.com/zeux/meshoptimizer).
+* GUI is done using the [IMGUI](https://github.com/ocornut/imgui).

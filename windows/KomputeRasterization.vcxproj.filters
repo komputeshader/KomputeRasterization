@@ -246,6 +246,9 @@
     <None Include="shaders\Common.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="shaders\DrawOverdrawDisplayCS.hlsl">
+      <Filter>Shaders\SoftwareRasterization</Filter>
+    </None>
     <None Include="shaders\DrawOverdrawDisplayPS.hlsl">
       <Filter>Shaders</Filter>
     </None>
@@ -256,6 +259,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\DrawOverdrawVS.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\Overdraw.hlsli">
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\TypesAndConstants.hlsli">

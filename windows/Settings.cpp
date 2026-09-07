@@ -16,7 +16,7 @@ bool Settings::FrustumCullingEnabled = true;
 // which are easily fixed by two-pass Hi-Z occlusion culling
 bool Settings::CameraHiZCullingEnabled = true;
 bool Settings::ShadowsHiZCullingEnabled = true;
-bool Settings::PerTriangleHiZRasterizationCullingEnabled = false;
+bool Settings::PerTriangleHiZRasterizationCullingEnabled = true;
 bool Settings::ClusterBackfaceCullingEnabled = true;
 bool Settings::SWREnabled = false;
 bool Settings::AsyncComputeEnabled = true;

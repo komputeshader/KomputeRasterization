@@ -20,6 +20,7 @@ cbuffer SceneCB : register(b0)
 	int ScanlineRasterization;
 	float ShadowsDistance;
 	uint TotalTriangles;
+	int ShowOverdraw;
 };
 
 SamplerState PointClampSampler : register(s0);
@@ -30,6 +31,7 @@ Texture2D Depth : register(t2);
 Texture2DArray ShadowMap : register(t3);
 
 RWTexture2D<float4> RenderTarget : register(u0);
+RWTexture2D<uint> FragmentOverdraw : register(u1);
 
 groupshared uint Triangle[BIG_TRIANGLE_OPAQUE_FIELDS];
 
@@ -199,9 +201,14 @@ void main(
 				float weight2 = 1.0 - weight0 - weight1;
 
 				precise float depth = weight0 * Z0NDC + weight1 * Z1NDC + weight2 * Z2NDC;
-				// early z test
+				uint2 pixelCoord = uint2(x, y);
 				[branch]
-				if (Depth[uint2(x, y)].r == depth)
+				if (ShowOverdraw)
+				{
+					InterlockedAdd(FragmentOverdraw[pixelCoord], 1);
+				}
+				// early z test
+				else if (Depth[pixelCoord].r == depth)
 				{
 					// for perspective-correct interpolation
 					float denom = 1.0 / (weight0 * InvW0 + weight1 * InvW1 + weight2 * InvW2);
@@ -225,7 +232,7 @@ void main(
 						result *= (NdotL * shadow + ambient);
 					}
 
-					RenderTarget[uint2(x, y)] = float4(result, 1.0);
+					RenderTarget[pixelCoord] = float4(result, 1.0);
 				}
 			}
 		}

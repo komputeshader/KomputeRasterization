@@ -28,6 +28,7 @@ enum CBVSRVUAVIndices
 	PrevFrameDepthMipsSRV,
 	PrevFrameDepthMipsUAV = PrevFrameDepthMipsSRV + Settings::MaxBackBufferMipsCount,
 	SWRRenderTargetUAV = PrevFrameDepthMipsUAV + Settings::MaxBackBufferMipsCount,
+	SWROverdrawUAV,
 	SWRShadowMapSRV,
 	SWRShadowMapUAV,
 	PrevFrameShadowMapSRV = SWRShadowMapUAV + MAX_CASCADES_COUNT,

@@ -22,6 +22,7 @@ cbuffer SceneCB : register(b0)
 	int ScanlineRasterization;
 	float ShadowsDistance;
 	uint TotalTriangles;
+	int ShowOverdraw;
 	int PerTriangleHiZRasterizationCullingEnabled;
 };
 
@@ -42,6 +43,7 @@ StructuredBuffer<IndirectCommand> Commands : register(t12);
 RWTexture2D<float4> RenderTarget : register(u0);
 AppendStructuredBuffer<BigTriangleOpaque> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
+RWTexture2D<uint> FragmentOverdraw : register(u3);
 
 groupshared IndirectCommand Command;
 groupshared uint2 StatisticsSM;
@@ -279,9 +281,14 @@ void main(
 
 							precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-							// early z test
+							uint2 pixelCoord = uint2(x, y);
 							[branch]
-							if (Depth[uint2(x, y)].r == depth)
+							if (ShowOverdraw)
+							{
+								InterlockedAdd(FragmentOverdraw[pixelCoord], 1);
+							}
+							// early z test
+							else if (Depth[pixelCoord].r == depth)
 							{
 								// for perspective-correct interpolation
 								float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
@@ -309,7 +316,7 @@ void main(
 									result *= (NdotL * shadow + ambient);
 								}
 
-								RenderTarget[uint2(x, y)] = float4(result, 1.0);
+								RenderTarget[pixelCoord] = float4(result, 1.0);
 							}
 					
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -361,9 +368,13 @@ void main(
 
 								uint2 pixelCoord = uint2(x, y);
 
-								// early z test
 								[branch]
-								if (Depth[pixelCoord].r == depth)
+								if (ShowOverdraw)
+								{
+									InterlockedAdd(FragmentOverdraw[pixelCoord], 1);
+								}
+								// early z test
+								else if (Depth[pixelCoord].r == depth)
 								{
 									// for perspective-correct interpolation
 									float denom = 1.0 / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);

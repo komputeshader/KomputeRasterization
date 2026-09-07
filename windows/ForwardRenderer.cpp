@@ -1068,6 +1068,7 @@ void ForwardRenderer::_newFrameGUI()
 
 		if (Settings::SWREnabled)
 		{
+			ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 #ifdef USE_WORK_GRAPHS
 			if (DX::WorkGraphsSupported)
 			{
@@ -1082,16 +1083,16 @@ void ForwardRenderer::_newFrameGUI()
 		}
 		else
 		{
-			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
 			if (DX::WaveOpsSupported)
 			{
-				ImGui::Checkbox("Show Quad Overshading", &Settings::ShowOverdraw);
+				ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 			}
 			else
 			{
 				Settings::ShowOverdraw = false;
-				ImGui::TextDisabled("Quad overshading requires Shader Model 6 wave operations");
+				ImGui::TextDisabled("HWR overdraw requires Shader Model 6 wave operations");
 			}
+			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
 		}
 
 		ImGui::Checkbox(

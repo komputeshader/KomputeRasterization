@@ -40,6 +40,8 @@ private:
 
 	void _createRenderTargetResources();
 	void _createDepthBufferResources();
+	void _createOverdrawResources();
+	void _createOverdrawDisplayPSO();
 	void _createMDIResources();
 	void _createResetBuffer();
 	void _createStatsResources();
@@ -59,6 +61,7 @@ private:
 	void _drawShadowsBigTriangles();
 	void _finishDepthsRendering();
 	void _drawOpaque();
+	void _drawOverdrawDisplay();
 	void _endFrame();
 #ifdef USE_WORK_GRAPHS
 	void _drawDepthWG();
@@ -82,6 +85,9 @@ private:
 	// need these two for UAV writes
 	Microsoft::WRL::ComPtr<ID3D12Resource> _renderTarget;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _depthBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> _overdrawBuffer;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> _overdrawDisplayRS;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> _overdrawDisplayPSO;
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _triangleDepthRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleDepthPSO;

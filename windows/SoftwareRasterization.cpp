@@ -41,8 +41,9 @@ struct SWRSceneCB
 	int scanlineRasterization;
 	float shadowsDistance;
 	unsigned int totalTriangles;
+	int showOverdraw;
 	int perTriangleHiZRasterizationCullingEnabled;
-	int pad1[14];
+	int pad1[13];
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
@@ -104,6 +105,8 @@ void SoftwareRasterization::Resize(
 	_createBigTriangleOpaquePSO();
 	_createRenderTargetResources();
 	_createDepthBufferResources();
+	_createOverdrawResources();
+	_createOverdrawDisplayPSO();
 
 	// depth CBV
 	_depthSceneCBFrameSize = sizeof(SWRDepthSceneCB) * MAX_FRUSTUMS_COUNT;
@@ -489,9 +492,9 @@ void SoftwareRasterization::_createOpaqueWGResources()
 	lib->SetDXILLibrary(&libraryCode);
 
 	{
-		CD3DX12_ROOT_PARAMETER1 computeRootParameters[14] = {};
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[15] = {};
 		computeRootParameters[0].InitAsConstantBufferView(0);
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[13] = {};
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[14] = {};
 
 		ranges[0].Init(
 			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -570,6 +573,12 @@ void SoftwareRasterization::_createOpaqueWGResources()
 			1,
 			2);
 		computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
+
+		ranges[13].Init(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			1,
+			3);
+		computeRootParameters[14].InitAsDescriptorTable(1, &ranges[13]);
 
 		D3D12_STATIC_SAMPLER_DESC samplers[] =
 		{
@@ -721,6 +730,7 @@ void SoftwareRasterization::Update()
 	sceneData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	sceneData.shadowsDistance = Shadows::Sun.GetShadowDistance();
 	sceneData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
+	sceneData.showOverdraw = Settings::ShowOverdraw ? 1 : 0;
 	sceneData.perTriangleHiZRasterizationCullingEnabled =
 		Settings::PerTriangleHiZRasterizationCullingEnabled ? 1 : 0;
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
@@ -777,7 +787,34 @@ void SoftwareRasterization::DrawOpaque()
 	{
 		_drawOpaque();
 	}
+	if (Settings::ShowOverdraw)
+	{
+		_drawOverdrawDisplay();
+	}
 	_endFrame();
+}
+
+void SoftwareRasterization::_drawOverdrawDisplay()
+{
+	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Fragment Overdraw Display");
+
+	CD3DX12_RESOURCE_BARRIER barriers[] =
+	{
+		CD3DX12_RESOURCE_BARRIER::UAV(_overdrawBuffer.Get()),
+		CD3DX12_RESOURCE_BARRIER::UAV(_renderTarget.Get())
+	};
+	COMMAND_LIST->ResourceBarrier(_countof(barriers), barriers);
+
+	COMMAND_LIST->SetComputeRootSignature(_overdrawDisplayRS.Get());
+	COMMAND_LIST->SetPipelineState(_overdrawDisplayPSO.Get());
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		0, Descriptors::SV.GetGPUHandle(SWROverdrawUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		1, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+	COMMAND_LIST->Dispatch(
+		Utils::DispatchSize(8, _width),
+		Utils::DispatchSize(8, _height),
+		1);
 }
 
 void SoftwareRasterization::_beginFrame()
@@ -870,6 +907,19 @@ void SoftwareRasterization::_beginFrame()
 		SkyColor,
 		0,
 		nullptr);
+
+	if (Settings::ShowOverdraw)
+	{
+		COMMAND_LIST->ClearUnorderedAccessViewUint(
+			Descriptors::SV.GetGPUHandle(SWROverdrawUAV),
+			Descriptors::NonSV.GetCPUHandle(SWROverdrawUAV),
+			_overdrawBuffer.Get(),
+			clearValue,
+			0,
+			nullptr);
+		auto barrier = CD3DX12_RESOURCE_BARRIER::UAV(_overdrawBuffer.Get());
+		COMMAND_LIST->ResourceBarrier(1, &barrier);
+	}
 }
 
 void SoftwareRasterization::_drawDepth()
@@ -1153,6 +1203,8 @@ void SoftwareRasterization::_drawOpaque()
 		11, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		12, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		13, Descriptors::SV.GetGPUHandle(SWROverdrawUAV));
 
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
@@ -1188,6 +1240,8 @@ void SoftwareRasterization::_drawOpaque()
 		4, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		5, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		6, Descriptors::SV.GetGPUHandle(SWROverdrawUAV));
 
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
@@ -1351,6 +1405,8 @@ void SoftwareRasterization::_drawOpaqueWG()
 		12, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		13, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		14, Descriptors::SV.GetGPUHandle(SWROverdrawUAV));
 
 	ComPtr<ID3D12GraphicsCommandList10> commandList;
 	SUCCESS(COMMAND_LIST.As(&commandList));
@@ -1394,6 +1450,8 @@ void SoftwareRasterization::_drawOpaqueWG()
 		4, Descriptors::SV.GetGPUHandle(SWRShadowMapSRV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		5, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
+	COMMAND_LIST->SetComputeRootDescriptorTable(
+		6, Descriptors::SV.GetGPUHandle(SWROverdrawUAV));
 
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
@@ -1591,6 +1649,40 @@ void SoftwareRasterization::_createRenderTargetResources()
 		nullptr,
 		&rtUAV,
 		Descriptors::NonSV.GetCPUHandle(SWRRenderTargetUAV));
+}
+
+void SoftwareRasterization::_createOverdrawResources()
+{
+	auto desc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R32_UINT,
+		_width,
+		_height,
+		1,
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	SUCCESS(DX::Device->CreateCommittedResource(
+		&prop,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(&_overdrawBuffer)));
+	NAME_D3D12_OBJECT(_overdrawBuffer);
+
+	auto uav = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::Tex2D(DXGI_FORMAT_R32_UINT);
+	DX::Device->CreateUnorderedAccessView(
+		_overdrawBuffer.Get(),
+		nullptr,
+		&uav,
+		Descriptors::SV.GetCPUHandle(SWROverdrawUAV));
+	DX::Device->CreateUnorderedAccessView(
+		_overdrawBuffer.Get(),
+		nullptr,
+		&uav,
+		Descriptors::NonSV.GetCPUHandle(SWROverdrawUAV));
 }
 
 void SoftwareRasterization::_createDepthBufferResources()
@@ -1799,9 +1891,9 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 
 void SoftwareRasterization::_createTriangleOpaquePSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[13] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[14] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[12] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[13] = {};
 
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -1875,6 +1967,12 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 		2);
 	computeRootParameters[12].InitAsDescriptorTable(1, &ranges[11]);
 
+	ranges[12].Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		1,
+		3);
+	computeRootParameters[13].InitAsDescriptorTable(1, &ranges[12]);
+
 	D3D12_STATIC_SAMPLER_DESC samplers[] =
 	{
 		Utils::PointClampSampler(0),
@@ -1909,9 +2007,9 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 
 void SoftwareRasterization::_createBigTriangleOpaquePSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[6] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[7] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
-	CD3DX12_DESCRIPTOR_RANGE1 ranges[5] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[6] = {};
 
 	ranges[0].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -1943,6 +2041,12 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 		0);
 	computeRootParameters[5].InitAsDescriptorTable(1, &ranges[4]);
 
+	ranges[5].Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		1,
+		1);
+	computeRootParameters[6].InitAsDescriptorTable(1, &ranges[5]);
+
 	auto pointClampSampler = Utils::PointClampSampler(0);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
@@ -1970,4 +2074,33 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 		&psoDesc,
 		IID_PPV_ARGS(&_bigTriangleOpaquePSO)));
 	NAME_D3D12_OBJECT(_bigTriangleOpaquePSO);
+}
+
+void SoftwareRasterization::_createOverdrawDisplayPSO()
+{
+	CD3DX12_ROOT_PARAMETER1 rootParameters[2] = {};
+	CD3DX12_DESCRIPTOR_RANGE1 ranges[2] = {};
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+	rootParameters[0].InitAsDescriptorTable(1, &ranges[0]);
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+	rootParameters[1].InitAsDescriptorTable(1, &ranges[1]);
+
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters);
+	Utils::CreateRS(rootSignatureDesc, _overdrawDisplayRS);
+	NAME_D3D12_OBJECT(_overdrawDisplayRS);
+
+	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
+		L"shaders\\DrawOverdrawDisplayCS.hlsl",
+		nullptr,
+		"main",
+		"cs_5_0");
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = _overdrawDisplayRS.Get();
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
+	SUCCESS(DX::Device->CreateComputePipelineState(
+		&psoDesc,
+		IID_PPV_ARGS(&_overdrawDisplayPSO)));
+	NAME_D3D12_OBJECT(_overdrawDisplayPSO);
 }
