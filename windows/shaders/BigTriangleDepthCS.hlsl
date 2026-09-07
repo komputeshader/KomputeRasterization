@@ -12,6 +12,9 @@ cbuffer DepthSceneCB : register(b0)
 	int UseTopLeftRule;
 	int ScanlineRasterization;
 	uint TotalTriangles;
+	int PerTriangleHiZRasterizationCullingEnabled;
+	float CameraNear;
+	int NearPlaneClippingEnabled;
 };
 
 StructuredBuffer<uint> BigTriangles : register(t0);
@@ -66,6 +69,83 @@ void main(
 		float4 p1CS = mul(VP, float4(asfloat(uint3(Triangle[P1_WS_FLOAT3 + 0], Triangle[P1_WS_FLOAT3 + 1], Triangle[P1_WS_FLOAT3 + 2])), 1.0));
 		float4 p2CS = mul(VP, float4(asfloat(uint3(Triangle[P2_WS_FLOAT3 + 0], Triangle[P2_WS_FLOAT3 + 1], Triangle[P2_WS_FLOAT3 + 2])), 1.0));
 
+		uint tileOffsetData = Triangle[TILE_OFFSET_FLOAT];
+		bool firstQuadHalf = (tileOffsetData & 0x80000000) == 0;
+
+		if (NearPlaneClippingEnabled)
+		{
+			bool p0Behind = p0CS.z > CameraNear;
+			bool p1Behind = p1CS.z > CameraNear;
+			bool p2Behind = p2CS.z > CameraNear;
+
+
+			//        /\                             /\
+			//       /  \            =====>         /  \
+			//      /    \                         /    \
+			// ----x------x------- near plane ----x------x-----
+			//    /________\
+
+			if (p0Behind && p1Behind)
+			{
+				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+				p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
+			}
+			else if (p1Behind && p2Behind)
+			{
+				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+				p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+			}
+			else if (p2Behind && p0Behind)
+			{
+				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
+			}
+
+
+			//    ________                    ________
+			//    \      /        =====>      \      /
+			//     \    /                      \    /
+			// -----x--x------- near plane -----x--x----
+			//       \/
+
+			else if (p0Behind)
+			{
+				if (firstQuadHalf)
+				{
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+				}
+				else
+				{
+					p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
+				}
+			}
+			else if (p1Behind)
+			{
+				if (firstQuadHalf)
+				{
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+				}
+				else
+				{
+					p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
+				}
+			}
+			else if (p2Behind)
+			{
+				if (firstQuadHalf)
+				{
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+				}
+				else
+				{
+					p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+				}
+			}
+		}
+
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
 		float invW2 = 1.0 / p2CS.w;
@@ -86,8 +166,9 @@ void main(
 		minP.xy = SnapMinBoundToPixelCenter(minP.xy);
 		float2 dimensions = maxP.xy - minP.xy;
 		float2 tileCount = ceil(dimensions / BigTriangleTileSize);
-		float yTileOffset = floor(asfloat(Triangle[TILE_OFFSET_FLOAT]) / tileCount.x);
-		float xTileOffset = asfloat(Triangle[TILE_OFFSET_FLOAT]) - yTileOffset * tileCount.x;
+		float tileOffset = asfloat(tileOffsetData & 0x7FFFFFFF);
+		float yTileOffset = floor(tileOffset / tileCount.x);
+		float xTileOffset = tileOffset - yTileOffset * tileCount.x;
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 

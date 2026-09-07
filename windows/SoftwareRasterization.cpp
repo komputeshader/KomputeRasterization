@@ -17,7 +17,9 @@ struct SWRDepthSceneCB
 	int scanlineRasterization;
 	unsigned int totalTriangles;
 	int perTriangleHiZRasterizationCullingEnabled;
-	int pad[38];
+	float cameraNear;
+	int nearPlaneClippingEnabled;
+	int pad[36];
 };
 static_assert(
 	(sizeof(SWRDepthSceneCB) % 256) == 0,
@@ -43,7 +45,8 @@ struct SWRSceneCB
 	unsigned int totalTriangles;
 	int showOverdraw;
 	int perTriangleHiZRasterizationCullingEnabled;
-	int pad1[13];
+	float cameraNear;
+	int pad1[12];
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
@@ -680,6 +683,8 @@ void SoftwareRasterization::Update()
 	depthData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
 	depthData.perTriangleHiZRasterizationCullingEnabled =
 		Settings::PerTriangleHiZRasterizationCullingEnabled ? 1 : 0;
+	depthData.cameraNear = camera.GetNearZ();
+	depthData.nearPlaneClippingEnabled = 1;
 	memcpy(
 		_depthSceneCBData + DX::FrameIndex * _depthSceneCBFrameSize,
 		&depthData,
@@ -688,6 +693,7 @@ void SoftwareRasterization::Update()
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		depthData.VP = Shadows::Sun.GetCascadeVP(cascade);
+		depthData.nearPlaneClippingEnabled = 0;
 		depthData.outputRes =
 		{
 			static_cast<float>(Settings::ShadowMapRes),
@@ -733,6 +739,7 @@ void SoftwareRasterization::Update()
 	sceneData.showOverdraw = Settings::ShowOverdraw ? 1 : 0;
 	sceneData.perTriangleHiZRasterizationCullingEnabled =
 		Settings::PerTriangleHiZRasterizationCullingEnabled ? 1 : 0;
+	sceneData.cameraNear = camera.GetNearZ();
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		sceneData.cascadeVP[cascade] = Shadows::Sun.GetCascadeVP(cascade);

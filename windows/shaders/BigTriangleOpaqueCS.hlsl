@@ -21,6 +21,8 @@ cbuffer SceneCB : register(b0)
 	float ShadowsDistance;
 	uint TotalTriangles;
 	int ShowOverdraw;
+	int PerTriangleHiZRasterizationCullingEnabled;
+	float CameraNear;
 };
 
 SamplerState PointClampSampler : register(s0);
@@ -91,10 +93,164 @@ void main(
 		P1WS = asfloat(uint3(Triangle[P1_WS_FLOAT3 + 0], Triangle[P1_WS_FLOAT3 + 1], Triangle[P1_WS_FLOAT3 + 2]));
 		P2WS = asfloat(uint3(Triangle[P2_WS_FLOAT3 + 0], Triangle[P2_WS_FLOAT3 + 1], Triangle[P2_WS_FLOAT3 + 2]));
 
+		N0 = UnpackNormal(Triangle[N0_PACKED_UINT]);
+		N1 = UnpackNormal(Triangle[N1_PACKED_UINT]);
+		N2 = UnpackNormal(Triangle[N2_PACKED_UINT]);
+
+		C0 = UnpackColor(uint2(Triangle[C0_PACKED_UINT2 + 0], Triangle[C0_PACKED_UINT2 + 1]));
+		C1 = UnpackColor(uint2(Triangle[C1_PACKED_UINT2 + 0], Triangle[C1_PACKED_UINT2 + 1]));
+		C2 = UnpackColor(uint2(Triangle[C2_PACKED_UINT2 + 0], Triangle[C2_PACKED_UINT2 + 1]));
+
+		UV0 = UnpackTexcoords(Triangle[UV0_PACKED_UINT]);
+		UV1 = UnpackTexcoords(Triangle[UV1_PACKED_UINT]);
+		UV2 = UnpackTexcoords(Triangle[UV2_PACKED_UINT]);
+
 		// WS -> VS -> CS
 		float4 p0CS = mul(VP, float4(P0WS, 1.0));
 		float4 p1CS = mul(VP, float4(P1WS, 1.0));
 		float4 p2CS = mul(VP, float4(P2WS, 1.0));
+
+		uint tileOffsetData = Triangle[TILE_OFFSET_FLOAT];
+		bool firstQuadHalf = (tileOffsetData & 0x80000000) == 0;
+		bool p0Behind = p0CS.z > CameraNear;
+		bool p1Behind = p1CS.z > CameraNear;
+		bool p2Behind = p2CS.z > CameraNear;
+
+
+		//        /\                             /\
+		//       /  \            =====>         /  \
+		//      /    \                         /    \
+		// ----x------x------- near plane ----x------x-----
+		//    /________\
+
+		if (p0Behind && p1Behind)
+		{
+			float t0, t1;
+			p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
+			p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
+			P0WS = lerp(P2WS, P0WS, t0);
+			P1WS = lerp(P2WS, P1WS, t1);
+			N0 = lerp(N2, N0, t0);
+			N1 = lerp(N2, N1, t1);
+			C0 = lerp(C2, C0, t0);
+			C1 = lerp(C2, C1, t1);
+			UV0 = lerp(UV2, UV0, t0);
+			UV1 = lerp(UV2, UV1, t1);
+		}
+		else if (p1Behind && p2Behind)
+		{
+			float t1, t2;
+			p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
+			p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
+			P1WS = lerp(P0WS, P1WS, t1);
+			P2WS = lerp(P0WS, P2WS, t2);
+			N1 = lerp(N0, N1, t1);
+			N2 = lerp(N0, N2, t2);
+			C1 = lerp(C0, C1, t1);
+			C2 = lerp(C0, C2, t2);
+			UV1 = lerp(UV0, UV1, t1);
+			UV2 = lerp(UV0, UV2, t2);
+		}
+		else if (p2Behind && p0Behind)
+		{
+			float t2, t0;
+			p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
+			p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+			P2WS = lerp(P1WS, P2WS, t2);
+			P0WS = lerp(P1WS, P0WS, t0);
+			N2 = lerp(N1, N2, t2);
+			N0 = lerp(N1, N0, t0);
+			C2 = lerp(C1, C2, t2);
+			C0 = lerp(C1, C0, t0);
+			UV2 = lerp(UV1, UV2, t2);
+			UV0 = lerp(UV1, UV0, t0);
+		}
+
+
+		//    ________                    ________
+		//    \      /        =====>      \      /
+		//     \    /                      \    /
+		// -----x--x------- near plane -----x--x----
+		//       \/
+
+		else if (p0Behind)
+		{
+			if (firstQuadHalf)
+			{
+				float t0;
+				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
+				P0WS = lerp(P2WS, P0WS, t0);
+				N0 = lerp(N2, N0, t0);
+				C0 = lerp(C2, C0, t0);
+				UV0 = lerp(UV2, UV0, t0);
+			}
+			else
+			{
+				float t2, t0;
+				p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t2);
+				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+				P2WS = lerp(P2WS, P0WS, t2);
+				P0WS = lerp(P1WS, P0WS, t0);
+				N2 = lerp(N2, N0, t2);
+				N0 = lerp(N1, N0, t0);
+				C2 = lerp(C2, C0, t2);
+				C0 = lerp(C1, C0, t0);
+				UV2 = lerp(UV2, UV0, t2);
+				UV0 = lerp(UV1, UV0, t0);
+			}
+		}
+		else if (p1Behind)
+		{
+			if (firstQuadHalf)
+			{
+				float t1;
+				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
+				P1WS = lerp(P0WS, P1WS, t1);
+				N1 = lerp(N0, N1, t1);
+				C1 = lerp(C0, C1, t1);
+				UV1 = lerp(UV0, UV1, t1);
+			}
+			else
+			{
+				float t0, t1;
+				p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t0);
+				p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
+				P0WS = lerp(P0WS, P1WS, t0);
+				P1WS = lerp(P2WS, P1WS, t1);
+				N0 = lerp(N0, N1, t0);
+				N1 = lerp(N2, N1, t1);
+				C0 = lerp(C0, C1, t0);
+				C1 = lerp(C2, C1, t1);
+				UV0 = lerp(UV0, UV1, t0);
+				UV1 = lerp(UV2, UV1, t1);
+			}
+		}
+		else if (p2Behind)
+		{
+			if (firstQuadHalf)
+			{
+				float t2;
+				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
+				P2WS = lerp(P1WS, P2WS, t2);
+				N2 = lerp(N1, N2, t2);
+				C2 = lerp(C1, C2, t2);
+				UV2 = lerp(UV1, UV2, t2);
+			}
+			else
+			{
+				float t1, t2;
+				p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t1);
+				p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
+				P1WS = lerp(P1WS, P2WS, t1);
+				P2WS = lerp(P0WS, P2WS, t2);
+				N1 = lerp(N1, N2, t1);
+				N2 = lerp(N0, N2, t2);
+				C1 = lerp(C1, C2, t1);
+				C2 = lerp(C0, C2, t2);
+				UV1 = lerp(UV1, UV2, t1);
+				UV2 = lerp(UV0, UV2, t2);
+			}
+		}
 
 		float invW0 = 1.0 / p0CS.w;
 		float invW1 = 1.0 / p1CS.w;
@@ -116,28 +272,18 @@ void main(
 		minP.xy = SnapMinBoundToPixelCenter(minP.xy);
 		float2 dimensions = maxP.xy - minP.xy;
 		float2 tileCount = ceil(dimensions / BigTriangleTileSize);
-		float yTileOffset = floor(asfloat(Triangle[TILE_OFFSET_FLOAT]) / tileCount.x);
-		float xTileOffset = asfloat(Triangle[TILE_OFFSET_FLOAT]) - yTileOffset * tileCount.x;
+		float tileOffset = asfloat(tileOffsetData & 0x7FFFFFFF);
+		float yTileOffset = floor(tileOffset / tileCount.x);
+		float xTileOffset = tileOffset - yTileOffset * tileCount.x;
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
 		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
 
-		N0 = UnpackNormal(Triangle[N0_PACKED_UINT]);
-		N1 = UnpackNormal(Triangle[N1_PACKED_UINT]);
-		N2 = UnpackNormal(Triangle[N2_PACKED_UINT]);
-
-		C0 = UnpackColor(uint2(Triangle[C0_PACKED_UINT2 + 0], Triangle[C0_PACKED_UINT2 + 1]));
-		C1 = UnpackColor(uint2(Triangle[C1_PACKED_UINT2 + 0], Triangle[C1_PACKED_UINT2 + 1]));
-		C2 = UnpackColor(uint2(Triangle[C2_PACKED_UINT2 + 0], Triangle[C2_PACKED_UINT2 + 1]));
 		//if (ShowMeshlets)
 		//{
 		//	C0 = float4(instance.color, 1.0);
 		//	C1 = float4(instance.color, 1.0);
 		//	C2 = float4(instance.color, 1.0);
 		//}
-
-		UV0 = UnpackTexcoords(Triangle[UV0_PACKED_UINT]);
-		UV1 = UnpackTexcoords(Triangle[UV1_PACKED_UINT]);
-		UV2 = UnpackTexcoords(Triangle[UV2_PACKED_UINT]);
 
 		P0SS = p0SS;
 		P1SS = p1SS;

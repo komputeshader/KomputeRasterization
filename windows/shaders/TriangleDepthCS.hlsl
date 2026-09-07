@@ -15,6 +15,8 @@ cbuffer DepthSceneCB : register(b0)
 	int ScanlineRasterization;
 	uint TotalTriangles;
 	int PerTriangleHiZRasterizationCullingEnabled;
+	float CameraNear;
+	int NearPlaneClippingEnabled;
 };
 
 SamplerState DepthSampler : register(s0);
@@ -76,11 +78,29 @@ void main(
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
 				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
-				// crude "clipping" of polygons behind the camera
-				// w in CS is a view space z
-				// TODO: implement proper near plane clipping
-				[branch]
-				if (p0CS.w <= 0.0 || p1CS.w <= 0.0 || p2CS.w <= 0.0)
+				bool p0Behind = false;
+				bool p1Behind = false;
+				bool p2Behind = false;
+				float4 p3Helper = 0.0.xxxx;
+				bool quadrilateral = false;
+
+				if (NearPlaneClippingEnabled)
+				{
+					if (!ClipTriangleToNearPlane(
+							p0CS,
+							p1CS,
+							p2CS,
+							CameraNear,
+							p0Behind,
+							p1Behind,
+							p2Behind,
+							p3Helper,
+							quadrilateral))
+					{
+						continue;
+					}
+				}
+				else if (p0CS.w <= 0.0 || p1CS.w <= 0.0 || p2CS.w <= 0.0)
 				{
 					continue;
 				}
@@ -153,7 +173,8 @@ void main(
 				// TODO: thread local
 
 				[branch]
-				if (dimensions.x * dimensions.y >= BigTriangleThreshold)
+				if (dimensions.x * dimensions.y >= BigTriangleThreshold ||
+					p0Behind || p1Behind || p2Behind)
 				{
 					BigTriangleDepth result;
 					result.p0WSX = p0WS.x;
@@ -176,6 +197,41 @@ void main(
 						// but the more reasonable/parallel approach isn't faster, and is in fact slower
 						// see the same code in the "experimental" branch
 						BigTriangles.Append(result);
+					}
+
+					if (quadrilateral)
+					{
+						// screen-space coordinate of the fourth clipped vertex
+						p3Helper.xy = (p3Helper.xy / p3Helper.w * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
+
+						if (p0Behind)
+						{
+							minP.xy = min(p3Helper.xy, min(p0SS, p1SS));
+							maxP.xy = max(p3Helper.xy, max(p0SS, p1SS));
+						}
+						else if (p1Behind)
+						{
+							minP.xy = min(p3Helper.xy, min(p1SS, p2SS));
+							maxP.xy = max(p3Helper.xy, max(p1SS, p2SS));
+						}
+						else
+						{
+							minP.xy = min(p3Helper.xy, min(p0SS, p2SS));
+							maxP.xy = max(p3Helper.xy, max(p0SS, p2SS));
+						}
+
+						ClampToScreenBounds(minP.xy, maxP.xy);
+						minP.xy = SnapMinBoundToPixelCenter(minP.xy);
+						dimensions = maxP.xy - minP.xy;
+
+						tilesCount = ceil(dimensions / BigTriangleTileSize);
+						totalTiles = tilesCount.x * tilesCount.y;
+						for (float offset = 0.0; offset < totalTiles; offset += 1.0)
+						{
+							// the sign bit selects the second triangle produced from the clipped quad
+							result.tileOffset = asfloat(asuint(offset) | 0x80000000);
+							BigTriangles.Append(result);
+						}
 					}
 
 					continue;
