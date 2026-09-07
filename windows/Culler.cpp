@@ -189,6 +189,10 @@ void Culler::Cull(
 		1,
 		1);
 
+	// clear counters -> UAV barrier -> reserve visible instance slots
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::UAV(_cullingCounters.Get());
+	commandList->ResourceBarrier(1, barriers);
+
 	// culling
 	commandList->SetComputeRootSignature(_cullingRS.Get());
 	commandList->SetPipelineState(_cullingPSO.Get());

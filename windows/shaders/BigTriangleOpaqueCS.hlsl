@@ -83,7 +83,8 @@ void main(
 		Triangle[groupIndex] = BigTriangles[groupID.x * BIG_TRIANGLE_OPAQUE_FIELDS + groupIndex];
 	}
 
-	GroupMemoryBarrier();
+	// not a GroupMemoryBarrier to make correctness independent of the usual GPU execution assumption
+	GroupMemoryBarrierWithGroupSync();
 
 	if (groupIndex == 0)
 	{

@@ -915,6 +915,12 @@ void SoftwareRasterization::_beginFrame()
 		0,
 		nullptr);
 
+	// clear -> UAV barrier -> rasterize; clears are unordered UAV writes too
+	barrierCount = 0;
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::UAV(_depthBuffer.Get());
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::UAV(Shadows::Sun.GetShadowMapSWR());
+	barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::UAV(_renderTarget.Get());
+
 	if (Settings::ShowOverdraw)
 	{
 		COMMAND_LIST->ClearUnorderedAccessViewUint(
@@ -924,9 +930,9 @@ void SoftwareRasterization::_beginFrame()
 			clearValue,
 			0,
 			nullptr);
-		auto barrier = CD3DX12_RESOURCE_BARRIER::UAV(_overdrawBuffer.Get());
-		COMMAND_LIST->ResourceBarrier(1, &barrier);
+		barriers[barrierCount++] = CD3DX12_RESOURCE_BARRIER::UAV(_overdrawBuffer.Get());
 	}
+	COMMAND_LIST->ResourceBarrier(barrierCount, barriers);
 }
 
 void SoftwareRasterization::_drawDepth()
