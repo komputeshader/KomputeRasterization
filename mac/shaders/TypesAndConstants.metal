@@ -132,7 +132,6 @@ struct DepthSceneCB
 	float2 inverseOutputResolution;
 	float bigTriangleThreshold;
 	float bigTriangleTileSize;
-	uint useTopLeftRule;
 	uint scanlineRasterization;
 	uint totalTriangles;
 	uint perTriangleHiZCullingEnabled;
@@ -159,7 +158,6 @@ struct SceneCB
 	float bigTriangleTileSize;
 	uint showCascades;
 	uint showMeshlets;
-	uint useTopLeftRule;
 	uint cascadesCount;
 	uint scanlineRasterization;
 	float shadowsDistance;

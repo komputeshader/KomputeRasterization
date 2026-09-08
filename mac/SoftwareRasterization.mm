@@ -177,7 +177,6 @@ void SoftwareRasterization::GUINewFrame()
 			2048,
 			"%i",
 			ImGuiSliderFlags_AlwaysClamp);
-		ImGui::Checkbox("Use top-left rasterization rule", &_useTopLeftRule);
 		ImGui::Checkbox("Scanline rasterization", &_scanlineRasterization);
 	}
 
@@ -201,7 +200,6 @@ void SoftwareRasterization::_drawDepth(
 	constants.inverseOutputResolution = { 1.0f / width, 1.0f / height };
 	constants.bigTriangleThreshold = static_cast<float>(_bigTriangleThreshold);
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
-	constants.useTopLeftRule = _useTopLeftRule;
 	constants.scanlineRasterization = _scanlineRasterization;
 	constants.totalTriangles = scene.GetTrianglesCount();
 	constants.perTriangleHiZCullingEnabled =
@@ -247,7 +245,6 @@ void SoftwareRasterization::_drawDepthBigTriangles(
 	constants.outputResolution = { static_cast<float>(width), static_cast<float>(height) };
 	constants.inverseOutputResolution = { 1.0f / width, 1.0f / height };
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
-	constants.useTopLeftRule = _useTopLeftRule;
 	constants.frustumIndex = frustum;
 	constants.maxBigTriangles = _maxBigTrianglesDepth[frustum];
 
@@ -354,7 +351,6 @@ void SoftwareRasterization::DrawOpaque(
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	constants.showCascades = shadows.ShowCascades();
 	constants.showMeshlets = Settings::ShowMeshlets;
-	constants.useTopLeftRule = _useTopLeftRule;
 	constants.cascadesCount = Settings::CascadesCount;
 	constants.scanlineRasterization = _scanlineRasterization;
 	constants.shadowsDistance = shadows.GetShadowDistance();

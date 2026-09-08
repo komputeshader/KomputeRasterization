@@ -36,7 +36,6 @@ cbuffer DepthSceneCB : register(b0)
 	float2 InvOutputRes;
 	float BigTriangleThreshold;
 	float BigTriangleTileSize;
-	int UseTopLeftRule;
 	int ScanlineRasterization;
 	uint TotalTriangles;
 	int PerTriangleHiZRasterizationCullingEnabled;
@@ -403,10 +402,7 @@ void TriangleRasterizationNode(
 						xMin = ceil(xMin - 0.5) + 0.5;
 
 						// top-left rule
-						if (UseTopLeftRule)
-						{
-							xMax += ((frac(xMax) == 0.5) ? -1.0 : 0.0);
-						}
+						xMax += ((frac(xMax) == 0.5) ? -1.0 : 0.0);
 
 						float area0tmp = area0 - dxdy0.y * (xMin - minP.x);
 						float area1tmp = area1 - dxdy1.y * (xMin - minP.x);
@@ -452,16 +448,9 @@ void TriangleRasterizationNode(
 						{
 							// edge tests, "frustum culling" for 3 lines in 2D
 							bool insideTriangle = true;
-							if (UseTopLeftRule)
-							{
-								insideTriangle = insideTriangle && (EdgeIsTopLeft(p1SS.xy, p2SS.xy) ? (area0tmp >= 0.0) : (area0tmp > 0.0));
-								insideTriangle = insideTriangle && (EdgeIsTopLeft(p2SS.xy, p0SS.xy) ? (area1tmp >= 0.0) : (area1tmp > 0.0));
-								insideTriangle = insideTriangle && (EdgeIsTopLeft(p0SS.xy, p1SS.xy) ? (area2tmp >= 0.0) : (area2tmp > 0.0));
-							}
-							else
-							{
-								insideTriangle = area0tmp >= 0.0 && area1tmp >= 0.0 && area2tmp >= 0.0;
-							}
+							insideTriangle = insideTriangle && (EdgeIsTopLeft(p1SS.xy, p2SS.xy) ? (area0tmp >= 0.0) : (area0tmp > 0.0));
+							insideTriangle = insideTriangle && (EdgeIsTopLeft(p2SS.xy, p0SS.xy) ? (area1tmp >= 0.0) : (area1tmp > 0.0));
+							insideTriangle = insideTriangle && (EdgeIsTopLeft(p0SS.xy, p1SS.xy) ? (area2tmp >= 0.0) : (area2tmp > 0.0));
 
 							[branch]
 							if (insideTriangle)

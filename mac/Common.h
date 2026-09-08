@@ -200,7 +200,6 @@ struct DepthSceneCB
 	simd_float2 inverseOutputResolution = {};
 	float bigTriangleThreshold = 4096.0f;
 	float bigTriangleTileSize = 128.0f;
-	uint32_t useTopLeftRule = 1;
 	uint32_t scanlineRasterization = 1;
 	uint32_t totalTriangles = 0;
 	uint32_t perTriangleHiZCullingEnabled = 0;
@@ -226,7 +225,6 @@ struct SceneCB
 	float bigTriangleTileSize = 128.0f;
 	uint32_t showCascades = 0;
 	uint32_t showMeshlets = 0;
-	uint32_t useTopLeftRule = 1;
 	uint32_t cascadesCount = 4;
 	uint32_t scanlineRasterization = 1;
 	float shadowsDistance = 5000.0f;

@@ -15,7 +15,6 @@ cbuffer SceneCB : register(b0)
 	float BigTriangleTileSize;
 	int ShowCascades;
 	int ShowMeshlets;
-	int UseTopLeftRule;
 	int CascadesCount;
 	int ScanlineRasterization;
 	float ShadowsDistance;
@@ -39,9 +38,6 @@ groupshared uint Triangle[BIG_TRIANGLE_OPAQUE_FIELDS];
 
 groupshared float2 MinP;
 groupshared float2 MaxP;
-groupshared float2 P0SS;
-groupshared float2 P1SS;
-groupshared float2 P2SS;
 groupshared float3 P0WS;
 groupshared float3 P1WS;
 groupshared float3 P2WS;
@@ -54,13 +50,8 @@ groupshared float4 C2;
 groupshared float2 UV0;
 groupshared float2 UV1;
 groupshared float2 UV2;
-groupshared float Z0NDC;
-groupshared float Z1NDC;
-groupshared float Z2NDC;
-groupshared float InvW0;
-groupshared float InvW1;
-groupshared float InvW2;
-groupshared float InvArea;
+groupshared float3 ClipZ;
+groupshared float3 ClipW;
 groupshared float Area0;
 groupshared float Area1;
 groupshared float Area2;
@@ -319,8 +310,6 @@ void main(
 			p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
 			p0SS, p1SS, p2SS);
 
-		float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
-
 		float z0NDC = p0CS.z * invW0;
 		float z1NDC = p1CS.z * invW1;
 		float z2NDC = p2CS.z * invW2;
@@ -345,75 +334,55 @@ void main(
 		//	C2 = float4(instance.color, 1.0);
 		//}
 
-		P0SS = p0SS;
-		P1SS = p1SS;
-		P2SS = p2SS;
-		Z0NDC = z0NDC;
-		Z1NDC = z1NDC;
-		Z2NDC = z2NDC;
-		InvW0 = invW0;
-		InvW1 = invW1;
-		InvW2 = invW2;
-		InvArea = 1.0 / area;
-
-		// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
-		EdgeFunction(
-			p1SS.xy, p2SS.xy, MinP,
+		// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/
+		ClipZ = float3(p0CS.z, p1CS.z, p2CS.z);
+		ClipW = float3(p0CS.w, p1CS.w, p2CS.w);
+		EdgeFunctionHomogeneous(
+			p1CS, p2CS, float2(0.0, 0.0),
 			Area0, Dxdy0);
-		EdgeFunction(
-			p2SS.xy, p0SS.xy, MinP,
+		EdgeFunctionHomogeneous(
+			p2CS, p0CS, float2(0.0, 0.0),
 			Area1, Dxdy1);
-		EdgeFunction(
-			p0SS.xy, p1SS.xy, MinP,
+		EdgeFunctionHomogeneous(
+			p0CS, p1CS, float2(0.0, 0.0),
 			Area2, Dxdy2);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-	uint yTiles = 0;
 	for (
 		float y = MinP.y + groupThreadID.y;
 		y <= MaxP.y;
-		y += SWR_BIG_TRIANGLE_THREADS_Y, yTiles++)
+		y += SWR_BIG_TRIANGLE_THREADS_Y)
 	{
-		uint yOffset = groupThreadID.y + yTiles * SWR_BIG_TRIANGLE_THREADS_Y;
-
-		uint xTiles = 0;
 		for (
 			float x = MinP.x + groupThreadID.x;
 			x <= MaxP.x;
-			x += SWR_BIG_TRIANGLE_THREADS_X, xTiles++)
+			x += SWR_BIG_TRIANGLE_THREADS_X)
 		{
-			uint xOffset = groupThreadID.x + xTiles * SWR_BIG_TRIANGLE_THREADS_X;
+			float2 sampleNDC = (float2(x, y) * InvOutputRes - float2(0.5, 0.5)) * float2(2.0, -2.0);
 
 			// E(x + a, y + b) = E(x, y) - a * dy + b * dx
-			float area0 = Area0 - xOffset * Dxdy0.y + yOffset * Dxdy0.x;
-			float area1 = Area1 - xOffset * Dxdy1.y + yOffset * Dxdy1.x;
-			float area2 = Area2 - xOffset * Dxdy2.y + yOffset * Dxdy2.x;
+			float area0 = Area0 - sampleNDC.x * Dxdy0.y + sampleNDC.y * Dxdy0.x;
+			float area1 = Area1 - sampleNDC.x * Dxdy1.y + sampleNDC.y * Dxdy1.x;
+			float area2 = Area2 - sampleNDC.x * Dxdy2.y + sampleNDC.y * Dxdy2.x;
 
 			// edge tests, "frustum culling" for 3 lines in 2D
 			bool insideTriangle = true;
-			if (UseTopLeftRule)
-			{
-				insideTriangle = insideTriangle && (EdgeIsTopLeft(P1SS.xy, P2SS.xy) ? (area0 >= 0.0) : (area0 > 0.0));
-				insideTriangle = insideTriangle && (EdgeIsTopLeft(P2SS.xy, P0SS.xy) ? (area1 >= 0.0) : (area1 > 0.0));
-				insideTriangle = insideTriangle && (EdgeIsTopLeft(P0SS.xy, P1SS.xy) ? (area2 >= 0.0) : (area2 > 0.0));
-			}
-			else
-			{
-				insideTriangle = area0 >= 0.0 && area1 >= 0.0 && area2 >= 0.0;
-			}
+			insideTriangle = insideTriangle && (EdgeIsTopLeft(Dxdy0) ? (area0 >= 0.0) : (area0 > 0.0));
+			insideTriangle = insideTriangle && (EdgeIsTopLeft(Dxdy1) ? (area1 >= 0.0) : (area1 > 0.0));
+			insideTriangle = insideTriangle && (EdgeIsTopLeft(Dxdy2) ? (area2 >= 0.0) : (area2 > 0.0));
 
 			[branch]
 			if (insideTriangle)
 			{
-				// convert to barycentric weights
-				float weight0 = area0 * InvArea;
-				float weight1 = area1 * InvArea;
-				float weight2 = area2 * InvArea;
+				float3 weights = float3(area0, area1, area2);
+				float weightedW = dot(weights, ClipW);
 
-				precise float depth = weight0 * Z0NDC + weight1 * Z1NDC + weight2 * Z2NDC;
+				precise float depth = dot(weights, ClipZ) / weightedW;
+
 				uint2 pixelCoord = uint2(x, y);
+
 				[branch]
 				if (ShowOverdraw)
 				{
@@ -422,15 +391,17 @@ void main(
 				// early z test
 				else if (Depth[pixelCoord].r == depth)
 				{
-					// for perspective-correct interpolation
-					float denom = 1.0 / (weight0 * InvW0 + weight1 * InvW1 + weight2 * InvW2);
+					// homogeneous edge values already include the 1 / w factor
+					float invWeightSum = 1.0 / (weights.x + weights.y + weights.z);
+					float denom = weightedW * invWeightSum;
+					weights *= invWeightSum;
 
-					float3 N = denom * (weight0 * N0 * InvW0 + weight1 * N1 * InvW1 + weight2 * N2 * InvW2);
+					float3 N = weights.x * N0 + weights.y * N1 + weights.z * N2;
 					N = normalize(N);
 
-					float3 color = denom * (weight0 * C0.rgb * InvW0 + weight1 * C1.rgb * InvW1 + weight2 * C2.rgb * InvW2);
+					float3 color = weights.x * C0.rgb + weights.y * C1.rgb + weights.z * C2.rgb;
 
-					float3 positionWS = denom * (weight0 * P0WS * InvW0 + weight1 * P1WS * InvW1 + weight2 * P2WS * InvW2);
+					float3 positionWS = weights.x * P0WS + weights.y * P1WS + weights.z * P2WS;
 
 					float NdotL = saturate(dot(SunDirection.xyz, N));
 					float viewDepth = denom;

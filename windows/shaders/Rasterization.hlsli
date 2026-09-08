@@ -21,6 +21,24 @@ void EdgeFunction(
 	dxdy = e0;
 }
 
+// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/
+// form edge equations from clip-space xyw without dividing the vertices by w
+void EdgeFunctionHomogeneous(
+	in float4 v0CS,
+	in float4 v1CS,
+	in float2 pNDC,
+	out float area,
+	out float2 dxdy)
+{
+	// screen y points down
+	// reverse the cross product to keep the inside positive
+	float3 edge = cross(v1CS.xyw, v0CS.xyw);
+	float value = dot(edge, float3(pNDC, 1.0));
+	area = value;
+	// E(x + a, y + b) = E(x, y) - a * dy + b * dx with offsets in NDC
+	dxdy = float2(edge.y, -edge.x);
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules#triangle-rasterization-rules-without-multisampling
 // Any pixel center which falls inside a triangle is drawn; a pixel is assumed
 // to be inside if it passes the top-left rule. The top-left rule is that a pixel
@@ -39,6 +57,15 @@ bool EdgeIsTopLeft(in float2 v0, in float2 v1)
 	float2 e = v1 - v0;
 	bool top = e.y == 0.0 && e.x > 0.0;
 	bool left = e.y < 0.0;
+	return top || left;
+}
+
+// a version for homogeneous edges
+bool EdgeIsTopLeft(in float2 dxdy)
+{
+	// for positive vertex w, dxdy.y has the sign of screen dy, and dxdy.x the opposite sign of screen dx
+	bool top = dxdy.y == 0.0 && dxdy.x < 0.0;
+	bool left = dxdy.y < 0.0;
 	return top || left;
 }
 

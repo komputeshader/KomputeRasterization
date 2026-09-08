@@ -221,14 +221,8 @@ static inline bool IsInsideTriangle(
 	float area2,
 	float2 p0,
 	float2 p1,
-	float2 p2,
-	bool useTopLeftRule)
+	float2 p2)
 {
-	if (!useTopLeftRule)
-	{
-		return area0 >= 0.0f && area1 >= 0.0f && area2 >= 0.0f;
-	}
-
 	return (EdgeIsTopLeft(p1, p2) ? area0 >= 0.0f : area0 > 0.0f) &&
 		(EdgeIsTopLeft(p2, p0) ? area1 >= 0.0f : area1 > 0.0f) &&
 		(EdgeIsTopLeft(p0, p1) ? area2 >= 0.0f : area2 > 0.0f);
@@ -299,7 +293,6 @@ static inline void RasterizeDepth(
 	float area,
 	float2 minP,
 	float2 maxP,
-	bool useTopLeftRule,
 	bool scanlineRasterization,
 	uint2 outputResolution,
 	device atomic_uint* depth)
@@ -354,10 +347,7 @@ static inline void RasterizeDepth(
 
 			xMin = ceil(xMin - 0.5f) + 0.5f;
 
-			if (useTopLeftRule)
-			{
-				xMax += fract(xMax) == 0.5f ? -1.0f : 0.0f;
-			}
+			xMax += fract(xMax) == 0.5f ? -1.0f : 0.0f;
 
 			float area0Temporary = area0 - dxdy0.y * (xMin - minP.x);
 			float area1Temporary = area1 - dxdy1.y * (xMin - minP.x);
@@ -397,8 +387,7 @@ static inline void RasterizeDepth(
 						area2Temporary,
 						p0SS,
 						p1SS,
-						p2SS,
-						useTopLeftRule))
+						p2SS))
 				{
 					const float weight0 = area0Temporary * invArea;
 					const float weight1 = area1Temporary * invArea;

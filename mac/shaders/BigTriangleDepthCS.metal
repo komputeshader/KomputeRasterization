@@ -133,8 +133,7 @@ kernel void BigTriangleDepthCS(
 					currentArea2,
 					p0SS,
 					p1SS,
-					p2SS,
-					constants.useTopLeftRule != 0))
+					p2SS))
 			{
 				const float weight0 = currentArea0 * invArea;
 				const float weight1 = currentArea1 * invArea;

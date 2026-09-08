@@ -14,7 +14,7 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 * Traditional compute-shader and DirectX 12 Work Graphs paths on Windows.
 * Meshlet frustum, backface-cone, and temporal Hi-Z occlusion culling for the camera and shadow cascades.
 * Optional per-triangle Hi-Z culling during software rasterization.
-* Configurable scanline or bounding-box traversal, with optional top-left fill rules.
+* Configurable scanline or bounding-box traversal, according to the [top-left fill rule](https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules#triangle-rasterization-rules-without-multisampling).
 * Adjustable cascaded shadow maps, with meshlet and cascade debug views.
 * Windows DirectX 12 and macOS Metal versions.
 

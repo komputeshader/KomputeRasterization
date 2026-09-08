@@ -13,13 +13,12 @@ struct SWRDepthSceneCB
 	XMFLOAT2 invOutputRes;
 	float bigTriangleThreshold;
 	float bigTriangleTileSize;
-	int useTopLeftRule;
 	int scanlineRasterization;
 	unsigned int totalTriangles;
 	int perTriangleHiZRasterizationCullingEnabled;
 	float cameraNear;
 	int nearPlaneClippingEnabled;
-	int pad[36];
+	int pad[37];
 };
 static_assert(
 	(sizeof(SWRDepthSceneCB) % 256) == 0,
@@ -38,7 +37,6 @@ struct SWRSceneCB
 	float bigTriangleTileSize;
 	int showCascades;
 	int showMeshlets;
-	int useTopLeftRule;
 	int cascadesCount;
 	int scanlineRasterization;
 	float shadowsDistance;
@@ -46,7 +44,7 @@ struct SWRSceneCB
 	int showOverdraw;
 	int perTriangleHiZRasterizationCullingEnabled;
 	float cameraNear;
-	int pad1[12];
+	int pad1[13];
 };
 static_assert(
 	(sizeof(SWRSceneCB) % 256) == 0,
@@ -678,7 +676,6 @@ void SoftwareRasterization::Update()
 	};
 	depthData.bigTriangleThreshold = static_cast<float>(_bigTriangleThreshold);
 	depthData.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
-	depthData.useTopLeftRule = _useTopLeftRule ? 1 : 0;
 	depthData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	depthData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
 	depthData.perTriangleHiZRasterizationCullingEnabled =
@@ -732,7 +729,6 @@ void SoftwareRasterization::Update()
 	sceneData.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	sceneData.showCascades = Shadows::Sun.ShowCascades() ? 1 : 0;
 	sceneData.showMeshlets = Settings::ShowMeshlets ? 1 : 0;
-	sceneData.useTopLeftRule = _useTopLeftRule ? 1 : 0;
 	sceneData.scanlineRasterization = _scanlineRasterization ? 1 : 0;
 	sceneData.shadowsDistance = Shadows::Sun.GetShadowDistance();
 	sceneData.totalTriangles = static_cast<unsigned>(Scene::CurrentScene->indicesCPU.size() / 3);
@@ -1559,7 +1555,6 @@ void SoftwareRasterization::GUINewFrame()
 			"%i",
 			ImGuiSliderFlags_AlwaysClamp);
 
-		ImGui::Checkbox("Use top-left rasterization rule", &_useTopLeftRule);
 		ImGui::Checkbox("Scanline rasterization", &_scanlineRasterization);
 	}
 

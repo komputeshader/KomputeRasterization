@@ -71,7 +71,6 @@ private:
 	int _bigTriangleThreshold = 4096;
 	int _bigTriangleTileSize = 128;
 
-	bool _useTopLeftRule = true;
 	bool _scanlineRasterization = true;
 };
 

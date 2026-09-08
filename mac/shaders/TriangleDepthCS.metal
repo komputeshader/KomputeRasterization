@@ -169,7 +169,6 @@ kernel void TriangleDepthCS(
 				area,
 				minP,
 				maxP,
-				constants.useTopLeftRule != 0,
 				constants.scanlineRasterization != 0,
 				uint2(constants.outputResolution),
 				depth);

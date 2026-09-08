@@ -128,10 +128,7 @@ inline void RasterizeOpaque(
 
 			xMin = ceil(xMin - 0.5f) + 0.5f;
 
-			if (constants.useTopLeftRule)
-			{
-				xMax += fract(xMax) == 0.5f ? -1.0f : 0.0f;
-			}
+			xMax += fract(xMax) == 0.5f ? -1.0f : 0.0f;
 
 			float area0Temporary = area0 - dxdy0.y * (xMin - minP.x);
 			float area1Temporary = area1 - dxdy1.y * (xMin - minP.x);
@@ -186,8 +183,7 @@ inline void RasterizeOpaque(
 						area2Temporary,
 						p0SS,
 						p1SS,
-						p2SS,
-						constants.useTopLeftRule != 0))
+						p2SS))
 				{
 					ShadeOpaquePixel(
 						uint2(x, y),

@@ -151,8 +151,7 @@ kernel void BigTriangleOpaqueCS(
 					currentArea2,
 					p0SS,
 					p1SS,
-					p2SS,
-					constants.useTopLeftRule != 0))
+					p2SS))
 			{
 				continue;
 			}
