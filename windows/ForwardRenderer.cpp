@@ -685,7 +685,12 @@ void ForwardRenderer::Draw()
 			_depthsFenceValue));
 	}
 
-	SUCCESS(_swapChain->Present(0, 0));
+	const HRESULT presentResult = _swapChain->Present(0, 0);
+	if (presentResult == DXGI_ERROR_DEVICE_REMOVED || presentResult == DXGI_ERROR_DEVICE_RESET)
+	{
+		DX::ReportDeviceRemoved();
+	}
+	SUCCESS(presentResult);
 
 	DX::FrameFenceValues[DX::FrameIndex] = DX::FrameFenceValue;
 

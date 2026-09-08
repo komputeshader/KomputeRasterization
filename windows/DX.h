@@ -49,6 +49,7 @@ void GetHardwareAdapter(
 	bool requestHighPerformanceAdapter = true);
 
 void CreateDevice();
+void ReportDeviceRemoved();
 void CreateCommandAllocators();
 void CreateCommandQueues();
 void CreateCommandLists();

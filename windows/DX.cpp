@@ -130,6 +130,18 @@ void CreateDevice()
 
 	unsigned int dxgiFactoryFlags = 0;
 
+	// capture GPU progress in Release too when launched with a debugger
+	// NOTE: DRED must be configured before the first D3D12CreateDevice call
+	if (IsDebuggerPresent())
+	{
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&dredSettings))))
+		{
+			dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		}
+	}
+
 #if defined(_DEBUG)
 	// Enable the debug layer (requires the Graphics Tools "optional feature").
 	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
@@ -230,6 +242,85 @@ void CreateDevice()
 	WorkGraphsSupported = SUCCEEDED(workGraphsSupportResult) &&
 		Options.WorkGraphsTier != D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED;
 #endif
+}
+
+void ReportDeviceRemoved()
+{
+	if (!Device)
+	{
+		return;
+	}
+
+	const HRESULT reason = Device->GetDeviceRemovedReason();
+	if (SUCCEEDED(reason))
+	{
+		return;
+	}
+
+	PrintToOutput(
+		"D3D12 device removed: reason=0x%08X, frame=%d, SWR=%d, work graphs=%d\n",
+		static_cast<unsigned int>(reason), FrameNumber,
+		Settings::SWREnabled, Settings::SWRWGEnabled && WorkGraphsSupported);
+	PrintToOutput(
+		"D3D12 settings: resolution=%ux%u, culling=%d, per-triangle Hi-Z=%d, cascades=%d\n",
+		Settings::RenderWidth, Settings::RenderHeight, Settings::CullingEnabled,
+		Settings::PerTriangleHiZRasterizationCullingEnabled, Settings::CascadesCount);
+
+	ComPtr<ID3D12DeviceRemovedExtendedData> dred;
+	if (FAILED(Device.As(&dred)))
+	{
+		return;
+	}
+
+	D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT breadcrumbs = {};
+	if (SUCCEEDED(dred->GetAutoBreadcrumbsOutput(&breadcrumbs)))
+	{
+		for (auto node = breadcrumbs.pHeadAutoBreadcrumbNode; node; node = node->pNext)
+		{
+			if (!node->pLastBreadcrumbValue)
+			{
+				continue;
+			}
+			const UINT completed = *node->pLastBreadcrumbValue;
+			if (completed >= node->BreadcrumbCount)
+			{
+				continue;
+			}
+			PrintToOutput(
+				"DRED: command list %p, queue %p, completed %u/%u operations\n",
+				node->pCommandList, node->pCommandQueue, completed, node->BreadcrumbCount);
+			if (node->pCommandListDebugNameW)
+			{
+				PrintToOutput(L"DRED: command list name: %.200ls\n", node->pCommandListDebugNameW);
+			}
+			if (node->pCommandHistory)
+			{
+				// DRED keeps a ring of the last 65536 operations
+				const UINT oldest = node->BreadcrumbCount > 65536 ? node->BreadcrumbCount - 65536 : 0;
+				if (completed >= oldest)
+				{
+					PrintToOutput("DRED: next operation enum=%u\n",
+						static_cast<unsigned int>(node->pCommandHistory[completed % 65536]));
+				}
+			}
+		}
+	}
+
+	D3D12_DRED_PAGE_FAULT_OUTPUT pageFault = {};
+	if (SUCCEEDED(dred->GetPageFaultAllocationOutput(&pageFault)) && pageFault.PageFaultVA)
+	{
+		PrintToOutput("DRED: GPU page fault at 0x%016llX\n", pageFault.PageFaultVA);
+		for (auto node = pageFault.pHeadExistingAllocationNode; node; node = node->pNext)
+		{
+			PrintToOutput(L"DRED: existing allocation: %.200ls (type=%u)\n",
+				node->ObjectNameW ? node->ObjectNameW : L"<unnamed>", node->AllocationType);
+		}
+		for (auto node = pageFault.pHeadRecentFreedAllocationNode; node; node = node->pNext)
+		{
+			PrintToOutput(L"DRED: recently freed allocation: %.200ls (type=%u)\n",
+				node->ObjectNameW ? node->ObjectNameW : L"<unnamed>", node->AllocationType);
+		}
+	}
 }
 
 void CreateCommandAllocators()

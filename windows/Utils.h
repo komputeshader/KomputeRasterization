@@ -27,10 +27,15 @@ inline void PrintToOutput(const wchar_t* format, ...)
 	OutputDebugString(buffer);
 }
 
-// Assign a name to the object to aid with debugging.
-#if defined(_DEBUG) || defined(DBG)
+// keep names available to DRED when debugging an optimized Release build too
 inline void SetName(ID3D12Object* pObject, LPCWSTR name)
 {
+#if !defined(_DEBUG) && !defined(DBG)
+	if (!IsDebuggerPresent())
+	{
+		return;
+	}
+#endif
 	pObject->SetName(name);
 }
 
@@ -39,17 +44,9 @@ inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, unsigned int ind
 	wchar_t fullName[50];
 	if (swprintf_s(fullName, L"%s[%u]", name, index) > 0)
 	{
-		pObject->SetName(fullName);
+		SetName(pObject, fullName);
 	}
 }
-#else
-inline void SetName(ID3D12Object*, LPCWSTR)
-{
-}
-inline void SetNameIndexed(ID3D12Object*, LPCWSTR, unsigned int)
-{
-}
-#endif
 
 // Naming helper for ComPtr<T>.
 // Assigns the name of the variable as the name of the object.
