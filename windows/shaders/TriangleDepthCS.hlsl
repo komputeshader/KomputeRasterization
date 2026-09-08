@@ -90,7 +90,7 @@ void main(
 				bool p0Behind = false;
 				bool p1Behind = false;
 				bool p2Behind = false;
-				float4 p3Helper = 0.0.xxxx;
+				float4 p3Helper = float4(0.0, 0.0, 0.0, 0.0);
 				bool quadrilateral = false;
 
 				if (NearPlaneClippingEnabled)

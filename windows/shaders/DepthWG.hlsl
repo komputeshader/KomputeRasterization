@@ -121,7 +121,7 @@ void TriangleRasterizationNode(
 				bool p0Behind = NearPlaneClippingEnabled && p0CS.z > CameraNear;
 				bool p1Behind = NearPlaneClippingEnabled && p1CS.z > CameraNear;
 				bool p2Behind = NearPlaneClippingEnabled && p2CS.z > CameraNear;
-				float4 p3Helper = 0.0.xxxx;
+				float4 p3Helper = float4(0.0, 0.0, 0.0, 0.0);
 				bool quadrilateral = false;
 
 				if (NearPlaneClippingEnabled && (p0Behind || p1Behind || p2Behind))

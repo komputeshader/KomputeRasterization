@@ -204,7 +204,7 @@ void main(
 		float yTileOffset = floor(tileOffset / tileCount.x);
 		float xTileOffset = tileOffset - yTileOffset * tileCount.x;
 		MinP = minP.xy + float2(xTileOffset, yTileOffset) * BigTriangleTileSize;
-		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx);
+		MaxP = min(maxP.xy, MinP + BigTriangleTileSize.xx - float2(1.0, 1.0));
 
 		P0SS = p0SS;
 		P1SS = p1SS;

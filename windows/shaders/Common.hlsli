@@ -16,7 +16,7 @@ float3 UnpackNormal(in uint packed)
 	return float3(
 		uint((packed >> 20) & 0x3FF),
 		uint((packed >> 10) & 0x3FF),
-		uint(packed & 0x3FF)) * denom * 2.0 - 1.0.xxx;
+		uint(packed & 0x3FF)) * denom * 2.0 - float3(1.0, 1.0, 1.0);
 }
 
 float3 UnpackNormal(in VertexNormal packed)
