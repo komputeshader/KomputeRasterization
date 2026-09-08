@@ -1,278 +1,328 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{72a0ef1f-c05c-4759-bd29-3da8c4b5a282}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Utils">
-      <UniqueIdentifier>{e845ae46-f737-4871-83a3-b105f53036da}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Utils">
-      <UniqueIdentifier>{5bb67f9c-dc9d-4784-aa94-cc7309707b34}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders\Culling">
-      <UniqueIdentifier>{3be773db-f338-4951-9d4e-bce080e69dd5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shaders\SoftwareRasterization">
-      <UniqueIdentifier>{26e898f3-a94a-4ee4-8195-28e793bc6271}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Third Party">
+    <Filter Include="third_party">
       <UniqueIdentifier>{deb14474-a0d5-4472-9746-3f646aa95c0b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Third Party\meshoptimizer">
-      <UniqueIdentifier>{a8e47752-03c4-4f0e-9b71-f36745a935d9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\rapidobj">
-      <UniqueIdentifier>{8d31a5c4-22fe-4e64-a9b7-5f7d0322a3a1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\imgui">
-      <UniqueIdentifier>{1aedf856-1bac-4a0b-84ad-98b185075fbc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\imgui">
+    <Filter Include="third_party\imgui">
       <UniqueIdentifier>{7efca725-1247-41c5-9150-39fd27c87f34}</UniqueIdentifier>
     </Filter>
+    <Filter Include="third_party\imgui\backends">
+      <UniqueIdentifier>{1aedf856-1bac-4a0b-84ad-98b185075fbc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\meshoptimizer">
+      <UniqueIdentifier>{a8e47752-03c4-4f0e-9b71-f36745a935d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\meshoptimizer\src">
+      <UniqueIdentifier>{d98032fa-b50f-4f50-8dc7-d08f9a018bbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\rapidobj">
+      <UniqueIdentifier>{8d31a5c4-22fe-4e64-a9b7-5f7d0322a3a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\rapidobj\include">
+      <UniqueIdentifier>{abd323ba-7ba1-4fce-bade-46ef75c6e431}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\rapidobj\include\rapidobj">
+      <UniqueIdentifier>{45302a4f-36a3-475a-9328-6703710e6d16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="windows">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="windows\shaders">
+      <UniqueIdentifier>{72a0ef1f-c05c-4759-bd29-3da8c4b5a282}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HardwareRasterization.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Shadows.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SoftwareRasterization.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DescriptorManager.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="DXSample.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Timer.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Win32Application.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Utils.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Profiler.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Settings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DX.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="ForwardRenderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Culler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\meshoptimizer\src\*.cpp">
-      <Filter>Third Party\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\imgui\imgui.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="..\third_party\imgui\backends\imgui_impl_dx12.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>third_party\imgui\backends</Filter>
     </ClCompile>
     <ClCompile Include="..\third_party\imgui\backends\imgui_impl_win32.cpp">
-      <Filter>Source Files\imgui</Filter>
+      <Filter>third_party\imgui\backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\allocator.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\clusterizer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexanalyzer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexcodec.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexgenerator.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\meshletcodec.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\meshletutils.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\opacitymap.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\overdrawoptimizer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\partition.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\quantization.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\rasterizer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\simplifier.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\spatialorder.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\stripifier.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\tangentspace.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\vcacheoptimizer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\vertexcodec.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\vertexfilter.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\meshoptimizer\src\vfetchoptimizer.cpp">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Culler.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="DescriptorManager.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="DX.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="DXSample.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="ForwardRenderer.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="HardwareRasterization.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Settings.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Shadows.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="SoftwareRasterization.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32Application.cpp">
+      <Filter>windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HardwareRasterization.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Shadows.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SoftwareRasterization.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DescriptorManager.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="DXSample.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32Application.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Utils.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Profiler.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Settings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DX.h">
-      <Filter>Header Files\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="ForwardRenderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Culler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\meshoptimizer\src\meshoptimizer.h">
-      <Filter>Third Party\meshoptimizer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\rapidobj\include\rapidobj\rapidobj.hpp">
-      <Filter>Header Files\rapidobj</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imconfig.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imgui.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imgui_internal.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imstb_textedit.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\third_party\imgui\imstb_truetype.h">
-      <Filter>Header Files\imgui</Filter>
-    </ClInclude>
     <ClInclude Include="..\third_party\imgui\backends\imgui_impl_dx12.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>third_party\imgui\backends</Filter>
     </ClInclude>
     <ClInclude Include="..\third_party\imgui\backends\imgui_impl_win32.h">
-      <Filter>Header Files\imgui</Filter>
+      <Filter>third_party\imgui\backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imconfig.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imgui_internal.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imgui.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imstb_textedit.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imstb_truetype.h">
+      <Filter>third_party\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\meshoptimizer\src\meshoptimizer.h">
+      <Filter>third_party\meshoptimizer\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\rapidobj\include\rapidobj\rapidobj.hpp">
+      <Filter>third_party\rapidobj\include\rapidobj</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>windows</Filter>
     </ClInclude>
     <ClInclude Include="CPUGPUCommon.h">
-      <Filter>Header Files</Filter>
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Culler.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="DescriptorManager.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="DX.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="DXSample.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="ForwardRenderer.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="HardwareRasterization.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Shadows.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="SoftwareRasterization.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32Application.h">
+      <Filter>windows</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\BigTriangleDepthCS.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\TriangleDepthCS.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\ClearCS.hlsl">
-      <Filter>Shaders\Culling</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\CullingCS.hlsl">
-      <Filter>Shaders\Culling</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\GenerateCommandsCS.hlsl">
-      <Filter>Shaders\Culling</Filter>
+      <Filter>windows\shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\BigTriangleOpaqueCS.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
+      <Filter>windows\shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\TriangleOpaqueCS.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
+    <FxCompile Include="shaders\ClearCS.hlsl">
+      <Filter>windows\shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\GenerateHiZMipCS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\DrawDepthVS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\DrawOpaquePS.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\DrawOpaqueVS.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="shaders\CullingCS.hlsl">
+      <Filter>windows\shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\DepthWG.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\DrawDepthVS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\DrawOpaquePS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\DrawOpaqueVS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\GenerateCommandsCS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\GenerateHiZMipCS.hlsl">
+      <Filter>windows\shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\OpaqueWG.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\TriangleDepthCS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\TriangleOpaqueCS.hlsl">
+      <Filter>windows\shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config">
+      <Filter>windows</Filter>
+    </None>
     <None Include="shaders\Common.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\DrawOverdrawDisplayCS.hlsl">
-      <Filter>Shaders\SoftwareRasterization</Filter>
-    </None>
-    <None Include="shaders\DrawOverdrawDisplayPS.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\DrawOverdrawDisplayVS.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\DrawOverdrawPS.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\DrawOverdrawVS.hlsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\Overdraw.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\TypesAndConstants.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\Rasterization.hlsli">
-      <Filter>Shaders\SoftwareRasterization</Filter>
+      <Filter>windows\shaders</Filter>
     </None>
     <None Include="shaders\CullingCommon.hlsli">
-      <Filter>Shaders\Culling</Filter>
+      <Filter>windows\shaders</Filter>
     </None>
-    <None Include="packages.config" />
+    <None Include="shaders\DrawOpaque.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawDisplayCS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawDisplayPS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawDisplayVS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawPS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\DrawOverdrawVS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\Overdraw.hlsli">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\Rasterization.hlsli">
+      <Filter>windows\shaders</Filter>
+    </None>
+    <None Include="shaders\TypesAndConstants.hlsli">
+      <Filter>windows\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

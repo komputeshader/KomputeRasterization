@@ -295,7 +295,26 @@
     <ClCompile Include="..\third_party\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="..\third_party\meshoptimizer\src\*.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\allocator.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\clusterizer.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexanalyzer.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexcodec.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\indexgenerator.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\meshletcodec.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\meshletutils.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\opacitymap.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\overdrawoptimizer.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\partition.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\quantization.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\rasterizer.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\simplifier.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\spatialorder.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\stripifier.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\tangentspace.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\vcacheoptimizer.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\vertexcodec.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\vertexfilter.cpp" />
+    <ClCompile Include="..\third_party\meshoptimizer\src\vfetchoptimizer.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DescriptorManager.cpp" />
@@ -522,6 +541,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="shaders\DrawOpaque.hlsl" />
     <None Include="shaders\DrawOverdrawDisplayCS.hlsl" />
     <None Include="shaders\DrawOverdrawDisplayPS.hlsl" />
     <None Include="shaders\DrawOverdrawDisplayVS.hlsl" />
