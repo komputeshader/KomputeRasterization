@@ -372,7 +372,7 @@ void main(
 				// convert to barycentric weights
 				float weight0 = area0 * InvArea;
 				float weight1 = area1 * InvArea;
-				float weight2 = 1.0 - weight0 - weight1;
+				float weight2 = area2 * InvArea;
 
 				precise float depth = weight0 * Z0NDC + weight1 * Z1NDC + weight2 * Z2NDC;
 				uint2 pixelCoord = uint2(x, y);

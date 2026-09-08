@@ -252,8 +252,7 @@ void main(
 				// TODO: thread local
 
 				[branch]
-				if (dimensions.x * dimensions.y >= BigTriangleThreshold ||
-					p0Behind || p1Behind || p2Behind)
+				if (dimensions.x * dimensions.y >= BigTriangleThreshold || quadrilateral)
 				{
 					BigTriangleDepth result;
 					result.p0WSX = p0WS.x;
@@ -370,13 +369,14 @@ void main(
 
 						float area0tmp = area0 - dxdy0.y * (xMin - minP.x);
 						float area1tmp = area1 - dxdy1.y * (xMin - minP.x);
+						float area2tmp = area2 - dxdy2.y * (xMin - minP.x);
 
 						for (float x = xMin; x <= xMax; x += 1.0)
 						{
 							// convert to barycentric weights
 							float weight0 = area0tmp * invArea;
 							float weight1 = area1tmp * invArea;
-							float weight2 = 1.0 - weight0 - weight1;
+							float weight2 = area2tmp * invArea;
 
 							precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
@@ -386,10 +386,12 @@ void main(
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
 							area0tmp -= dxdy0.y;
 							area1tmp -= dxdy1.y;
+							area2tmp -= dxdy2.y;
 						}
 
 						area0 += dxdy0.x;
 						area1 += dxdy1.x;
+						area2 += dxdy2.x;
 					}
 				}
 				else
@@ -426,7 +428,7 @@ void main(
 								// convert to barycentric weights
 								float weight0 = area0tmp * invArea;
 								float weight1 = area1tmp * invArea;
-								float weight2 = 1.0 - weight0 - weight1;
+								float weight2 = area2tmp * invArea;
 
 								precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
