@@ -78,6 +78,11 @@ void main(
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
 				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
+				// near plane clipping handling adds to register pressure and processing costs,
+				// and could be avoided for most triangles by tagging meshlets, as crossing
+				// the near plane, at the culling stage
+				// however, that's an optimization for the concrete renderer architecture,
+				// and isn't the general rasterizer optimization
 				bool p0Behind = false;
 				bool p1Behind = false;
 				bool p2Behind = false;
@@ -231,6 +236,7 @@ void main(
 						DepthSampler,
 						(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
 						mipLevel).r;
+
 					[branch]
 					if (tileDepth > maxP.z)
 					{
