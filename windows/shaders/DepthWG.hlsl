@@ -114,28 +114,99 @@ void TriangleRasterizationNode(
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
 				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
-				bool p0Behind = false;
-				bool p1Behind = false;
-				bool p2Behind = false;
+				bool p0Behind = NearPlaneClippingEnabled && p0CS.z > CameraNear;
+				bool p1Behind = NearPlaneClippingEnabled && p1CS.z > CameraNear;
+				bool p2Behind = NearPlaneClippingEnabled && p2CS.z > CameraNear;
 				float4 p3Helper = 0.0.xxxx;
 				bool quadrilateral = false;
 
-				if (NearPlaneClippingEnabled)
+				if (NearPlaneClippingEnabled && (p0Behind || p1Behind || p2Behind))
 				{
-					if (!ClipTriangleToNearPlane(
-							p0CS,
-							p1CS,
-							p2CS,
-							CameraNear,
-							p0Behind,
-							p1Behind,
-							p2Behind,
-							p3Helper,
-							quadrilateral))
+					if (p0Behind && p1Behind && p2Behind)
 					{
 						continue;
 					}
+
+					//        p2                             p2
+					//        /\                             /\
+					//       /  \            =====>         /  \
+					//      /    \                         /    \
+					// ----x------x------- near plane ----x------x-----
+					//    /________\                     p0      p1
+					//   p0        p1
+					if (p0Behind && p1Behind)
+					{
+						p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+						p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
+					}
+
+					//        p0                             p0
+					//        /\                             /\
+					//       /  \            =====>         /  \
+					//      /    \                         /    \
+					// ----x------x------- near plane ----x------x-----
+					//    /________\                     p2      p1
+					//   p2        p1
+					else if (p1Behind && p2Behind)
+					{
+						p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+						p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+					}
+
+					//        p1                             p1
+					//        /\                             /\
+					//       /  \            =====>         /  \
+					//      /    \                         /    \
+					// ----x------x------- near plane ----x------x-----
+					//    /________\                     p0      p2
+					//   p0        p2
+					else if (p2Behind && p0Behind)
+					{
+						p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+						p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
+					}
+
+					//  p1________p2                p1________p2
+					//    \      /        =====>      \⟍     /
+					//     \    /                      \ ⟍  /
+					// -----x--x------- near plane -----x--x----
+					//       \/                        p3  p0
+					//       p0
+					else if (p0Behind)
+					{
+						p3Helper = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
+						p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+						quadrilateral = true;
+					}
+
+					//  p2________p0                p2________p0
+					//    \      /        =====>      \⟍     /
+					//     \    /                      \ ⟍  /
+					// -----x--x------- near plane -----x--x----
+					//       \/                        p3  p1
+					//       p1
+					else if (p1Behind)
+					{
+						p3Helper = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
+						p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+						quadrilateral = true;
+					}
+
+					//  p0________p1                p0________p1
+					//    \      /        =====>      \⟍     /
+					//     \    /                      \ ⟍  /
+					// -----x--x------- near plane -----x--x----
+					//       \/                        p3  p2
+					//       p2
+					else if (p2Behind)
+					{
+						p3Helper = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+						p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+						quadrilateral = true;
+					}
 				}
+				// crude method - just drop the triangle entirely
+				// however, that path should work only for shadows, and such a situation is not possible in that case
 				else if (p0CS.w <= 0.0 || p1CS.w <= 0.0 || p2CS.w <= 0.0)
 				{
 					continue;

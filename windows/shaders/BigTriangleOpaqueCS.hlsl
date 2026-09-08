@@ -117,139 +117,166 @@ void main(
 		bool p1Behind = p1CS.z > CameraNear;
 		bool p2Behind = p2CS.z > CameraNear;
 
-
-		//        /\                             /\
-		//       /  \            =====>         /  \
-		//      /    \                         /    \
-		// ----x------x------- near plane ----x------x-----
-		//    /________\
-
-		if (p0Behind && p1Behind)
+		if (p0Behind || p1Behind || p2Behind)
 		{
-			float t0, t1;
-			p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
-			p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
-			P0WS = lerp(P2WS, P0WS, t0);
-			P1WS = lerp(P2WS, P1WS, t1);
-			N0 = lerp(N2, N0, t0);
-			N1 = lerp(N2, N1, t1);
-			C0 = lerp(C2, C0, t0);
-			C1 = lerp(C2, C1, t1);
-			UV0 = lerp(UV2, UV0, t0);
-			UV1 = lerp(UV2, UV1, t1);
-		}
-		else if (p1Behind && p2Behind)
-		{
-			float t1, t2;
-			p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
-			p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
-			P1WS = lerp(P0WS, P1WS, t1);
-			P2WS = lerp(P0WS, P2WS, t2);
-			N1 = lerp(N0, N1, t1);
-			N2 = lerp(N0, N2, t2);
-			C1 = lerp(C0, C1, t1);
-			C2 = lerp(C0, C2, t2);
-			UV1 = lerp(UV0, UV1, t1);
-			UV2 = lerp(UV0, UV2, t2);
-		}
-		else if (p2Behind && p0Behind)
-		{
-			float t2, t0;
-			p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
-			p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
-			P2WS = lerp(P1WS, P2WS, t2);
-			P0WS = lerp(P1WS, P0WS, t0);
-			N2 = lerp(N1, N2, t2);
-			N0 = lerp(N1, N0, t0);
-			C2 = lerp(C1, C2, t2);
-			C0 = lerp(C1, C0, t0);
-			UV2 = lerp(UV1, UV2, t2);
-			UV0 = lerp(UV1, UV0, t0);
-		}
-
-
-		//    ________                    ________
-		//    \      /        =====>      \      /
-		//     \    /                      \    /
-		// -----x--x------- near plane -----x--x----
-		//       \/
-
-		else if (p0Behind)
-		{
-			if (firstQuadHalf)
-			{
-				float t0;
-				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
-				P0WS = lerp(P2WS, P0WS, t0);
-				N0 = lerp(N2, N0, t0);
-				C0 = lerp(C2, C0, t0);
-				UV0 = lerp(UV2, UV0, t0);
-			}
-			else
-			{
-				float t2, t0;
-				p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t2);
-				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
-				P2WS = lerp(P2WS, P0WS, t2);
-				P0WS = lerp(P1WS, P0WS, t0);
-				N2 = lerp(N2, N0, t2);
-				N0 = lerp(N1, N0, t0);
-				C2 = lerp(C2, C0, t2);
-				C0 = lerp(C1, C0, t0);
-				UV2 = lerp(UV2, UV0, t2);
-				UV0 = lerp(UV1, UV0, t0);
-			}
-		}
-		else if (p1Behind)
-		{
-			if (firstQuadHalf)
-			{
-				float t1;
-				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
-				P1WS = lerp(P0WS, P1WS, t1);
-				N1 = lerp(N0, N1, t1);
-				C1 = lerp(C0, C1, t1);
-				UV1 = lerp(UV0, UV1, t1);
-			}
-			else
+			//        p2                             p2
+			//        /\                             /\
+			//       /  \            =====>         /  \
+			//      /    \                         /    \
+			// ----x------x------- near plane ----x------x-----
+			//    /________\                     p0      p1
+			//   p0        p1
+			if (p0Behind && p1Behind)
 			{
 				float t0, t1;
-				p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t0);
+				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
 				p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
-				P0WS = lerp(P0WS, P1WS, t0);
+				P0WS = lerp(P2WS, P0WS, t0);
 				P1WS = lerp(P2WS, P1WS, t1);
-				N0 = lerp(N0, N1, t0);
+				N0 = lerp(N2, N0, t0);
 				N1 = lerp(N2, N1, t1);
-				C0 = lerp(C0, C1, t0);
+				C0 = lerp(C2, C0, t0);
 				C1 = lerp(C2, C1, t1);
-				UV0 = lerp(UV0, UV1, t0);
+				UV0 = lerp(UV2, UV0, t0);
 				UV1 = lerp(UV2, UV1, t1);
 			}
-		}
-		else if (p2Behind)
-		{
-			if (firstQuadHalf)
-			{
-				float t2;
-				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
-				P2WS = lerp(P1WS, P2WS, t2);
-				N2 = lerp(N1, N2, t2);
-				C2 = lerp(C1, C2, t2);
-				UV2 = lerp(UV1, UV2, t2);
-			}
-			else
+			//        p0                             p0
+			//        /\                             /\
+			//       /  \            =====>         /  \
+			//      /    \                         /    \
+			// ----x------x------- near plane ----x------x-----
+			//    /________\                     p2      p1
+			//   p2        p1
+			else if (p1Behind && p2Behind)
 			{
 				float t1, t2;
-				p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t1);
+				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
 				p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
-				P1WS = lerp(P1WS, P2WS, t1);
+				P1WS = lerp(P0WS, P1WS, t1);
 				P2WS = lerp(P0WS, P2WS, t2);
-				N1 = lerp(N1, N2, t1);
+				N1 = lerp(N0, N1, t1);
 				N2 = lerp(N0, N2, t2);
-				C1 = lerp(C1, C2, t1);
+				C1 = lerp(C0, C1, t1);
 				C2 = lerp(C0, C2, t2);
-				UV1 = lerp(UV1, UV2, t1);
+				UV1 = lerp(UV0, UV1, t1);
 				UV2 = lerp(UV0, UV2, t2);
+			}
+			//        p1                             p1
+			//        /\                             /\
+			//       /  \            =====>         /  \
+			//      /    \                         /    \
+			// ----x------x------- near plane ----x------x-----
+			//    /________\                     p0      p2
+			//   p0        p2
+			else if (p2Behind && p0Behind)
+			{
+				float t2, t0;
+				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
+				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+				P2WS = lerp(P1WS, P2WS, t2);
+				P0WS = lerp(P1WS, P0WS, t0);
+				N2 = lerp(N1, N2, t2);
+				N0 = lerp(N1, N0, t0);
+				C2 = lerp(C1, C2, t2);
+				C0 = lerp(C1, C0, t0);
+				UV2 = lerp(UV1, UV2, t2);
+				UV0 = lerp(UV1, UV0, t0);
+			}
+			//  p1________p2                p1________p2
+			//    \      /        =====>      \⟍     /
+			//     \    /                      \ ⟍  /
+			// -----x--x------- near plane -----x--x----
+			//       \/                        p3  p0
+			//       p0
+			else if (p0Behind)
+			{
+				if (firstQuadHalf)
+				{
+					float t0;
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
+					P0WS = lerp(P2WS, P0WS, t0);
+					N0 = lerp(N2, N0, t0);
+					C0 = lerp(C2, C0, t0);
+					UV0 = lerp(UV2, UV0, t0);
+				}
+				else
+				{
+					float t2, t0;
+					p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t2);
+					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+					P2WS = lerp(P2WS, P0WS, t2);
+					P0WS = lerp(P1WS, P0WS, t0);
+					N2 = lerp(N2, N0, t2);
+					N0 = lerp(N1, N0, t0);
+					C2 = lerp(C2, C0, t2);
+					C0 = lerp(C1, C0, t0);
+					UV2 = lerp(UV2, UV0, t2);
+					UV0 = lerp(UV1, UV0, t0);
+				}
+			}
+			//  p2________p0                p2________p0
+			//    \      /        =====>      \⟍     /
+			//     \    /                      \ ⟍  /
+			// -----x--x------- near plane -----x--x----
+			//       \/                        p3  p1
+			//       p1
+			else if (p1Behind)
+			{
+				if (firstQuadHalf)
+				{
+					float t1;
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
+					P1WS = lerp(P0WS, P1WS, t1);
+					N1 = lerp(N0, N1, t1);
+					C1 = lerp(C0, C1, t1);
+					UV1 = lerp(UV0, UV1, t1);
+				}
+				else
+				{
+					float t0, t1;
+					p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t0);
+					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
+					P0WS = lerp(P0WS, P1WS, t0);
+					P1WS = lerp(P2WS, P1WS, t1);
+					N0 = lerp(N0, N1, t0);
+					N1 = lerp(N2, N1, t1);
+					C0 = lerp(C0, C1, t0);
+					C1 = lerp(C2, C1, t1);
+					UV0 = lerp(UV0, UV1, t0);
+					UV1 = lerp(UV2, UV1, t1);
+				}
+			}
+			//  p0________p1                p0________p1
+			//    \      /        =====>      \⟍     /
+			//     \    /                      \ ⟍  /
+			// -----x--x------- near plane -----x--x----
+			//       \/                        p3  p2
+			//       p2
+			else if (p2Behind)
+			{
+				if (firstQuadHalf)
+				{
+					float t2;
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
+					P2WS = lerp(P1WS, P2WS, t2);
+					N2 = lerp(N1, N2, t2);
+					C2 = lerp(C1, C2, t2);
+					UV2 = lerp(UV1, UV2, t2);
+				}
+				else
+				{
+					float t1, t2;
+					p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t1);
+					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
+					P1WS = lerp(P1WS, P2WS, t1);
+					P2WS = lerp(P0WS, P2WS, t2);
+					N1 = lerp(N1, N2, t1);
+					N2 = lerp(N0, N2, t2);
+					C1 = lerp(C1, C2, t1);
+					C2 = lerp(C0, C2, t2);
+					UV1 = lerp(UV1, UV2, t1);
+					UV2 = lerp(UV0, UV2, t2);
+				}
 			}
 		}
 

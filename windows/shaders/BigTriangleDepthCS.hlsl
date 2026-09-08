@@ -73,76 +73,107 @@ void main(
 		uint tileOffsetData = Triangle[TILE_OFFSET_FLOAT];
 		bool firstQuadHalf = (tileOffsetData & 0x80000000) == 0;
 
+		bool p0Behind = false;
+		bool p1Behind = false;
+		bool p2Behind = false;
+
 		if (NearPlaneClippingEnabled)
 		{
-			bool p0Behind = p0CS.z > CameraNear;
-			bool p1Behind = p1CS.z > CameraNear;
-			bool p2Behind = p2CS.z > CameraNear;
+			p0Behind = p0CS.z > CameraNear;
+			p1Behind = p1CS.z > CameraNear;
+			p2Behind = p2CS.z > CameraNear;
 
-
-			//        /\                             /\
-			//       /  \            =====>         /  \
-			//      /    \                         /    \
-			// ----x------x------- near plane ----x------x-----
-			//    /________\
-
-			if (p0Behind && p1Behind)
+			if (p0Behind || p1Behind || p2Behind)
 			{
-				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
-				p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
-			}
-			else if (p1Behind && p2Behind)
-			{
-				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
-				p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
-			}
-			else if (p2Behind && p0Behind)
-			{
-				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
-				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
-			}
-
-
-			//    ________                    ________
-			//    \      /        =====>      \      /
-			//     \    /                      \    /
-			// -----x--x------- near plane -----x--x----
-			//       \/
-
-			else if (p0Behind)
-			{
-				if (firstQuadHalf)
+				//        p2                             p2
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p1
+				//   p0        p1
+				if (p0Behind && p1Behind)
 				{
 					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
-				}
-				else
-				{
-					p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
-					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
-				}
-			}
-			else if (p1Behind)
-			{
-				if (firstQuadHalf)
-				{
-					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
-				}
-				else
-				{
-					p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
 					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
 				}
-			}
-			else if (p2Behind)
-			{
-				if (firstQuadHalf)
+				//        p0                             p0
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p2      p1
+				//   p2        p1
+				else if (p1Behind && p2Behind)
+				{
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+				}
+				//        p1                             p1
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p2
+				//   p0        p2
+				else if (p2Behind && p0Behind)
 				{
 					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
 				}
-				else
+				//  p1________p2                p1________p2
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p0
+				//       p0
+				else if (p0Behind)
 				{
-					p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
-					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+					if (firstQuadHalf)
+					{
+						p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+					}
+					else
+					{
+						p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear);
+						p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear);
+					}
+				}
+				//  p2________p0                p2________p0
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p1
+				//       p1
+				else if (p1Behind)
+				{
+					if (firstQuadHalf)
+					{
+						p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+					}
+					else
+					{
+						p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear);
+						p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear);
+					}
+				}
+				//  p0________p1                p0________p1
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p2
+				//       p2
+				else if (p2Behind)
+				{
+					if (firstQuadHalf)
+					{
+						p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+					}
+					else
+					{
+						p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear);
+						p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear);
+					}
 				}
 			}
 		}
