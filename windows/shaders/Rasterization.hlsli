@@ -75,6 +75,22 @@ float EdgeScanlineIntersection(in float2 v0, in float2 v1, in float y)
 	return ((denom == 0.0) ? FloatMax : (y - v0.y) * rcp(denom));
 }
 
+void ClampScanline(
+	in float minX,
+	in float maxX,
+	inout float xMin,
+	inout float xMax)
+{
+	xMin = max(xMin, minX);
+	xMax = min(xMax, maxX);
+
+	// snap min x bound to pixel center
+	xMin = ceil(xMin - 0.5) + 0.5;
+
+	// top-left rule
+	xMax += ((frac(xMax) == 0.5) ? -1.0 : 0.0);
+}
+
 float4 EdgeNearPlaneIntersection(
 	in float3 v0CS,
 	in float3 v1CS,

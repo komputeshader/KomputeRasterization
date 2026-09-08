@@ -398,11 +398,7 @@ void TriangleRasterizationNode(
 						float xMin = min(candidate0, min(candidate1, candidate2));
 						float xMax = max(candidate0, max(candidate1, candidate2));
 
-						// snap min x bound to pixel center
-						xMin = ceil(xMin - 0.5) + 0.5;
-
-						// top-left rule
-						xMax += ((frac(xMax) == 0.5) ? -1.0 : 0.0);
+						ClampScanline(minP.x, maxP.x, xMin, xMax);
 
 						float area0tmp = area0 - dxdy0.y * (xMin - minP.x);
 						float area1tmp = area1 - dxdy1.y * (xMin - minP.x);
