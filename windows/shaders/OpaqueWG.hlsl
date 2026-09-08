@@ -116,12 +116,19 @@ void TriangleRasterizationNode(
 				i0, i1, i2);
 
 			float3 p0, p1, p2;
-			GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
+			GetTriangleVertexPositions(
+				i0, i1, i2, Command.args.baseVertexLocation,
+				p0, p1, p2);
 
 			VertexNormal n0P, n1P, n2P;
-			GetPackedVertexNormals(i0, i1, i2, Command.args.baseVertexLocation, n0P, n1P, n2P);
+			GetPackedVertexNormals(
+				i0, i1, i2, Command.args.baseVertexLocation,
+				n0P, n1P, n2P);
+
 			VertexColor c0P, c1P, c2P;
-			GetPackedVertexColors(i0, i1, i2, Command.args.baseVertexLocation, c0P, c1P, c2P);
+			GetPackedVertexColors(
+				i0, i1, i2, Command.args.baseVertexLocation,
+				c0P, c1P, c2P);
 
 			for (uint instanceID = 0; instanceID < Command.args.instanceCount; instanceID++)
 			{
@@ -131,7 +138,9 @@ void TriangleRasterizationNode(
 				float3 p0WS, p1WS, p2WS;
 				float4 p0CS, p1CS, p2CS;
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
-				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+				GetCSPositions(
+					instance, p0, p1, p2,
+					p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
 				bool p0Behind = p0CS.z > CameraNear;
 				bool p1Behind = p1CS.z > CameraNear;
@@ -231,7 +240,9 @@ void TriangleRasterizationNode(
 				float invW2 = 1.0 / p2CS.w;
 
 				float2 p0SS, p1SS, p2SS;
-				GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, p0SS, p1SS, p2SS);
+				GetSSPositions(
+					p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
+					p0SS, p1SS, p2SS);
 
 				float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
 
@@ -278,6 +289,7 @@ void TriangleRasterizationNode(
 						DepthSampler,
 						(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
 						mipLevel).r;
+
 					[branch]
 					if (tileDepth > maxP.z)
 					{
@@ -332,8 +344,7 @@ void TriangleRasterizationNode(
 					if (quadrilateral)
 					{
 						// screen-space coordinate of the fourth clipped vertex
-						p3Helper.xy =
-							(p3Helper.xy / p3Helper.w * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
+						p3Helper.xy = (p3Helper.xy / p3Helper.w * float2(0.5, -0.5) + float2(0.5, 0.5)) * OutputRes;
 
 						if (p0Behind)
 						{
@@ -380,13 +391,19 @@ void TriangleRasterizationNode(
 				// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
 				float2 dxdy0;
 				float area0;
-				EdgeFunction(p1SS.xy, p2SS.xy, minP.xy, area0, dxdy0);
+				EdgeFunction(
+					p1SS.xy, p2SS.xy, minP.xy,
+					area0, dxdy0);
 				float2 dxdy1;
 				float area1;
-				EdgeFunction(p2SS.xy, p0SS.xy, minP.xy, area1, dxdy1);
+				EdgeFunction(
+					p2SS.xy, p0SS.xy, minP.xy,
+					area1, dxdy1);
 				float2 dxdy2;
 				float area2;
-				EdgeFunction(p0SS.xy, p1SS.xy, minP.xy, area2, dxdy2);
+				EdgeFunction(
+					p0SS.xy, p1SS.xy, minP.xy,
+					area2, dxdy2);
 
 				if (ScanlineRasterization)
 				{

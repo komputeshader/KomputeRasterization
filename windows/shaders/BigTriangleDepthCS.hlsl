@@ -183,7 +183,9 @@ void main(
 		float invW2 = 1.0 / p2CS.w;
 
 		float2 p0SS, p1SS, p2SS;
-		GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, p0SS, p1SS, p2SS);
+		GetSSPositions(
+			p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
+			p0SS, p1SS, p2SS);
 
 		float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
 
@@ -216,9 +218,15 @@ void main(
 		InvArea = 1.0 / area;
 
 		// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
-		EdgeFunction(p1SS.xy, p2SS.xy, MinP, Area0, Dxdy0);
-		EdgeFunction(p2SS.xy, p0SS.xy, MinP, Area1, Dxdy1);
-		EdgeFunction(p0SS.xy, p1SS.xy, MinP, Area2, Dxdy2);
+		EdgeFunction(
+			p1SS.xy, p2SS.xy, MinP,
+			Area0, Dxdy0);
+		EdgeFunction(
+			p2SS.xy, p0SS.xy, MinP,
+			Area1, Dxdy1);
+		EdgeFunction(
+			p0SS.xy, p1SS.xy, MinP,
+			Area2, Dxdy2);
 	}
 
 	GroupMemoryBarrierWithGroupSync();

@@ -129,8 +129,12 @@ void main(
 			if (p0Behind && p1Behind)
 			{
 				float t0, t1;
-				p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
-				p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
+				p0CS = EdgeNearPlaneIntersection(
+					p2CS.xyz, p0CS.xyz, CameraNear,
+					t0);
+				p1CS = EdgeNearPlaneIntersection(
+					p2CS.xyz, p1CS.xyz, CameraNear,
+					t1);
 				P0WS = lerp(P2WS, P0WS, t0);
 				P1WS = lerp(P2WS, P1WS, t1);
 				N0 = lerp(N2, N0, t0);
@@ -150,8 +154,12 @@ void main(
 			else if (p1Behind && p2Behind)
 			{
 				float t1, t2;
-				p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
-				p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
+				p1CS = EdgeNearPlaneIntersection(
+					p0CS.xyz, p1CS.xyz, CameraNear,
+					t1);
+				p2CS = EdgeNearPlaneIntersection(
+					p0CS.xyz, p2CS.xyz, CameraNear,
+					t2);
 				P1WS = lerp(P0WS, P1WS, t1);
 				P2WS = lerp(P0WS, P2WS, t2);
 				N1 = lerp(N0, N1, t1);
@@ -171,8 +179,12 @@ void main(
 			else if (p2Behind && p0Behind)
 			{
 				float t2, t0;
-				p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
-				p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+				p2CS = EdgeNearPlaneIntersection(
+					p1CS.xyz, p2CS.xyz, CameraNear,
+					t2);
+				p0CS = EdgeNearPlaneIntersection(
+					p1CS.xyz, p0CS.xyz, CameraNear,
+					t0);
 				P2WS = lerp(P1WS, P2WS, t2);
 				P0WS = lerp(P1WS, P0WS, t0);
 				N2 = lerp(N1, N2, t2);
@@ -193,7 +205,9 @@ void main(
 				if (firstQuadHalf)
 				{
 					float t0;
-					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t0);
+					p0CS = EdgeNearPlaneIntersection(
+						p2CS.xyz, p0CS.xyz, CameraNear,
+						t0);
 					P0WS = lerp(P2WS, P0WS, t0);
 					N0 = lerp(N2, N0, t0);
 					C0 = lerp(C2, C0, t0);
@@ -202,8 +216,12 @@ void main(
 				else
 				{
 					float t2, t0;
-					p2CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, CameraNear, t2);
-					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, CameraNear, t0);
+					p2CS = EdgeNearPlaneIntersection(
+						p2CS.xyz, p0CS.xyz, CameraNear,
+						t2);
+					p0CS = EdgeNearPlaneIntersection(
+						p1CS.xyz, p0CS.xyz, CameraNear,
+						t0);
 					P2WS = lerp(P2WS, P0WS, t2);
 					P0WS = lerp(P1WS, P0WS, t0);
 					N2 = lerp(N2, N0, t2);
@@ -225,7 +243,9 @@ void main(
 				if (firstQuadHalf)
 				{
 					float t1;
-					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t1);
+					p1CS = EdgeNearPlaneIntersection(
+						p0CS.xyz, p1CS.xyz, CameraNear,
+						t1);
 					P1WS = lerp(P0WS, P1WS, t1);
 					N1 = lerp(N0, N1, t1);
 					C1 = lerp(C0, C1, t1);
@@ -234,8 +254,12 @@ void main(
 				else
 				{
 					float t0, t1;
-					p0CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, CameraNear, t0);
-					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, CameraNear, t1);
+					p0CS = EdgeNearPlaneIntersection(
+						p0CS.xyz, p1CS.xyz, CameraNear,
+						t0);
+					p1CS = EdgeNearPlaneIntersection(
+						p2CS.xyz, p1CS.xyz, CameraNear,
+						t1);
 					P0WS = lerp(P0WS, P1WS, t0);
 					P1WS = lerp(P2WS, P1WS, t1);
 					N0 = lerp(N0, N1, t0);
@@ -257,7 +281,9 @@ void main(
 				if (firstQuadHalf)
 				{
 					float t2;
-					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t2);
+					p2CS = EdgeNearPlaneIntersection(
+						p1CS.xyz, p2CS.xyz, CameraNear,
+						t2);
 					P2WS = lerp(P1WS, P2WS, t2);
 					N2 = lerp(N1, N2, t2);
 					C2 = lerp(C1, C2, t2);
@@ -266,8 +292,12 @@ void main(
 				else
 				{
 					float t1, t2;
-					p1CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, CameraNear, t1);
-					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, CameraNear, t2);
+					p1CS = EdgeNearPlaneIntersection(
+						p1CS.xyz, p2CS.xyz, CameraNear,
+						t1);
+					p2CS = EdgeNearPlaneIntersection(
+						p0CS.xyz, p2CS.xyz, CameraNear,
+						t2);
 					P1WS = lerp(P1WS, P2WS, t1);
 					P2WS = lerp(P0WS, P2WS, t2);
 					N1 = lerp(N1, N2, t1);
@@ -285,7 +315,9 @@ void main(
 		float invW2 = 1.0 / p2CS.w;
 
 		float2 p0SS, p1SS, p2SS;
-		GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, p0SS, p1SS, p2SS);
+		GetSSPositions(
+			p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
+			p0SS, p1SS, p2SS);
 
 		float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
 
@@ -325,9 +357,15 @@ void main(
 		InvArea = 1.0 / area;
 
 		// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
-		EdgeFunction(p1SS.xy, p2SS.xy, MinP, Area0, Dxdy0);
-		EdgeFunction(p2SS.xy, p0SS.xy, MinP, Area1, Dxdy1);
-		EdgeFunction(p0SS.xy, p1SS.xy, MinP, Area2, Dxdy2);
+		EdgeFunction(
+			p1SS.xy, p2SS.xy, MinP,
+			Area0, Dxdy0);
+		EdgeFunction(
+			p2SS.xy, p0SS.xy, MinP,
+			Area1, Dxdy1);
+		EdgeFunction(
+			p0SS.xy, p1SS.xy, MinP,
+			Area2, Dxdy2);
 	}
 
 	GroupMemoryBarrierWithGroupSync();

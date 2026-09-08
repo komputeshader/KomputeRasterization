@@ -102,7 +102,9 @@ void TriangleRasterizationNode(
 				i0, i1, i2);
 
 			float3 p0, p1, p2;
-			GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
+			GetTriangleVertexPositions(
+				i0, i1, i2, Command.args.baseVertexLocation,
+				p0, p1, p2);
 
 			for (uint instanceID = 0; instanceID < Command.args.instanceCount; instanceID++)
 			{
@@ -112,7 +114,9 @@ void TriangleRasterizationNode(
 				float3 p0WS, p1WS, p2WS;
 				float4 p0CS, p1CS, p2CS;
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
-				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+				GetCSPositions(
+					instance, p0, p1, p2,
+					p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
 				bool p0Behind = NearPlaneClippingEnabled && p0CS.z > CameraNear;
 				bool p1Behind = NearPlaneClippingEnabled && p1CS.z > CameraNear;
@@ -265,6 +269,7 @@ void TriangleRasterizationNode(
 						DepthSampler,
 						(minP.xy + maxP.xy) * 0.5 * InvOutputRes,
 						mipLevel).r;
+
 					[branch]
 					if (tileDepth > maxP.z)
 					{
@@ -350,13 +355,19 @@ void TriangleRasterizationNode(
 				// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
 				float2 dxdy0;
 				float area0;
-				EdgeFunction(p1SS.xy, p2SS.xy, minP.xy, area0, dxdy0);
+				EdgeFunction(
+					p1SS.xy, p2SS.xy, minP.xy,
+					area0, dxdy0);
 				float2 dxdy1;
 				float area1;
-				EdgeFunction(p2SS.xy, p0SS.xy, minP.xy, area1, dxdy1);
+				EdgeFunction(
+					p2SS.xy, p0SS.xy, minP.xy,
+					area1, dxdy1);
 				float2 dxdy2;
 				float area2;
-				EdgeFunction(p0SS.xy, p1SS.xy, minP.xy, area2, dxdy2);
+				EdgeFunction(
+					p0SS.xy, p1SS.xy, minP.xy,
+					area2, dxdy2);
 
 				if (ScanlineRasterization)
 				{

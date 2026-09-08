@@ -66,7 +66,9 @@ void main(
 				i0, i1, i2);
 
 			float3 p0, p1, p2;
-			GetTriangleVertexPositions(i0, i1, i2, Command.args.baseVertexLocation, p0, p1, p2);
+			GetTriangleVertexPositions(
+				i0, i1, i2, Command.args.baseVertexLocation,
+				p0, p1, p2);
 
 			for (uint instanceID = 0; instanceID < Command.args.instanceCount; instanceID++)
 			{
@@ -76,7 +78,9 @@ void main(
 				float3 p0WS, p1WS, p2WS;
 				float4 p0CS, p1CS, p2CS;
 				Instance instance = Instances[Command.startInstanceLocation + instanceID];
-				GetCSPositions(instance, p0, p1, p2, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+				GetCSPositions(
+					instance, p0, p1, p2,
+					p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
 				// near plane clipping handling adds to register pressure and processing costs,
 				// and could be avoided for most triangles by tagging meshlets, as crossing
