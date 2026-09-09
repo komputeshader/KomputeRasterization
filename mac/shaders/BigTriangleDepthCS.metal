@@ -50,16 +50,9 @@ kernel void BigTriangleDepthCS(
 		float2 p2SSTemporary;
 
 		GetSSPositions(
-			p0CS.xy,
-			p1CS.xy,
-			p2CS.xy,
-			invW0,
-			invW1,
-			invW2,
+			p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
 			constants.outputResolution,
-			p0SSTemporary,
-			p1SSTemporary,
-			p2SSTemporary);
+			p0SSTemporary, p1SSTemporary, p2SSTemporary);
 
 		p0SS = p0SSTemporary;
 		p1SS = p1SSTemporary;
@@ -93,9 +86,15 @@ kernel void BigTriangleDepthCS(
 		float2 dxdy1Temporary;
 		float2 dxdy2Temporary;
 
-		EdgeFunction(p1SS, p2SS, minP, area0Temporary, dxdy0Temporary);
-		EdgeFunction(p2SS, p0SS, minP, area1Temporary, dxdy1Temporary);
-		EdgeFunction(p0SS, p1SS, minP, area2Temporary, dxdy2Temporary);
+		EdgeFunction(
+			p1SS, p2SS, minP,
+			area0Temporary, dxdy0Temporary);
+		EdgeFunction(
+			p2SS, p0SS, minP,
+			area1Temporary, dxdy1Temporary);
+		EdgeFunction(
+			p0SS, p1SS, minP,
+			area2Temporary, dxdy2Temporary);
 		area0 = area0Temporary;
 		area1 = area1Temporary;
 		area2 = area2Temporary;

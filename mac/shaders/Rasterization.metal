@@ -166,7 +166,9 @@ static inline bool SetupTriangle(
 	thread float2& minP,
 	thread float2& maxP)
 {
-	GetCSPositions(instance, p0, p1, p2, VP, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+	GetCSPositions(
+		instance, p0, p1, p2, VP,
+		p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 	if (p0CS.w <= 0.0f || p1CS.w <= 0.0f || p2CS.w <= 0.0f)
 	{
 		return false;
@@ -177,16 +179,9 @@ static inline bool SetupTriangle(
 	const float invW2 = 1.0f / p2CS.w;
 
 	GetSSPositions(
-		p0CS.xy,
-		p1CS.xy,
-		p2CS.xy,
-		invW0,
-		invW1,
-		invW2,
+		p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2,
 		outputResolution,
-		p0SS,
-		p1SS,
-		p2SS);
+		p0SS, p1SS, p2SS);
 
 	area = Area(p0SS, p1SS, p2SS);
 	if (area <= 0.0f)
@@ -309,13 +304,19 @@ static inline void RasterizeDepth(
 
 	float2 dxdy0;
 	float area0;
-	EdgeFunction(p1SS, p2SS, minP, area0, dxdy0);
+	EdgeFunction(
+		p1SS, p2SS, minP,
+		area0, dxdy0);
 	float2 dxdy1;
 	float area1;
-	EdgeFunction(p2SS, p0SS, minP, area1, dxdy1);
+	EdgeFunction(
+		p2SS, p0SS, minP,
+		area1, dxdy1);
 	float2 dxdy2;
 	float area2;
-	EdgeFunction(p0SS, p1SS, minP, area2, dxdy2);
+	EdgeFunction(
+		p0SS, p1SS, minP,
+		area2, dxdy2);
 
 	if (scanlineRasterization)
 	{

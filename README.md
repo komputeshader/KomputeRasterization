@@ -8,13 +8,14 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 ## Features
 * Fully GPU-driven rendering using indirect draws and compute dispatches.
 * Compute-based software rasterization of depth, opaque geometry, and cascaded shadow maps.
+* Configurable scanline or bounding-box traversal, according to the [top-left fill rule](https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules#triangle-rasterization-rules-without-multisampling).
+* Near-plane clipping support.
 * Adaptive triangle processing: small triangles use a single-thread path, while large triangles are divided into configurable tiles and processed cooperatively.
 * Runtime comparison between software and hardware rasterization by overdraw visualization and GPU performance/statistics reporting.
 * Compares true overdraw - compute threads vs. pixel shader 2x2 quad threads (ordinary + helper ones).
 * Traditional compute-shader and DirectX 12 Work Graphs paths on Windows.
 * Meshlet frustum, backface-cone, and temporal Hi-Z occlusion culling for the camera and shadow cascades.
 * Optional per-triangle Hi-Z culling during software rasterization.
-* Configurable scanline or bounding-box traversal, according to the [top-left fill rule](https://learn.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-rasterizer-stage-rules#triangle-rasterization-rules-without-multisampling).
 * Adjustable cascaded shadow maps, with meshlet and cascade debug views.
 * Windows DirectX 12 and macOS Metal versions.
 

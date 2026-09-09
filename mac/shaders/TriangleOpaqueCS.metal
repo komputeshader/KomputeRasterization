@@ -100,13 +100,19 @@ inline void RasterizeOpaque(
 
 	float2 dxdy0;
 	float area0;
-	EdgeFunction(p1SS, p2SS, minP, area0, dxdy0);
+	EdgeFunction(
+		p1SS, p2SS, minP,
+		area0, dxdy0);
 	float2 dxdy1;
 	float area1;
-	EdgeFunction(p2SS, p0SS, minP, area1, dxdy1);
+	EdgeFunction(
+		p2SS, p0SS, minP,
+		area1, dxdy1);
 	float2 dxdy2;
 	float area2;
-	EdgeFunction(p0SS, p1SS, minP, area2, dxdy2);
+	EdgeFunction(
+		p0SS, p1SS, minP,
+		area2, dxdy2);
 
 	if (constants.scanlineRasterization)
 	{
