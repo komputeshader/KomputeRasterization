@@ -106,6 +106,7 @@ void main(
 				// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/ (section 5.2)
 				// backface culling before clipping and division by w
 				// reverse the cross product because screen y points down
+				// NOTE: not actually faster (or even lil bit slower) than standard backface culling
 				[branch]
 				if (dot(p0CS.xyw, cross(p2CS.xyw, p1CS.xyw)) <= 0.0)
 				{
