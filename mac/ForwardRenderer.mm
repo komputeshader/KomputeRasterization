@@ -352,11 +352,11 @@ void ForwardRenderer::_newFrameGUI()
 
 		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 		ImGui::Checkbox("Software Rasterization", &Settings::SWREnabled);
+		ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 		if (!Settings::SWREnabled)
 		{
 			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
 		}
-		ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 
 		ImGui::Checkbox("Frustum Culling", &Settings::FrustumCullingEnabled);
 		ImGui::Checkbox("Cluster Backface Culling", &Settings::ClusterBackfaceCullingEnabled);
