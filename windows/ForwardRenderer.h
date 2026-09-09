@@ -29,21 +29,29 @@ public:
 
 	void PreparePrevFrameDepth(ID3D12Resource* depth);
 	void GeneratePrevFrameDepthHiZ(ID3D12GraphicsCommandList* commandList);
-	ID3D12Resource* GetCulledCommands(int frame, int frustum)
+	ID3D12Resource* GetCulledCommands(int frame)
 	{
 		assert(frame >= 0);
 		assert(frame < DX::FramesCount);
-		assert(frustum >= 0);
-		assert(frustum < Settings::FrustumsCount);
-		return _culledCommands[frame][frustum].Get();
+		return _culledCommands[frame].Get();
 	}
-	ID3D12Resource* GetCulledCommandsCounter(int frame, int frustum)
+	UINT64 GetCulledCommandsOffset(int frustum)
+	{
+		assert(frustum >= 0);
+		assert(frustum < Settings::FrustumsCount);
+		return frustum * Scene::MaxSceneMeshesMetaCount * sizeof(IndirectCommand);
+	}
+	ID3D12Resource* GetCulledCommandsCounters(int frame)
 	{
 		assert(frame >= 0);
 		assert(frame < DX::FramesCount);
+		return _culledCommandsCounters[frame].Get();
+	}
+	UINT64 GetCulledCommandsCountersOffset(int frustum)
+	{
 		assert(frustum >= 0);
 		assert(frustum < Settings::FrustumsCount);
-		return _culledCommandsCounters[frame][frustum].Get();
+		return frustum * sizeof(D3D12_DISPATCH_ARGUMENTS);
 	}
 
 private:
@@ -77,14 +85,13 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> _depthsFence;
 	size_t _depthsFenceValue = 0;
 	// per frame granularity for async compute and graphics work
-	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommands[DX::FramesCount][MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommands[DX::FramesCount];
 	// first 4 bytes used as a counter
 	// all 12 bytes are used as a dispatch indirect command
 	// [0] - counter / group count X
 	// [1] - group count Y
 	// [2] - group count Z
-	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommandsCounters[DX::FramesCount][MAX_FRUSTUMS_COUNT];
-	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommandsCountersUpload[DX::FramesCount][MAX_FRUSTUMS_COUNT];
+	Microsoft::WRL::ComPtr<ID3D12Resource> _culledCommandsCounters[DX::FramesCount];
 
 	std::unique_ptr<Culler> _culler;
 	std::unique_ptr<HardwareRasterization> _HWR;

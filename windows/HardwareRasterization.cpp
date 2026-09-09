@@ -284,10 +284,10 @@ void HardwareRasterization::_drawDepth()
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{
@@ -358,10 +358,10 @@ void HardwareRasterization::_drawShadows()
 			COMMAND_LIST->ExecuteIndirect(
 				_commandSignature.Get(),
 				static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-				_renderer->GetCulledCommands(DX::FrameIndex, cascade),
-				0,
-				_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
-				0);
+				_renderer->GetCulledCommands(DX::FrameIndex),
+				_renderer->GetCulledCommandsOffset(cascade),
+				_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+				_renderer->GetCulledCommandsCountersOffset(cascade));
 		}
 		else
 		{
@@ -443,10 +443,10 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{
@@ -508,10 +508,10 @@ void HardwareRasterization::_drawOverdraw(ID3D12Resource* renderTarget)
 		COMMAND_LIST->ExecuteIndirect(
 			_overdrawCommandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{

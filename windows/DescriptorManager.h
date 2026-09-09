@@ -46,7 +46,8 @@ enum CBVSRVUAVIndices
 	VisibleInstancesSRV = SingleDescriptorsCount,
 	VisibleInstancesUAV = VisibleInstancesSRV + MAX_FRUSTUMS_COUNT,
 	CulledCommandsUAV,
-	CulledCommandsCountersSRV = CulledCommandsUAV + MAX_FRUSTUMS_COUNT,
+	CulledCommandsCountersUAV,
+	CulledCommandsCountersSRV,
 	CulledCommandsSRV = CulledCommandsCountersSRV + MAX_FRUSTUMS_COUNT,
 
 	PerFrameDescriptorsCount = CulledCommandsSRV + MAX_FRUSTUMS_COUNT - VisibleInstancesSRV,

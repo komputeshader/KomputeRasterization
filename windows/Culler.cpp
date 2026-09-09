@@ -46,26 +46,32 @@ Culler::Culler()
 		reinterpret_cast<void**>(&_cullingCBData),
 		_cullingCB);
 
+	D3D12_DISPATCH_ARGUMENTS dispatchArguments[MAX_FRUSTUMS_COUNT] = {};
+	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
+	{
+		dispatchArguments[frustum].ThreadGroupCountY = SWR_THREAD_GROUPS_Y;
+		dispatchArguments[frustum].ThreadGroupCountZ = 1;
+	}
+
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(unsigned int));
+	auto desc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(dispatchArguments));
 	SUCCESS(DX::Device->CreateCommittedResource(
 		&prop,
 		D3D12_HEAP_FLAG_NONE,
 		&desc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&_culledCommandsCounterReset)));
-	NAME_D3D12_OBJECT(_culledCommandsCounterReset);
+		IID_PPV_ARGS(&_culledCommandsCountersReset)));
+	NAME_D3D12_OBJECT(_culledCommandsCountersReset);
 
-	unsigned char* pMappedCounterReset = nullptr;
-	// we do not intend to read from this resource on the CPU
+	unsigned char* mappedCounters = nullptr;
 	CD3DX12_RANGE readRange(0, 0);
-	SUCCESS(_culledCommandsCounterReset->Map(
+	SUCCESS(_culledCommandsCountersReset->Map(
 		0,
 		&readRange,
-		reinterpret_cast<void**>(&pMappedCounterReset)));
-	ZeroMemory(pMappedCounterReset, sizeof(unsigned int));
-	_culledCommandsCounterReset->Unmap(0, nullptr);
+		reinterpret_cast<void**>(&mappedCounters)));
+	memcpy(mappedCounters, dispatchArguments, sizeof(dispatchArguments));
+	_culledCommandsCountersReset->Unmap(0, nullptr);
 }
 
 void Culler::Update()
@@ -119,63 +125,46 @@ void Culler::Update()
 void Culler::Cull(
 	ID3D12GraphicsCommandList* commandList,
 	ID3D12Resource* visibleInstances,
-	const ComPtr<ID3D12Resource> (&culledCommands)[MAX_FRUSTUMS_COUNT],
-	const ComPtr<ID3D12Resource> (&culledCommandsCounters)[MAX_FRUSTUMS_COUNT])
+	ID3D12Resource* culledCommands,
+	ID3D12Resource* culledCommandsCounters)
 {
 	PIXScopedEvent(commandList, 0, L"Culling");
-	const D3D12_RESOURCE_STATES culledCommandsCounterReadState =
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
-		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-
-	CD3DX12_RESOURCE_BARRIER barriers[2 + 2 * MAX_FRUSTUMS_COUNT] = {};
-	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
-	{
-		barriers[frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
-			culledCommandsCounters[frustum].Get(),
-			culledCommandsCounterReadState,
-			D3D12_RESOURCE_STATE_COPY_DEST);
-	}
-	commandList->ResourceBarrier(MAX_FRUSTUMS_COUNT, barriers);
-
-	// reset the UAV counters for this frame
-	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
-	{
-		commandList->CopyBufferRegion(
-			culledCommandsCounters[frustum].Get(),
-			0,
-			_culledCommandsCounterReset.Get(),
-			0,
-			sizeof(unsigned int));
-	}
-
 	D3D12_GPU_VIRTUAL_ADDRESS cbAdress = _cullingCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(CullingCB);
 	D3D12_RESOURCE_STATES culledCommandsReadState =
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
 		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
-	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
-	{
-		barriers[2 * frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
-			culledCommandsCounters[frustum].Get(),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		barriers[2 * frustum + 1] =
-			CD3DX12_RESOURCE_BARRIER::Transition(
-				culledCommands[frustum].Get(),
-				culledCommandsReadState,
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	}
-	barriers[_countof(barriers) - 2] =
+	CD3DX12_RESOURCE_BARRIER barriers[4] = {};
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+		culledCommands,
+		culledCommandsReadState,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+		culledCommandsCounters,
+		culledCommandsReadState,
+		D3D12_RESOURCE_STATE_COPY_DEST);
+	barriers[2] =
 		CD3DX12_RESOURCE_BARRIER::Transition(
 			visibleInstances,
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	barriers[_countof(barriers) - 1] =
+	barriers[3] =
 		CD3DX12_RESOURCE_BARRIER::Transition(
 			_cullingCounters.Get(),
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	commandList->ResourceBarrier(_countof(barriers), barriers);
+	commandList->CopyBufferRegion(
+		culledCommandsCounters,
+		0,
+		_culledCommandsCountersReset.Get(),
+		0,
+		sizeof(D3D12_DISPATCH_ARGUMENTS) * MAX_FRUSTUMS_COUNT);
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+		culledCommandsCounters,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	commandList->ResourceBarrier(1, barriers);
 
 	// clear
 	commandList->SetComputeRootSignature(_clearRS.Get());
@@ -241,19 +230,15 @@ void Culler::Cull(
 		1,
 		1);
 
-	for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
-	{
-		barriers[2 * frustum] = CD3DX12_RESOURCE_BARRIER::Transition(
-			culledCommands[frustum].Get(),
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-			culledCommandsReadState);
-		barriers[2 * frustum + 1] =
-			CD3DX12_RESOURCE_BARRIER::Transition(
-				culledCommandsCounters[frustum].Get(),
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				culledCommandsCounterReadState);
-	}
-	commandList->ResourceBarrier(2 * MAX_FRUSTUMS_COUNT, barriers);
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+		culledCommands,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		culledCommandsReadState);
+	barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+		culledCommandsCounters,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		culledCommandsReadState);
+	commandList->ResourceBarrier(2, barriers);
 }
 
 void Culler::_createCullingCounters()
@@ -409,7 +394,7 @@ void Culler::_createGenerateCommandsPSO()
 	computeRootParameters[2].InitAsDescriptorTable(1, &ranges[1]);
 	ranges[2].Init(
 		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
-		MAX_FRUSTUMS_COUNT,
+		2,
 		0);
 	computeRootParameters[3].InitAsDescriptorTable(1, &ranges[2]);
 

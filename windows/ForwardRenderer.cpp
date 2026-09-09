@@ -246,73 +246,78 @@ void ForwardRenderer::_createCulledCommandsBuffers()
 		D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 	CD3DX12_RESOURCE_DESC commandBufferDesc =
 		CD3DX12_RESOURCE_DESC::Buffer(
-			Scene::MaxSceneMeshesMetaCount * sizeof(IndirectCommand),
+			Scene::MaxSceneMeshesMetaCount * sizeof(IndirectCommand) * MAX_FRUSTUMS_COUNT,
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CD3DX12_RESOURCE_DESC counterBufferDesc =
+		CD3DX12_RESOURCE_DESC::Buffer(
+			sizeof(D3D12_DISPATCH_ARGUMENTS) * MAX_FRUSTUMS_COUNT,
 			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
-	auto UAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+	auto commandUAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount * MAX_FRUSTUMS_COUNT),
+		sizeof(IndirectCommand));
+	auto counterUAVDesc = CD3DX12_UNORDERED_ACCESS_VIEW_DESC::StructuredBuffer(
+		MAX_FRUSTUMS_COUNT,
+		sizeof(D3D12_DISPATCH_ARGUMENTS));
+	auto commandSRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
 		static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount),
 		sizeof(IndirectCommand));
 	auto counterSRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
 		1,
 		sizeof(D3D12_DISPATCH_ARGUMENTS));
-	auto commandSRVDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::StructuredBuffer(
-		static_cast<unsigned int>(Scene::MaxSceneMeshesMetaCount),
-		sizeof(IndirectCommand));
-
-	static D3D12_DISPATCH_ARGUMENTS dispatch;
-	dispatch.ThreadGroupCountX = 0;
-	dispatch.ThreadGroupCountY = SWR_THREAD_GROUPS_Y;
-	dispatch.ThreadGroupCountZ = 1;
 
 	for (int frame = 0; frame < DX::FramesCount; frame++)
 	{
+		SUCCESS(DX::Device->CreateCommittedResource(
+			&prop,
+			D3D12_HEAP_FLAG_NONE,
+			&commandBufferDesc,
+			culledCommandsReadState,
+			nullptr,
+			IID_PPV_ARGS(&_culledCommands[frame])));
+		SetNameIndexed(
+			_culledCommands[frame].Get(),
+			L"_culledCommands",
+			frame);
+
+		DX::Device->CreateUnorderedAccessView(
+			_culledCommands[frame].Get(),
+			nullptr,
+			&commandUAVDesc,
+			Descriptors::SV.GetCPUHandle(CulledCommandsUAV + frame * PerFrameDescriptorsCount));
+
+		SUCCESS(DX::Device->CreateCommittedResource(
+			&prop,
+			D3D12_HEAP_FLAG_NONE,
+			&counterBufferDesc,
+			culledCommandsReadState,
+			nullptr,
+			IID_PPV_ARGS(&_culledCommandsCounters[frame])));
+		SetNameIndexed(
+			_culledCommandsCounters[frame].Get(),
+			L"_culledCommandsCounters",
+			frame);
+
+		DX::Device->CreateUnorderedAccessView(
+			_culledCommandsCounters[frame].Get(),
+			nullptr,
+			&counterUAVDesc,
+			Descriptors::SV.GetCPUHandle(CulledCommandsCountersUAV + frame * PerFrameDescriptorsCount));
+
 		for (int frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
 		{
-			Utils::CreateDefaultHeapBuffer(
-				COMMAND_LIST.Get(),
-				&dispatch,
-				sizeof(D3D12_DISPATCH_ARGUMENTS),
-				_culledCommandsCounters[frame][frustum],
-				_culledCommandsCountersUpload[frame][frustum],
-				culledCommandsReadState,
-				true);
-			SetNameIndexed(
-				_culledCommandsCounters[frame][frustum].Get(),
-				L"_culledCommandsCounters",
-				frame * MAX_FRUSTUMS_COUNT + frustum);
-			SetNameIndexed(
-				_culledCommandsCountersUpload[frame][frustum].Get(),
-				L"_culledCommandsCountersUpload",
-				frame * MAX_FRUSTUMS_COUNT + frustum);
-
+			commandSRVDesc.Buffer.FirstElement = frustum * Scene::MaxSceneMeshesMetaCount;
 			DX::Device->CreateShaderResourceView(
-				_culledCommandsCounters[frame][frustum].Get(),
-				&counterSRVDesc,
-				Descriptors::SV.GetCPUHandle(CulledCommandsCountersSRV + frustum + frame * PerFrameDescriptorsCount));
-
-			SUCCESS(DX::Device->CreateCommittedResource(
-				&prop,
-				D3D12_HEAP_FLAG_NONE,
-				&commandBufferDesc,
-				culledCommandsReadState,
-				nullptr,
-				IID_PPV_ARGS(&_culledCommands[frame][frustum])));
-			SetNameIndexed(
-				_culledCommands[frame][frustum].Get(),
-				L"_culledCommands",
-				frame * MAX_FRUSTUMS_COUNT + frustum);
-
-			DX::Device->CreateUnorderedAccessView(
-				_culledCommands[frame][frustum].Get(),
-				_culledCommandsCounters[frame][frustum].Get(),
-				&UAVDesc,
-				Descriptors::SV.GetCPUHandle(CulledCommandsUAV + frustum + frame * PerFrameDescriptorsCount));
-
-			DX::Device->CreateShaderResourceView(
-				_culledCommands[frame][frustum].Get(),
+				_culledCommands[frame].Get(),
 				&commandSRVDesc,
 				Descriptors::SV.GetCPUHandle(CulledCommandsSRV + frustum + frame * PerFrameDescriptorsCount));
+
+			counterSRVDesc.Buffer.FirstElement = frustum;
+			DX::Device->CreateShaderResourceView(
+				_culledCommandsCounters[frame].Get(),
+				&counterSRVDesc,
+				Descriptors::SV.GetCPUHandle(CulledCommandsCountersSRV + frustum + frame * PerFrameDescriptorsCount));
 		}
 	}
 }
@@ -547,8 +552,8 @@ void ForwardRenderer::Draw()
 			_culler->Cull(
 				COMPUTE_COMMAND_LIST.Get(),
 				_visibleInstances[DX::FrameIndex].Get(),
-				_culledCommands[DX::FrameIndex],
-				_culledCommandsCounters[DX::FrameIndex]);
+				_culledCommands[DX::FrameIndex].Get(),
+				_culledCommandsCounters[DX::FrameIndex].Get());
 		}
 
 		//_profiler->FinishMeasure(COMPUTE_COMMAND_LIST.Get());

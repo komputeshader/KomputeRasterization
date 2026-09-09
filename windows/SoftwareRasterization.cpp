@@ -965,8 +965,8 @@ void SoftwareRasterization::_drawDepth()
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
 		1,
-		_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-		0,
+		_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+		_renderer->GetCulledCommandsCountersOffset(0),
 		nullptr,
 		0);
 
@@ -1024,8 +1024,8 @@ void SoftwareRasterization::_drawShadows()
 		COMMAND_LIST->ExecuteIndirect(
 			_dispatchCS.Get(),
 			1,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
-			0,
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(cascade),
 			nullptr,
 			0);
 
@@ -1218,8 +1218,8 @@ void SoftwareRasterization::_drawOpaque()
 	COMMAND_LIST->ExecuteIndirect(
 		_dispatchCS.Get(),
 		1,
-		_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-		0,
+		_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+		_renderer->GetCulledCommandsCountersOffset(0),
 		nullptr,
 		0);
 
