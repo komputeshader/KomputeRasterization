@@ -66,7 +66,7 @@ void HardwareRasterization::_createDepthBufferResources()
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 	auto optimizedClear = CD3DX12_CLEAR_VALUE(
 		_depthFormat,
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
+		0.0f,
 		0);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -274,7 +274,7 @@ void HardwareRasterization::_drawDepth()
 	COMMAND_LIST->ClearDepthStencilView(
 		DSVHandle,
 		D3D12_CLEAR_FLAG_DEPTH,
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
+		0.0f,
 		0,
 		0,
 		nullptr);
@@ -666,9 +666,7 @@ void HardwareRasterization::_createDepthPassPSO()
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState.DepthFunc = Scene::CurrentScene->camera.ReverseZ()
-		? D3D12_COMPARISON_FUNC_GREATER
-		: D3D12_COMPARISON_FUNC_LESS;
+	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
 	psoDesc.DSVFormat = _depthFormat;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;

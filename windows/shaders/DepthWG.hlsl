@@ -432,7 +432,6 @@ void TriangleRasterizationNode(
 
 							precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-							// TODO: account for non-reversed Z
 							InterlockedMax(Depth[uint2(x, y)], asuint(depth));
 
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -477,7 +476,6 @@ void TriangleRasterizationNode(
 
 								precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-								// TODO: account for non-reversed Z
 								InterlockedMax(Depth[uint2(x, y)], asuint(depth));
 							}
 

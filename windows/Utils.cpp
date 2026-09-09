@@ -385,9 +385,8 @@ void GetFrustumPlanes(XMMATRIX m, Frustum& f)
 	XMStoreFloat4(&f.r, XMPlaneNormalize(XMVectorAdd(r4, -r1)));
 	XMStoreFloat4(&f.b, XMPlaneNormalize(XMVectorAdd(r4, r2)));
 	XMStoreFloat4(&f.t, XMPlaneNormalize(XMVectorAdd(r4, -r2)));
-	XMStoreFloat4(&f.n, XMPlaneNormalize(r3));
-	// TODO: wtf is with far value?
-	XMStoreFloat4(&f.f, XMPlaneNormalize(XMVectorAdd(r4, -r3)));
+	XMStoreFloat4(&f.n, XMPlaneNormalize(XMVectorAdd(r4, -r3)));
+	XMStoreFloat4(&f.f, XMPlaneNormalize(r3));
 }
 
 unsigned int MipsCount(unsigned int width, unsigned int height)

@@ -130,16 +130,7 @@ void Camera::SetProjection(
 	_nearWindowHeight = nearZ * tmp;
 	_farWindowHeight = farZ * tmp;
 
-	XMMATRIX projection = XMMatrixPerspectiveFovLH(_fovY, _aspect, _nearZ, _farZ);
-	if (_reverseZ)
-	{
-		XMMATRIX reverseZ = XMMatrixSet(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, -1.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 1.0f);
-		projection *= reverseZ;
-	}
+	XMMATRIX projection = XMMatrixPerspectiveFovLH(_fovY, _aspect, _farZ, _nearZ);
 	XMStoreFloat4x4(&_projection, projection);
 	_prevFrameViewProjection = _viewProjection;
 	XMStoreFloat4x4(&_viewProjection, XMLoadFloat4x4(&_view) * projection);
@@ -150,11 +141,6 @@ void Camera::SetProjection(
 void Camera::_updateFrustumPlanes()
 {
 	Utils::GetFrustumPlanes(XMLoadFloat4x4(&_viewProjection), _frustum);
-
-	if (_reverseZ)
-	{
-		std::swap(_frustum.n, _frustum.f);
-	}
 }
 
 void Camera::LookAt(

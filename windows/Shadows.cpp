@@ -696,9 +696,6 @@ void Shadows::_updateFrustumPlanes()
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		Utils::GetFrustumPlanes(XMLoadFloat4x4(&_cascadeVP[cascade]), _cascadeFrustums[cascade]);
-
-		// reverse Z is used
-		std::swap(_cascadeFrustums[cascade].n, _cascadeFrustums[cascade].f);
 	}
 }
 
