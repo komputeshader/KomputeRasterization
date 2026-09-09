@@ -5,9 +5,18 @@
 
 inline float3 UnpackNormal(uint packed)
 {
-	constexpr float scale = 2.0f / 1023.0f;
+	// 1 / (2 ^ N - 1), N = 10, see Scene.cpp normal packing
+	float denom = 1.0f / 1023.0f;
 
-	return float3((packed >> 20) & 1023, (packed >> 10) & 1023, packed & 1023) * scale - 1.0f;
+	return float3(
+		uint((packed >> 20) & 0x3FF),
+		uint((packed >> 10) & 0x3FF),
+		uint(packed & 0x3FF)) * denom * 2.0f - float3(1.0f, 1.0f, 1.0f);
+}
+
+inline float3 UnpackNormal(VertexNormal packed)
+{
+	return UnpackNormal(packed.packedNormal);
 }
 
 inline float UnpackHalf(uint bits)
@@ -19,6 +28,11 @@ inline float4 UnpackColor(uint2 packed)
 {
 	return float4(
 		UnpackHalf(packed.x >> 16), UnpackHalf(packed.x), UnpackHalf(packed.y >> 16), UnpackHalf(packed.y));
+}
+
+inline float4 UnpackColor(VertexColor packed)
+{
+	return UnpackColor(packed.packedColor);
 }
 
 inline float2 UnpackTexcoords(uint packed)
@@ -38,6 +52,23 @@ inline uint SelectCascade(float depth, constant SceneCB& constants)
 	}
 
 	return selected;
+}
+
+inline float3 GetCascadeColor(float viewDepth, constant SceneCB& constants)
+{
+	constexpr float3 cascadeColors[8] =
+	{
+		float3(1, 0, 0),
+		float3(0, 1, 0),
+		float3(0, 0, 1),
+		float3(1, 1, 0),
+		float3(0.5f, 0, 0),
+		float3(0, 0.5f, 0),
+		float3(0, 0, 0.5f),
+		float3(0.5f, 0.5f, 0)
+	};
+
+	return cascadeColors[SelectCascade(viewDepth, constants)];
 }
 
 inline float GetShadow(

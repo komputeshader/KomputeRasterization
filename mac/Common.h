@@ -208,7 +208,9 @@ struct DepthSceneCB
 	uint32_t maxSceneMeshes = 0;
 	uint32_t maxSceneInstances = 0;
 	uint32_t hasHiZHistory = 0;
-	uint32_t padding[3] = {};
+	float cameraNear = 0.0f;
+	uint32_t nearPlaneClippingEnabled = 0;
+	uint32_t padding = 0;
 };
 
 struct SceneCB
@@ -233,7 +235,7 @@ struct SceneCB
 	uint32_t maxBigTriangles = 0;
 	uint32_t hasHiZHistory = 0;
 	uint32_t showOverdraw = 0;
-	uint32_t padding = 0;
+	float cameraNear = 0.0f;
 };
 
 enum class ScenesIndices : uint32_t
@@ -250,3 +252,5 @@ static_assert(sizeof(MeshMeta) == 80);
 static_assert(sizeof(Instance) == 80);
 static_assert(sizeof(BigTriangleDepth) == 40);
 static_assert(sizeof(BigTriangleOpaque) == 88);
+static_assert(sizeof(DepthSceneCB) == 144);
+static_assert(sizeof(SceneCB) == 736);

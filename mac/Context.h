@@ -13,6 +13,10 @@ extern id<MTLSharedEvent> SharedEvent;
 
 bool Initialize(MTKView* view);
 
+id<MTLCommandBuffer> CreateCommandBuffer(
+	id<MTLCommandQueue> queue,
+	NSString* label,
+	uint64_t frameNumber);
 id<MTLFunction> GetFunction(const char* name);
 id<MTLComputePipelineState> CreateComputePipeline(const char* name);
 id<MTLBuffer> CreateBuffer(

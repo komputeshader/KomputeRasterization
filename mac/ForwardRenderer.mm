@@ -484,13 +484,14 @@ void ForwardRenderer::Draw(MTKView* view)
 		ImGui::Render();
 		Update();
 		_stats.BeginFrame(Settings::SWREnabled);
+		++_frameNumber;
 
 		const bool culledCommandsRequired = Settings::CullingEnabled || Settings::SWREnabled;
 		uint64_t computeReady = _lastComputeValue;
 		if (culledCommandsRequired)
 		{
-			id<MTLCommandBuffer> culling = [Context::ComputeCommandQueue commandBuffer];
-			culling.label = @"GPU culling";
+			id<MTLCommandBuffer> culling = Context::CreateCommandBuffer(
+				Context::ComputeCommandQueue, @"GPU culling", _frameNumber);
 			_culler.Cull(
 				culling,
 				*_scene,
@@ -504,7 +505,8 @@ void ForwardRenderer::Draw(MTKView* view)
 
 		if (computeReady != 0)
 		{
-			id<MTLCommandBuffer> waitForCompute = [Context::CommandQueue commandBuffer];
+			id<MTLCommandBuffer> waitForCompute = Context::CreateCommandBuffer(
+				Context::CommandQueue, @"Wait for compute", _frameNumber);
 			[waitForCompute encodeWaitForEvent:Context::SharedEvent value:computeReady];
 			[waitForCompute commit];
 		}
@@ -515,8 +517,8 @@ void ForwardRenderer::Draw(MTKView* view)
 		{
 			const bool perTriangleHiZRasterizationCullingEnabled =
 				Settings::PerTriangleHiZRasterizationCullingEnabled;
-			graphics = [Context::CommandQueue commandBuffer];
-			graphics.label = @"Software frame";
+			graphics = Context::CreateCommandBuffer(
+				Context::CommandQueue, @"Software frame", _frameNumber);
 			_SWR.DrawDepths(graphics, *_scene, _culler, _shadows, _resources->previousCameraHiZ, _hasCameraHistory, _stats);
 			_generateHiZ(
 				graphics,
@@ -529,43 +531,27 @@ void ForwardRenderer::Draw(MTKView* view)
 		}
 		else if (Settings::AsyncComputeEnabled)
 		{
-			id<MTLCommandBuffer> depths = [Context::CommandQueue commandBuffer];
-			depths.label = @"Hardware depths";
+			id<MTLCommandBuffer> depths = Context::CreateCommandBuffer(
+				Context::CommandQueue, @"Hardware depths", _frameNumber);
 			_HWR.DrawDepths(depths, *_scene, _culler, _shadows, _stats);
 			const uint64_t depthsReady = ++_eventValue;
 			[depths encodeSignalEvent:Context::SharedEvent value:depthsReady];
-			[depths addCompletedHandler:^(id<MTLCommandBuffer> completed)
-			{
-				if (completed.status == MTLCommandBufferStatusError)
-				{
-					Utils::Log("Metal depth command buffer failed: %s\n",
-						completed.error.localizedDescription.UTF8String);
-				}
-			}];
 			[depths commit];
 
 			if (Settings::CameraHiZCullingEnabled ||
 				Settings::ShadowsHiZCullingEnabled)
 			{
-				id<MTLCommandBuffer> history = [Context::ComputeCommandQueue commandBuffer];
-				history.label = @"Async depth history";
+				id<MTLCommandBuffer> history = Context::CreateCommandBuffer(
+					Context::ComputeCommandQueue, @"Async depth history", _frameNumber);
 				[history encodeWaitForEvent:Context::SharedEvent value:depthsReady];
 				_generateHiZ(history, false, false);
 				_lastComputeValue = ++_eventValue;
 				[history encodeSignalEvent:Context::SharedEvent value:_lastComputeValue];
-				[history addCompletedHandler:^(id<MTLCommandBuffer> completed)
-				{
-					if (completed.status == MTLCommandBufferStatusError)
-					{
-						Utils::Log("Metal history command buffer failed: %s\n",
-							completed.error.localizedDescription.UTF8String);
-					}
-				}];
 				[history commit];
 			}
 
-			graphics = [Context::CommandQueue commandBuffer];
-			graphics.label = @"Hardware opaque frame";
+			graphics = Context::CreateCommandBuffer(
+				Context::CommandQueue, @"Hardware opaque frame", _frameNumber);
 			id<MTLRenderCommandEncoder> encoder =
 				_HWR.DrawOpaque(graphics, pass, *_scene, _culler, _shadows, _stats);
 			[encoder endEncoding];
@@ -573,8 +559,8 @@ void ForwardRenderer::Draw(MTKView* view)
 		}
 		else
 		{
-			graphics = [Context::CommandQueue commandBuffer];
-			graphics.label = @"Hardware frame";
+			graphics = Context::CreateCommandBuffer(
+				Context::CommandQueue, @"Hardware frame", _frameNumber);
 
 			_HWR.DrawDepths(graphics, *_scene, _culler, _shadows, _stats);
 			_generateHiZ(graphics, false, false);
@@ -595,10 +581,7 @@ void ForwardRenderer::Draw(MTKView* view)
 		dispatch_semaphore_t semaphore = _resources->frameSemaphore;
 		[graphics addCompletedHandler:^(id<MTLCommandBuffer> completed)
 		{
-			if (completed.status == MTLCommandBufferStatusError)
-			{
-				Utils::Log("Metal command buffer failed: %s\n", completed.error.localizedDescription.UTF8String);
-			}
+			(void)completed;
 
 			dispatch_semaphore_signal(semaphore);
 		}];

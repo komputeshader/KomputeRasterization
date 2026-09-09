@@ -61,6 +61,7 @@ private:
 
 	bool _keys[256] = {};
 	bool _hasCameraHistory = false;
+	uint64_t _frameNumber = 0;
 	uint64_t _eventValue = 0;
 	uint64_t _lastComputeValue = 0;
 };

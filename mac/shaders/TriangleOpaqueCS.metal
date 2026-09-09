@@ -5,241 +5,6 @@
 #include "Common.metal"
 #include "Rasterization.metal"
 
-inline void ShadeOpaquePixel(
-	uint2 pixel,
-	float weight0,
-	float weight1,
-	float z0NDC,
-	float z1NDC,
-	float z2NDC,
-	float invW0,
-	float invW1,
-	float invW2,
-	float3 p0WS,
-	float3 p1WS,
-	float3 p2WS,
-	float3 n0,
-	float3 n1,
-	float3 n2,
-	float3 c0,
-	float3 c1,
-	float3 c2,
-	constant SceneCB& constants,
-	device const uint* depth,
-	device const uint* shadowMap,
-	device atomic_uint* fragmentOverdraw,
-	texture2d<float, access::write> output)
-{
-	const uint pixelIndex = pixel.y * uint(constants.outputResolution.x) + pixel.x;
-
-	if (constants.showOverdraw)
-	{
-		atomic_fetch_add_explicit(&fragmentOverdraw[pixelIndex], 1u, memory_order_relaxed);
-		return;
-	}
-
-	if (depth[pixelIndex] !=
-		GetDepthBits(weight0, weight1, z0NDC, z1NDC, z2NDC))
-	{
-		return;
-	}
-
-	const float weight2 = 1.0f - weight0 - weight1;
-	const float viewDepth = 1.0f /
-		(weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
-	const float3 weights = float3(weight0, weight1, weight2) *
-		float3(invW0, invW1, invW2) * viewDepth;
-
-	output.write(
-		float4(
-			ShadePixel(
-				n0 * weights.x + n1 * weights.y + n2 * weights.z,
-				c0 * weights.x + c1 * weights.y + c2 * weights.z,
-				p0WS * weights.x + p1WS * weights.y + p2WS * weights.z,
-				viewDepth,
-				constants,
-				shadowMap),
-			1.0f),
-		pixel);
-}
-
-inline void RasterizeOpaque(
-	float2 p0SS,
-	float2 p1SS,
-	float2 p2SS,
-	float4 p0CS,
-	float4 p1CS,
-	float4 p2CS,
-	float3 p0WS,
-	float3 p1WS,
-	float3 p2WS,
-	float3 n0,
-	float3 n1,
-	float3 n2,
-	float3 c0,
-	float3 c1,
-	float3 c2,
-	float area,
-	float2 minP,
-	float2 maxP,
-	constant SceneCB& constants,
-	device const uint* depth,
-	device const uint* shadowMap,
-	device atomic_uint* fragmentOverdraw,
-	texture2d<float, access::write> output)
-{
-	const float invW0 = 1.0f / p0CS.w;
-	const float invW1 = 1.0f / p1CS.w;
-	const float invW2 = 1.0f / p2CS.w;
-
-	const float z0NDC = p0CS.z * invW0;
-	const float z1NDC = p1CS.z * invW1;
-	const float z2NDC = p2CS.z * invW2;
-
-	const float invArea = 1.0f / area;
-
-	float2 dxdy0;
-	float area0;
-	EdgeFunction(
-		p1SS, p2SS, minP,
-		area0, dxdy0);
-	float2 dxdy1;
-	float area1;
-	EdgeFunction(
-		p2SS, p0SS, minP,
-		area1, dxdy1);
-	float2 dxdy2;
-	float area2;
-	EdgeFunction(
-		p0SS, p1SS, minP,
-		area2, dxdy2);
-
-	if (constants.scanlineRasterization)
-	{
-		for (float y = minP.y; y <= maxP.y; y += 1.0f)
-		{
-			const float t0 = EdgeScanlineIntersection(p1SS, p2SS, y);
-			const float t1 = EdgeScanlineIntersection(p2SS, p0SS, y);
-			const float t2 = EdgeScanlineIntersection(p0SS, p1SS, y);
-
-			const bool t0Test = 0.0f <= t0 && t0 <= 1.0f;
-			const bool t1Test = 0.0f <= t1 && t1 <= 1.0f;
-			const bool t2Test = 0.0f <= t2 && t2 <= 1.0f;
-
-			if ((!t0Test && !t1Test) || (!t1Test && !t2Test) || (!t2Test && !t0Test))
-			{
-				continue;
-			}
-
-			const float x0 = mix(p1SS.x, p2SS.x, t0);
-			const float x1 = mix(p2SS.x, p0SS.x, t1);
-			const float x2 = mix(p0SS.x, p1SS.x, t2);
-
-			const float candidate0 = t0Test ? x0 : mix(x1, x2, 0.5f);
-			const float candidate1 = t1Test ? x1 : mix(x2, x0, 0.5f);
-			const float candidate2 = t2Test ? x2 : mix(x0, x1, 0.5f);
-
-			float xMin = min(candidate0, min(candidate1, candidate2));
-			float xMax = max(candidate0, max(candidate1, candidate2));
-
-			xMin = ceil(xMin - 0.5f) + 0.5f;
-
-			xMax += fract(xMax) == 0.5f ? -1.0f : 0.0f;
-
-			float area0Temporary = area0 - dxdy0.y * (xMin - minP.x);
-			float area1Temporary = area1 - dxdy1.y * (xMin - minP.x);
-
-			for (float x = xMin; x <= xMax; x += 1.0f)
-			{
-				ShadeOpaquePixel(
-					uint2(x, y),
-					area0Temporary * invArea,
-					area1Temporary * invArea,
-					z0NDC,
-					z1NDC,
-					z2NDC,
-					invW0,
-					invW1,
-					invW2,
-					p0WS,
-					p1WS,
-					p2WS,
-					n0,
-					n1,
-					n2,
-					c0,
-					c1,
-					c2,
-					constants,
-					depth,
-					shadowMap,
-					fragmentOverdraw,
-					output);
-
-				area0Temporary -= dxdy0.y;
-				area1Temporary -= dxdy1.y;
-			}
-
-			area0 += dxdy0.x;
-			area1 += dxdy1.x;
-		}
-	}
-	else
-	{
-		for (float y = minP.y; y <= maxP.y; y += 1.0f)
-		{
-			float area0Temporary = area0;
-			float area1Temporary = area1;
-			float area2Temporary = area2;
-
-			for (float x = minP.x; x <= maxP.x; x += 1.0f)
-			{
-				if (IsInsideTriangle(
-						area0Temporary,
-						area1Temporary,
-						area2Temporary,
-						p0SS,
-						p1SS,
-						p2SS))
-				{
-					ShadeOpaquePixel(
-						uint2(x, y),
-						area0Temporary * invArea,
-						area1Temporary * invArea,
-						z0NDC,
-						z1NDC,
-						z2NDC,
-						invW0,
-						invW1,
-						invW2,
-						p0WS,
-						p1WS,
-						p2WS,
-						n0,
-						n1,
-						n2,
-						c0,
-						c1,
-						c2,
-						constants,
-						depth,
-						shadowMap,
-						fragmentOverdraw,
-						output);
-				}
-
-				area0Temporary -= dxdy0.y;
-				area1Temporary -= dxdy1.y;
-				area2Temporary -= dxdy2.y;
-			}
-
-			area0 += dxdy0.x;
-			area1 += dxdy1.x;
-			area2 += dxdy2.x;
-		}
-	}
-}
-
 kernel void TriangleOpaqueCS(
 	device const VertexPosition* positions [[buffer(0)]],
 	device const VertexNormal* normals [[buffer(1)]],
@@ -252,7 +17,7 @@ kernel void TriangleOpaqueCS(
 	device atomic_uint* statistics [[buffer(10)]],
 	device BigTriangleOpaque* bigTriangles [[buffer(11)]],
 	device DispatchArguments& arguments [[buffer(12)]],
-	device const uint* depth [[buffer(6)]],
+	device const uint* depthBuffer [[buffer(6)]],
 	device const uint* shadowMap [[buffer(8)]],
 	device atomic_uint* fragmentOverdraw [[buffer(13)]],
 	texture2d<float, access::write> output [[texture(2)]],
@@ -285,149 +50,458 @@ kernel void TriangleOpaqueCS(
 
 		uint i0, i1, i2;
 		GetTriangleIndices(
-			indices,
-			constants.totalTriangles,
-			command.args.startIndexLocation + triangleIndex * 3,
-			i0,
-			i1,
-			i2);
+			indices, constants.totalTriangles, command.args.startIndexLocation + triangleIndex * 3,
+			i0, i1, i2);
 
-		i0 += command.args.baseVertexLocation;
-		i1 += command.args.baseVertexLocation;
-		i2 += command.args.baseVertexLocation;
+		float3 p0, p1, p2;
+		GetTriangleVertexPositions(
+			positions, i0, i1, i2, command.args.baseVertexLocation,
+			p0, p1, p2);
 
-		const float3 p0 = float3(positions[i0].position);
-		const float3 p1 = float3(positions[i1].position);
-		const float3 p2 = float3(positions[i2].position);
-
-		const float3 n0 = UnpackNormal(normals[i0].packedNormal);
-		const float3 n1 = UnpackNormal(normals[i1].packedNormal);
-		const float3 n2 = UnpackNormal(normals[i2].packedNormal);
-
-		const float3 baseColor0 = UnpackColor(colors[i0].packedColor).rgb;
-		const float3 baseColor1 = UnpackColor(colors[i1].packedColor).rgb;
-		const float3 baseColor2 = UnpackColor(colors[i2].packedColor).rgb;
+		VertexNormal n0P, n1P, n2P;
+		GetPackedVertexNormals(
+			normals, i0, i1, i2, command.args.baseVertexLocation,
+			n0P, n1P, n2P);
+		VertexColor c0P, c1P, c2P;
+		GetPackedVertexColors(
+			colors, i0, i1, i2, command.args.baseVertexLocation,
+			c0P, c1P, c2P);
 
 		for (uint instanceID = 0; instanceID < command.args.instanceCount; instanceID++)
 		{
-			atomic_fetch_add_explicit(&statisticsSM[0], 1, memory_order_relaxed);
-
-			const Instance instance = instances[command.startInstanceLocation + instanceID];
+			// one more triangle attempted to be rendered
+			atomic_fetch_add_explicit(&statisticsSM[0], 1u, memory_order_relaxed);
 
 			float3 p0WS, p1WS, p2WS;
 			float4 p0CS, p1CS, p2CS;
-			float2 p0SS, p1SS, p2SS;
-			float area;
-			float2 minP, maxP;
+			Instance instance = instances[command.startInstanceLocation + instanceID];
+			GetCSPositions(
+				instance, p0, p1, p2, constants.vp,
+				p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
-			if (!SetupTriangle(
-					p0,
-					p1,
-					p2,
-					instance,
-					constants.vp,
-					constants.outputResolution,
-					p0WS,
-					p1WS,
-					p2WS,
-					p0CS,
-					p1CS,
-					p2CS,
-					p0SS,
-					p1SS,
-					p2SS,
-					area,
-					minP,
-					maxP))
+			// near plane clipping handling adds to register pressure and processing costs,
+			// and could be avoided for most triangles by tagging meshlets, as crossing
+			// the near plane, at the culling stage
+			// however, that's an optimization for the concrete renderer architecture,
+			// and isn't the general rasterizer optimization
+			bool p0Behind = p0CS.z > constants.cameraNear;
+			bool p1Behind = p1CS.z > constants.cameraNear;
+			bool p2Behind = p2CS.z > constants.cameraNear;
+			float4 p3Helper = float4(0.0f, 0.0f, 0.0f, 0.0f);
+			bool quadrilateral = false;
+
+			if (p0Behind || p1Behind || p2Behind)
 			{
-				continue;
-			}
-
-			const float z0NDC = p0CS.z * (1.0f / p0CS.w);
-			const float z1NDC = p1CS.z * (1.0f / p1CS.w);
-			const float z2NDC = p2CS.z * (1.0f / p2CS.w);
-
-			if (constants.perTriangleHiZCullingEnabled && constants.hasHiZHistory &&
-				!TriangleVsHiZ(
-					minP,
-					maxP,
-					max(z0NDC, max(z1NDC, z2NDC)),
-					constants.inverseOutputResolution,
-					previousDepth))
-			{
-				continue;
-			}
-
-			atomic_fetch_add_explicit(&statisticsSM[1], 1, memory_order_relaxed);
-
-			const float2 dimensions = maxP - minP;
-
-			if (dimensions.x * dimensions.y >= constants.bigTriangleThreshold)
-			{
-				BigTriangleOpaque result;
-				result.p0WS = packed_float3(p0WS);
-				result.p1WS = packed_float3(p1WS);
-				result.p2WS = packed_float3(p2WS);
-
-				result.packedNormal0 = normals[i0].packedNormal;
-				result.packedNormal1 = normals[i1].packedNormal;
-				result.packedNormal2 = normals[i2].packedNormal;
-
-				result.packedColor0 = colors[i0].packedColor;
-				result.packedColor1 = colors[i1].packedColor;
-				result.packedColor2 = colors[i2].packedColor;
-
-				result.packedUV0 = 0;
-				result.packedUV1 = 0;
-				result.packedUV2 = 0;
-
-				const float2 tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
-				const uint totalTiles = uint(tilesCount.x * tilesCount.y);
-				bool enqueued = true;
-
-				for (uint offset = 0; offset < totalTiles; offset++)
+				if (p0Behind && p1Behind && p2Behind)
 				{
-					result.tileOffset = float(offset);
-
-					enqueued &= EnqueueBigTriangle(
-						result,
-						bigTriangles,
-						arguments,
-						constants.maxBigTriangles);
+					continue;
 				}
 
-				if (enqueued)
+				//        p2                             p2
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p1
+				//   p0        p1
+				if (p0Behind && p1Behind)
+				{
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
+					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
+				}
+
+				//        p0                             p0
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p2      p1
+				//   p2        p1
+				else if (p1Behind && p2Behind)
+				{
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
+					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
+				}
+
+				//        p1                             p1
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p2
+				//   p0        p2
+				else if (p2Behind && p0Behind)
+				{
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
+					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
+				}
+
+				//  p1________p2                p1________p2
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p0
+				//       p0
+				else if (p0Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
+
+				//  p2________p0                p2________p0
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p1
+				//       p1
+				else if (p1Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
+
+				//  p0________p1                p0________p1
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p2
+				//       p2
+				else if (p2Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
+			}
+
+			// 1 / z for each vertex (z in VS)
+			float invW0 = 1.0f / p0CS.w;
+			float invW1 = 1.0f / p1CS.w;
+			float invW2 = 1.0f / p2CS.w;
+
+			float2 p0SS, p1SS, p2SS;
+			GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, constants.outputResolution, p0SS, p1SS, p2SS);
+
+			float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
+
+			// backface if negative
+			if (area <= 0.0f)
+			{
+				continue;
+			}
+
+			float z0NDC = p0CS.z * invW0;
+			float z1NDC = p1CS.z * invW1;
+			float z2NDC = p2CS.z * invW2;
+
+			float3 minP = min(min(float3(p0SS.xy, z0NDC), float3(p1SS.xy, z1NDC)), float3(p2SS.xy, z2NDC));
+			float3 maxP = max(max(float3(p0SS.xy, z0NDC), float3(p1SS.xy, z1NDC)), float3(p2SS.xy, z2NDC));
+
+			// frustum culling
+			if (minP.x >= constants.outputResolution.x || maxP.x < 0.0f || maxP.y < 0.0f || minP.y >= constants.outputResolution.y)
+			{
+				continue;
+			}
+
+			ClampToScreenBounds(minP, maxP, constants.outputResolution);
+
+			// small triangles between pixel centers
+			// https://frostbite-wp-prd.s3.amazonaws.com/wp-content/uploads/2016/03/29204330/GDC_2016_Compute.pdf
+			if (any(round(minP.xy) == round(maxP.xy)))
+			{
+				continue;
+			}
+
+			minP.xy = SnapMinBoundToPixelCenter(minP.xy);
+
+			float2 dimensions = maxP.xy - minP.xy;
+
+			// Hi-Z
+			if (constants.perTriangleHiZCullingEnabled && constants.hasHiZHistory)
+			{
+				const float maximumDepth = maxP.z;
+				const bool visible = TriangleVsHiZ(
+					minP.xy, maxP.xy, maximumDepth, constants.inverseOutputResolution,
+					previousDepth);
+
+				if (!visible)
 				{
 					continue;
 				}
 			}
 
-			const float3 meshletColor = float3(instance.color);
+			// one more triangle was rendered
+			// not precise, though, since it still could miss any pixel centers
+			atomic_fetch_add_explicit(&statisticsSM[1], 1u, memory_order_relaxed);
+			if (dimensions.x * dimensions.y >= constants.bigTriangleThreshold || quadrilateral)
+			{
+				BigTriangleOpaque result;
+				result.p0WSX = p0WS.x;
+				result.p0WSY = p0WS.y;
+				result.p0WSZ = p0WS.z;
+				result.p1WSX = p1WS.x;
+				result.p1WSY = p1WS.y;
+				result.p1WSZ = p1WS.z;
+				result.p2WSX = p2WS.x;
+				result.p2WSY = p2WS.y;
+				result.p2WSZ = p2WS.z;
+				result.packedNormal0 = n0P.packedNormal;
+				result.packedNormal1 = n1P.packedNormal;
+				result.packedNormal2 = n2P.packedNormal;
+				result.packedColor0X = c0P.packedColor.x;
+				result.packedColor0Y = c0P.packedColor.y;
+				result.packedColor1X = c1P.packedColor.x;
+				result.packedColor1Y = c1P.packedColor.y;
+				result.packedColor2X = c2P.packedColor.x;
+				result.packedColor2Y = c2P.packedColor.y;
+				// TODO: add this
+				result.packedUV0 = 0;
+				result.packedUV1 = 0;
+				result.packedUV2 = 0;
 
-			RasterizeOpaque(
-				p0SS,
-				p1SS,
-				p2SS,
-				p0CS,
-				p1CS,
-				p2CS,
-				p0WS,
-				p1WS,
-				p2WS,
-				n0,
-				n1,
-				n2,
-				constants.showMeshlets ? meshletColor : baseColor0,
-				constants.showMeshlets ? meshletColor : baseColor1,
-				constants.showMeshlets ? meshletColor : baseColor2,
-				area,
-				minP,
-				maxP,
-				constants,
-				depth,
-				shadowMap,
-				fragmentOverdraw,
-				output);
+				float2 tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
+				float totalTiles = tilesCount.x * tilesCount.y;
+				for (float offset = 0.0f; offset < totalTiles; offset += 1.0f)
+				{
+					result.tileOffset = offset;
+
+					// seemingly vastly inefficient way to write out that data,
+					// but the more reasonable/parallel approach isn't faster, and is in fact slower
+					// see the same code in the "experimental" branch
+					EnqueueBigTriangle(result, bigTriangles, arguments, constants.maxBigTriangles);
+				}
+
+				if (quadrilateral)
+				{
+					// screen-space coordinate of the fourth clipped vertex
+					p3Helper.xy = (p3Helper.xy / p3Helper.w * float2(0.5f, -0.5f) + float2(0.5f, 0.5f)) * constants.outputResolution;
+
+					if (p0Behind)
+					{
+						minP.xy = min(p3Helper.xy, min(p0SS, p1SS));
+						maxP.xy = max(p3Helper.xy, max(p0SS, p1SS));
+					}
+					else if (p1Behind)
+					{
+						minP.xy = min(p3Helper.xy, min(p1SS, p2SS));
+						maxP.xy = max(p3Helper.xy, max(p1SS, p2SS));
+					}
+					else
+					{
+						minP.xy = min(p3Helper.xy, min(p0SS, p2SS));
+						maxP.xy = max(p3Helper.xy, max(p0SS, p2SS));
+					}
+
+					ClampToScreenBounds(minP, maxP, constants.outputResolution);
+					minP.xy = SnapMinBoundToPixelCenter(minP.xy);
+					dimensions = maxP.xy - minP.xy;
+
+					tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
+					totalTiles = tilesCount.x * tilesCount.y;
+					for (float offset = 0.0f; offset < totalTiles; offset += 1.0f)
+					{
+						// the sign bit selects the second triangle produced from the clipped quad
+						result.tileOffset = as_type<float>(as_type<uint>(offset) | 0x80000000);
+						EnqueueBigTriangle(result, bigTriangles, arguments, constants.maxBigTriangles);
+					}
+				}
+
+				continue;
+			}
+
+			float3 n0 = UnpackNormal(n0P);
+			float3 n1 = UnpackNormal(n1P);
+			float3 n2 = UnpackNormal(n2P);
+			float4 c0 = UnpackColor(c0P);
+			float4 c1 = UnpackColor(c1P);
+			float4 c2 = UnpackColor(c2P);
+
+			float invArea = 1.0f / area;
+
+			// https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf
+			float2 dxdy0;
+			float area0;
+			EdgeFunction(p1SS.xy, p2SS.xy, minP.xy, area0, dxdy0);
+			float2 dxdy1;
+			float area1;
+			EdgeFunction(p2SS.xy, p0SS.xy, minP.xy, area1, dxdy1);
+			float2 dxdy2;
+			float area2;
+			EdgeFunction(p0SS.xy, p1SS.xy, minP.xy, area2, dxdy2);
+
+			if (constants.scanlineRasterization)
+			{
+				for (float y = minP.y; y <= maxP.y; y += 1.0f)
+				{
+					float t0 = EdgeScanlineIntersection(p1SS.xy, p2SS.xy, y);
+					float t1 = EdgeScanlineIntersection(p2SS.xy, p0SS.xy, y);
+					float t2 = EdgeScanlineIntersection(p0SS.xy, p1SS.xy, y);
+
+					bool t0Test = (0.0f <= t0 && t0 <= 1.0f);
+					bool t1Test = (0.0f <= t1 && t1 <= 1.0f);
+					bool t2Test = (0.0f <= t2 && t2 <= 1.0f);
+
+					// no intersection with a scanline
+					if ((!t0Test && !t1Test) || (!t1Test && !t2Test) || (!t2Test && !t0Test))
+					{
+						continue;
+					}
+
+					float x0 = mix(p1SS.x, p2SS.x, t0);
+					float x1 = mix(p2SS.x, p0SS.x, t1);
+					float x2 = mix(p0SS.x, p1SS.x, t2);
+
+					// filtering out redundant intersection
+					float candidate0 = t0Test ? x0 : mix(x1, x2, 0.5f);
+					float candidate1 = t1Test ? x1 : mix(x2, x0, 0.5f);
+					float candidate2 = t2Test ? x2 : mix(x0, x1, 0.5f);
+
+					float xMin = min(candidate0, min(candidate1, candidate2));
+					float xMax = max(candidate0, max(candidate1, candidate2));
+
+					ClampScanline(minP.x, maxP.x, xMin, xMax);
+
+					float area0tmp = area0 - dxdy0.y * (xMin - minP.x);
+					float area1tmp = area1 - dxdy1.y * (xMin - minP.x);
+					float area2tmp = area2 - dxdy2.y * (xMin - minP.x);
+
+					for (float x = xMin; x <= xMax; x += 1.0f)
+					{
+						// convert to barycentric weights
+						float weight0 = area0tmp * invArea;
+						float weight1 = area1tmp * invArea;
+						float weight2 = area2tmp * invArea;
+
+						float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
+
+						uint2 pixelCoord = uint2(x, y);
+						if (constants.showOverdraw)
+						{
+							atomic_fetch_add_explicit(&fragmentOverdraw[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x], 1u, memory_order_relaxed);
+						}
+						// early z test
+						else if (as_type<float>(depthBuffer[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x]) == depth)
+						{
+							// for perspective-correct interpolation
+							float denom = 1.0f / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
+
+							float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+							N = normalize(N);
+
+							float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+							if (constants.showMeshlets)
+							{
+								color = float3(instance.color);
+							}
+
+							float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+							float NdotL = saturate(dot(constants.sunDirection.xyz, N));
+							float viewDepth = denom;
+							float shadow = GetShadow(viewDepth, positionWS, constants, shadowMap);
+							float3 ambient = 0.2f * SkyColor.rgb;
+
+							float3 result = color * (NdotL * shadow + ambient);
+							if (constants.showCascades)
+							{
+								result = GetCascadeColor(viewDepth, constants);
+								result *= (NdotL * shadow + ambient);
+							}
+
+							output.write(float4(result, 1.0f), pixelCoord);
+						}
+
+						// E(x + a, y + b) = E(x, y) - a * dy + b * dx
+						area0tmp -= dxdy0.y;
+						area1tmp -= dxdy1.y;
+						area2tmp -= dxdy2.y;
+					}
+
+					area0 += dxdy0.x;
+					area1 += dxdy1.x;
+					area2 += dxdy2.x;
+				}
+			}
+			else
+			{
+				//  --->----
+				// |
+				//  --->----
+				// |
+				//  --->----
+				// etc.
+				for (float y = minP.y; y <= maxP.y; y += 1.0f)
+				{
+					float area0tmp = area0;
+					float area1tmp = area1;
+					float area2tmp = area2;
+					for (float x = minP.x; x <= maxP.x; x += 1.0f)
+					{
+						// edge tests, "frustum culling" for 3 lines in 2D
+						bool insideTriangle = true;
+						insideTriangle = insideTriangle && (EdgeIsTopLeft(p1SS.xy, p2SS.xy) ? (area0tmp >= 0.0f) : (area0tmp > 0.0f));
+						insideTriangle = insideTriangle && (EdgeIsTopLeft(p2SS.xy, p0SS.xy) ? (area1tmp >= 0.0f) : (area1tmp > 0.0f));
+						insideTriangle = insideTriangle && (EdgeIsTopLeft(p0SS.xy, p1SS.xy) ? (area2tmp >= 0.0f) : (area2tmp > 0.0f));
+						if (insideTriangle)
+						{
+							// convert to barycentric weights
+							float weight0 = area0tmp * invArea;
+							float weight1 = area1tmp * invArea;
+							float weight2 = area2tmp * invArea;
+
+							float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
+
+							uint2 pixelCoord = uint2(x, y);
+							if (constants.showOverdraw)
+							{
+								atomic_fetch_add_explicit(&fragmentOverdraw[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x], 1u, memory_order_relaxed);
+							}
+							// early z test
+							else if (as_type<float>(depthBuffer[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x]) == depth)
+							{
+								// for perspective-correct interpolation
+								float denom = 1.0f / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
+
+								float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+								N = normalize(N);
+
+								float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+								if (constants.showMeshlets)
+								{
+									color = float3(instance.color);
+								}
+
+								float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+								float NdotL = saturate(dot(constants.sunDirection.xyz, N));
+								float viewDepth = denom;
+								float shadow = GetShadow(viewDepth, positionWS, constants, shadowMap);
+								float3 ambient = 0.2f * SkyColor.rgb;
+
+								float3 result = color * (NdotL * shadow + ambient);
+								if (constants.showCascades)
+								{
+									result = GetCascadeColor(viewDepth, constants);
+									result *= (NdotL * shadow + ambient);
+								}
+
+								output.write(float4(result, 1.0f), pixelCoord);
+							}
+						}
+
+						// E(x + a, y + b) = E(x, y) - a * dy + b * dx
+						area0tmp -= dxdy0.y;
+						area1tmp -= dxdy1.y;
+						area2tmp -= dxdy2.y;
+					}
+
+					area0 += dxdy0.x;
+					area1 += dxdy1.x;
+					area2 += dxdy2.x;
+				}
+			}
 		}
 	}
 

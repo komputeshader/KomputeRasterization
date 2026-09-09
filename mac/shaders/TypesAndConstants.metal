@@ -5,16 +5,7 @@
 
 using namespace metal;
 
-constant uint MAX_CASCADES_COUNT = 8;
-constant uint INDICES_STRIDE = 3;
-
-constant uint SWR_TRIANGLE_THREADS_X = 64;
-constant uint TRIANGLES_PER_THREAD = 4;
-constant uint SWR_THREAD_GROUPS_Y = 1;
-
-constant uint SWR_BIG_TRIANGLE_THREADS_X = 8;
-constant uint SWR_BIG_TRIANGLE_THREADS_Y = 8;
-constant uint SWR_BIG_TRIANGLE_THREADS_Z = 1;
+#include "../CPUGPUCommon.h"
 
 constant float4 SkyColor = float4(136.0f, 198.0f, 252.0f, 255.0f) / 255.0f;
 
@@ -141,7 +132,9 @@ struct DepthSceneCB
 	uint maxSceneInstances;
 	uint hasHiZHistory;
 
-	uint3 padding;
+	float cameraNear;
+	uint nearPlaneClippingEnabled;
+	uint padding;
 };
 
 struct SceneCB
@@ -167,33 +160,53 @@ struct SceneCB
 	uint hasHiZHistory;
 
 	uint showOverdraw;
-	uint padding;
+	float cameraNear;
 };
 
 struct BigTriangleDepth
 {
 	float tileOffset;
-	packed_float3 p0WS;
-	packed_float3 p1WS;
-	packed_float3 p2WS;
+	float p0WSX;
+	float p0WSY;
+	float p0WSZ;
+	float p1WSX;
+	float p1WSY;
+	float p1WSZ;
+	float p2WSX;
+	float p2WSY;
+	float p2WSZ;
 };
 
 struct BigTriangleOpaque
 {
 	float tileOffset;
-	packed_float3 p0WS;
-	packed_float3 p1WS;
-	packed_float3 p2WS;
+	float p0WSX;
+	float p0WSY;
+	float p0WSZ;
+	float p1WSX;
+	float p1WSY;
+	float p1WSZ;
+	float p2WSX;
+	float p2WSY;
+	float p2WSZ;
 	uint packedNormal0;
 	uint packedNormal1;
 	uint packedNormal2;
-	uint2 packedColor0;
-	uint2 packedColor1;
-	uint2 packedColor2;
+	uint packedColor0X;
+	uint packedColor0Y;
+	uint packedColor1X;
+	uint packedColor1Y;
+	uint packedColor2X;
+	uint packedColor2Y;
 	uint packedUV0;
 	uint packedUV1;
 	uint packedUV2;
 };
+
+static_assert(sizeof(BigTriangleDepth) == 40, "BigTriangleDepth must match the CPU layout");
+static_assert(sizeof(BigTriangleOpaque) == 88, "BigTriangleOpaque must match the CPU layout");
+static_assert(sizeof(DepthSceneCB) == 144, "DepthSceneCB must match the CPU layout");
+static_assert(sizeof(SceneCB) == 736, "SceneCB must match the CPU layout");
 
 struct DispatchArguments
 {

@@ -217,6 +217,8 @@ void SoftwareRasterization::_drawDepth(
 	constants.maxSceneMeshes = culler.GetMaxMeshes();
 	constants.maxSceneInstances = culler.GetMaxInstances();
 	constants.hasHiZHistory = frustum == 0 ? hasCameraHistory : shadows.HasHistory();
+	constants.cameraNear = scene.camera.GetNearZ();
+	constants.nearPlaneClippingEnabled = frustum == 0;
 
 	[encoder setComputePipelineState:frustum == 0
 		? _resources->triangleDepth
@@ -255,6 +257,8 @@ void SoftwareRasterization::_drawDepthBigTriangles(
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	constants.frustumIndex = frustum;
 	constants.maxBigTriangles = _maxBigTrianglesDepth[frustum];
+	constants.cameraNear = scene.camera.GetNearZ();
+	constants.nearPlaneClippingEnabled = frustum == 0;
 
 	[encoder setComputePipelineState:frustum == 0
 		? _resources->bigTriangleDepth
@@ -378,6 +382,7 @@ void SoftwareRasterization::DrawOpaque(
 		Settings::PerTriangleHiZRasterizationCullingEnabled;
 	constants.maxBigTriangles = _maxBigTrianglesOpaque;
 	constants.hasHiZHistory = hasCameraHistory;
+	constants.cameraNear = scene.camera.GetNearZ();
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		constants.cascadeVP[cascade] = shadows.GetCascadeVP(cascade);

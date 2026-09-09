@@ -1,10 +1,13 @@
 #include "Context.h"
 
+#include "Settings.h"
 #include "Utils.h"
 
 #import <Foundation/Foundation.h>
 
 #include <cstring>
+#include <sys/sysctl.h>
+#include <unistd.h>
 
 id<MTLDevice> Context::Device = nil;
 id<MTLCommandQueue> Context::CommandQueue = nil;
@@ -15,6 +18,7 @@ namespace
 {
 
 	id<MTLLibrary> Library = nil;
+	bool EncoderExecutionStatusEnabled = false;
 
 }
 
@@ -44,6 +48,14 @@ bool Context::Initialize(MTKView* view)
 	SharedEvent = [Device newSharedEvent];
 	SharedEvent.label = @"Graphics/compute synchronization";
 
+	// capture GPU progress in Release too when launched with a debugger
+	int query[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+	kinfo_proc process = {};
+	size_t processSize = sizeof(process);
+	EncoderExecutionStatusEnabled =
+		sysctl(query, 4, &process, &processSize, nullptr, 0) == 0 &&
+		(process.kp_proc.p_flag & P_TRACED) != 0;
+
 	Library = [Device newDefaultLibrary];
 	if (!Library)
 	{
@@ -53,6 +65,60 @@ bool Context::Initialize(MTKView* view)
 
 	Utils::Log("Metal device: %s\n", Device.name.UTF8String);
 	return true;
+}
+
+id<MTLCommandBuffer> Context::CreateCommandBuffer(
+	id<MTLCommandQueue> queue,
+	NSString* label,
+	uint64_t frameNumber)
+{
+	MTLCommandBufferDescriptor* descriptor = [MTLCommandBufferDescriptor new];
+	descriptor.errorOptions = EncoderExecutionStatusEnabled
+		? MTLCommandBufferErrorOptionEncoderExecutionStatus
+		: MTLCommandBufferErrorOptionNone;
+	id<MTLCommandBuffer> commandBuffer = [queue commandBufferWithDescriptor:descriptor];
+	commandBuffer.label = label;
+
+	// snapshot settings for this submission
+	// completion runs on a driver thread
+	const bool softwareRasterization = Settings::SWREnabled;
+	const bool culling = Settings::CullingEnabled;
+	const bool perTriangleHiZ = Settings::PerTriangleHiZRasterizationCullingEnabled;
+	const uint32_t width = Settings::RenderWidth;
+	const uint32_t height = Settings::RenderHeight;
+	const int cascades = Settings::CascadesCount;
+	[commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> completed)
+	{
+		if (completed.status != MTLCommandBufferStatusError)
+		{
+			return;
+		}
+
+		Utils::Log("Metal command buffer failed: %s, error=%ld, frame=%llu, SWR=%d\n",
+			completed.label.UTF8String, static_cast<long>(completed.error.code),
+			static_cast<unsigned long long>(frameNumber), softwareRasterization);
+		Utils::Log("Metal settings: resolution=%ux%u, culling=%d, per-triangle Hi-Z=%d, cascades=%d\n",
+			width, height, culling, perTriangleHiZ, cascades);
+		Utils::Log("%s\n", completed.error.description.UTF8String);
+		NSArray<id<MTLCommandBufferEncoderInfo>>* encoders =
+			completed.error.userInfo[MTLCommandBufferEncoderInfoErrorKey];
+		for (id<MTLCommandBufferEncoderInfo> encoder in encoders)
+		{
+			if (encoder.errorState == MTLCommandEncoderErrorStateCompleted)
+			{
+				continue;
+			}
+
+			Utils::Log("Metal encoder: %s, state=%ld\n",
+				encoder.label.UTF8String, static_cast<long>(encoder.errorState));
+			for (NSString* signpost in encoder.debugSignposts)
+			{
+				Utils::Log("Metal signpost: %s\n", signpost.UTF8String);
+			}
+		}
+	}];
+
+	return commandBuffer;
 }
 
 id<MTLFunction> Context::GetFunction(const char* name)
