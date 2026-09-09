@@ -60,3 +60,17 @@ fragment float4 DrawOverdrawDisplayPS(
 	const uint count = quadOverdraw[quadID.y * quadWidth + quadID.x];
 	return float4(OverdrawColor(count), 1.0f);
 }
+
+kernel void DrawOverdrawDisplayCS(
+	device const uint* fragmentOverdraw [[buffer(0)]],
+	texture2d<float, access::write> output [[texture(0)]],
+	uint2 pixel [[thread_position_in_grid]])
+{
+	const uint width = output.get_width();
+	if (pixel.x >= width || pixel.y >= output.get_height())
+	{
+		return;
+	}
+
+	output.write(float4(OverdrawColor(fragmentOverdraw[pixel.y * width + pixel.x]), 1.0f), pixel);
+}

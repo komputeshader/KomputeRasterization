@@ -232,7 +232,8 @@ struct SceneCB
 	uint32_t perTriangleHiZCullingEnabled = 0;
 	uint32_t maxBigTriangles = 0;
 	uint32_t hasHiZHistory = 0;
-	uint32_t padding[2] = {};
+	uint32_t showOverdraw = 0;
+	uint32_t padding = 0;
 };
 
 enum class ScenesIndices : uint32_t

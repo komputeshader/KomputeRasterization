@@ -166,7 +166,8 @@ struct SceneCB
 	uint maxBigTriangles;
 	uint hasHiZHistory;
 
-	uint2 padding;
+	uint showOverdraw;
+	uint padding;
 };
 
 struct BigTriangleDepth

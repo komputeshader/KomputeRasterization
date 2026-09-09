@@ -27,9 +27,18 @@ inline void ShadeOpaquePixel(
 	constant SceneCB& constants,
 	device const uint* depth,
 	device const uint* shadowMap,
+	device atomic_uint* fragmentOverdraw,
 	texture2d<float, access::write> output)
 {
-	if (depth[pixel.y * uint(constants.outputResolution.x) + pixel.x] !=
+	const uint pixelIndex = pixel.y * uint(constants.outputResolution.x) + pixel.x;
+
+	if (constants.showOverdraw)
+	{
+		atomic_fetch_add_explicit(&fragmentOverdraw[pixelIndex], 1u, memory_order_relaxed);
+		return;
+	}
+
+	if (depth[pixelIndex] !=
 		GetDepthBits(weight0, weight1, z0NDC, z1NDC, z2NDC))
 	{
 		return;
@@ -76,6 +85,7 @@ inline void RasterizeOpaque(
 	constant SceneCB& constants,
 	device const uint* depth,
 	device const uint* shadowMap,
+	device atomic_uint* fragmentOverdraw,
 	texture2d<float, access::write> output)
 {
 	const float invW0 = 1.0f / p0CS.w;
@@ -157,6 +167,7 @@ inline void RasterizeOpaque(
 					constants,
 					depth,
 					shadowMap,
+					fragmentOverdraw,
 					output);
 
 				area0Temporary -= dxdy0.y;
@@ -207,6 +218,7 @@ inline void RasterizeOpaque(
 						constants,
 						depth,
 						shadowMap,
+						fragmentOverdraw,
 						output);
 				}
 
@@ -236,6 +248,7 @@ kernel void TriangleOpaqueCS(
 	device DispatchArguments& arguments [[buffer(12)]],
 	device const uint* depth [[buffer(6)]],
 	device const uint* shadowMap [[buffer(8)]],
+	device atomic_uint* fragmentOverdraw [[buffer(13)]],
 	texture2d<float, access::write> output [[texture(2)]],
 	texture2d<float> previousDepth [[texture(3)]],
 	uint3 groupID [[threadgroup_position_in_grid]],
@@ -407,6 +420,7 @@ kernel void TriangleOpaqueCS(
 				constants,
 				depth,
 				shadowMap,
+				fragmentOverdraw,
 				output);
 		}
 	}

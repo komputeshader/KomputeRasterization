@@ -15,6 +15,7 @@ struct SoftwareRasterization::Resources
 {
 	id<MTLTexture> renderTarget = nil;
 	id<MTLBuffer> depth = nil;
+	id<MTLBuffer> overdrawBuffer = nil;
 	id<MTLBuffer> bigTrianglesDepth[MAX_FRUSTUMS_COUNT] = {};
 	id<MTLBuffer> bigTrianglesDepthCounters[MAX_FRUSTUMS_COUNT] = {};
 	id<MTLBuffer> bigTrianglesOpaque = nil;
@@ -31,6 +32,7 @@ struct SoftwareRasterization::Resources
 	id<MTLComputePipelineState> bigTriangleShadow = nil;
 	id<MTLComputePipelineState> triangleOpaque = nil;
 	id<MTLComputePipelineState> bigTriangleOpaque = nil;
+	id<MTLComputePipelineState> overdrawDisplay = nil;
 };
 
 namespace
@@ -72,6 +74,7 @@ void SoftwareRasterization::Initialize(uint32_t width, uint32_t height)
 	_resources->bigTriangleShadow = Context::CreateComputePipeline("BigTriangleShadowCS");
 	_resources->triangleOpaque = Context::CreateComputePipeline("TriangleOpaqueCS");
 	_resources->bigTriangleOpaque = Context::CreateComputePipeline("BigTriangleOpaqueCS");
+	_resources->overdrawDisplay = Context::CreateComputePipeline("DrawOverdrawDisplayCS");
 
 	for (uint32_t frameIndex = 0; frameIndex < 2; frameIndex++)
 	{
@@ -129,6 +132,11 @@ void SoftwareRasterization::Resize(uint32_t width, uint32_t height)
 		static_cast<NSUInteger>(_width) * _height * sizeof(uint32_t),
 		MTLResourceStorageModePrivate,
 		@"Software camera depth");
+	_resources->overdrawBuffer = Context::CreateBuffer(
+		nullptr,
+		static_cast<NSUInteger>(_width) * _height * sizeof(uint32_t),
+		MTLResourceStorageModePrivate,
+		@"Software fragment overdraw");
 	_createBigTrianglesBuffers();
 }
 
@@ -326,6 +334,16 @@ void SoftwareRasterization::DrawOpaque(
 	bool hasCameraHistory,
 	FrameStatistics& statistics)
 {
+	if (Settings::ShowOverdraw)
+	{
+		id<MTLBlitCommandEncoder> clear = [commandBuffer blitCommandEncoder];
+		clear.label = @"Clear software fragment overdraw";
+		[clear fillBuffer:_resources->overdrawBuffer
+			range:NSMakeRange(0, _resources->overdrawBuffer.length)
+			value:0];
+		[clear endEncoding];
+	}
+
 	id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
 	encoder.label = @"Software opaque";
 	statistics.BeginMeasure(encoder);
@@ -351,6 +369,7 @@ void SoftwareRasterization::DrawOpaque(
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	constants.showCascades = shadows.ShowCascades();
 	constants.showMeshlets = Settings::ShowMeshlets;
+	constants.showOverdraw = Settings::ShowOverdraw;
 	constants.cascadesCount = Settings::CascadesCount;
 	constants.scanlineRasterization = _scanlineRasterization;
 	constants.shadowsDistance = shadows.GetShadowDistance();
@@ -380,6 +399,7 @@ void SoftwareRasterization::DrawOpaque(
 	[encoder setBuffer:_resources->bigTrianglesOpaqueCounter offset:0 atIndex:12];
 	[encoder setBuffer:_resources->depth offset:0 atIndex:6];
 	[encoder setBuffer:shadows.GetShadowMapSWR() offset:0 atIndex:8];
+	[encoder setBuffer:_resources->overdrawBuffer offset:0 atIndex:Bindings::FragmentOverdraw];
 	[encoder setTexture:_resources->renderTarget atIndex:2];
 	[encoder setTexture:previousCameraHiZ atIndex:3];
 	[encoder dispatchThreadgroupsWithIndirectBuffer:culler.GetSoftwareDispatchArguments()
@@ -394,6 +414,13 @@ void SoftwareRasterization::DrawOpaque(
 			SWR_BIG_TRIANGLE_THREADS_X,
 			SWR_BIG_TRIANGLE_THREADS_Y,
 			1)];
+	if (Settings::ShowOverdraw)
+	{
+		[encoder memoryBarrierWithScope:MTLBarrierScopeBuffers | MTLBarrierScopeTextures];
+		[encoder setBuffer:_resources->overdrawBuffer offset:0 atIndex:0];
+		[encoder setTexture:_resources->renderTarget atIndex:0];
+		Dispatch2D(encoder, _resources->overdrawDisplay, _width, _height);
+	}
 	statistics.FinishMeasure(encoder);
 	[encoder endEncoding];
 

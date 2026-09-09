@@ -16,7 +16,8 @@ enum Buffers
 	Counters = 8,
 	Commands = 9,
 	Statistics = 10,
-	BigTriangles = 11
+	BigTriangles = 11,
+	FragmentOverdraw = 13
 };
 }
 

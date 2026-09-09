@@ -355,8 +355,8 @@ void ForwardRenderer::_newFrameGUI()
 		if (!Settings::SWREnabled)
 		{
 			ImGui::Checkbox("Async Compute", &Settings::AsyncComputeEnabled);
-			ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 		}
+		ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 
 		ImGui::Checkbox("Frustum Culling", &Settings::FrustumCullingEnabled);
 		ImGui::Checkbox("Cluster Backface Culling", &Settings::ClusterBackfaceCullingEnabled);

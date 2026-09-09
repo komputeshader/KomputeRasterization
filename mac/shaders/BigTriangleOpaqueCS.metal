@@ -6,6 +6,7 @@ kernel void BigTriangleOpaqueCS(
 	device const BigTriangleOpaque* bigTriangles [[buffer(11)]],
 	device const uint* depth [[buffer(6)]],
 	device const uint* shadowMap [[buffer(8)]],
+	device atomic_uint* fragmentOverdraw [[buffer(13)]],
 	texture2d<float, access::write> output [[texture(2)]],
 	uint3 groupID [[threadgroup_position_in_grid]],
 	uint3 groupThreadID [[thread_position_in_threadgroup]],
@@ -156,9 +157,17 @@ kernel void BigTriangleOpaqueCS(
 				continue;
 			}
 
+			const uint pixelIndex = uint(y) * uint(constants.outputResolution.x) + uint(x);
+
+			if (constants.showOverdraw)
+			{
+				atomic_fetch_add_explicit(&fragmentOverdraw[pixelIndex], 1u, memory_order_relaxed);
+				continue;
+			}
+
 			const float weight0 = currentArea0 * invArea;
 			const float weight1 = currentArea1 * invArea;
-			if (depth[uint(y) * uint(constants.outputResolution.x) + uint(x)] !=
+			if (depth[pixelIndex] !=
 				GetDepthBits(weight0, weight1, z0NDC, z1NDC, z2NDC))
 			{
 				continue;
