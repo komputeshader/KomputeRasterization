@@ -202,7 +202,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 			sizeof(BigTriangleDepth));
 		DX::Device->CreateUnorderedAccessView(
 			_bigTrianglesDepth[depthBufferIdx].Get(),
-			_bigTrianglesDepthCounters[depthBufferIdx].Get(),
+			nullptr,
 			&UAVDesc,
 			Descriptors::SV.GetCPUHandle(BigTrianglesDepthUAV + depthBufferIdx));
 
@@ -249,7 +249,7 @@ void SoftwareRasterization::_createBigTrianglesBuffers()
 		sizeof(BigTriangleOpaque));
 	DX::Device->CreateUnorderedAccessView(
 		_bigTrianglesOpaque.Get(),
-		_bigTrianglesOpaqueCounter.Get(),
+		nullptr,
 		&UAVDesc,
 		Descriptors::SV.GetCPUHandle(BigTrianglesOpaqueUAV));
 
@@ -347,8 +347,9 @@ void SoftwareRasterization::_createDepthWGResources()
 	lib->SetDXILLibrary(&libraryCode);
 
 	{
-		CD3DX12_ROOT_PARAMETER1 computeRootParameters[10] = {};
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[11] = {};
 		computeRootParameters[0].InitAsConstantBufferView(0);
+		computeRootParameters[10].InitAsUnorderedAccessView(4);
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[9] = {};
 
 		ranges[0].Init(
@@ -493,8 +494,9 @@ void SoftwareRasterization::_createOpaqueWGResources()
 	lib->SetDXILLibrary(&libraryCode);
 
 	{
-		CD3DX12_ROOT_PARAMETER1 computeRootParameters[15] = {};
+		CD3DX12_ROOT_PARAMETER1 computeRootParameters[16] = {};
 		computeRootParameters[0].InitAsConstantBufferView(0);
+		computeRootParameters[15].InitAsUnorderedAccessView(4);
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[14] = {};
 
 		ranges[0].Init(
@@ -959,6 +961,8 @@ void SoftwareRasterization::_drawDepth()
 		6, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV));
+	COMMAND_LIST->SetComputeRootUnorderedAccessView(
+		9, _bigTrianglesDepthCounters[0]->GetGPUVirtualAddress());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
@@ -1018,6 +1022,8 @@ void SoftwareRasterization::_drawShadows()
 			6, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + cascade));
+		COMMAND_LIST->SetComputeRootUnorderedAccessView(
+			9, _bigTrianglesDepthCounters[cascade]->GetGPUVirtualAddress());
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 
@@ -1210,6 +1216,8 @@ void SoftwareRasterization::_drawOpaque()
 		10, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		11, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
+	COMMAND_LIST->SetComputeRootUnorderedAccessView(
+		14, _bigTrianglesOpaqueCounter->GetGPUVirtualAddress());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		12, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1293,6 +1301,8 @@ void SoftwareRasterization::_drawDepthWG()
 		6, Descriptors::SV.GetGPUHandle(SWRDepthUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + frustumIndex));
+	COMMAND_LIST->SetComputeRootUnorderedAccessView(
+		10, _bigTrianglesDepthCounters[frustumIndex]->GetGPUVirtualAddress());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1354,6 +1364,8 @@ void SoftwareRasterization::_drawShadowsWG()
 			6, Descriptors::SV.GetGPUHandle(SWRShadowMapUAV + cascade - 1));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			7, Descriptors::SV.GetGPUHandle(BigTrianglesDepthUAV + cascade));
+		COMMAND_LIST->SetComputeRootUnorderedAccessView(
+			10, _bigTrianglesDepthCounters[cascade]->GetGPUVirtualAddress());
 		COMMAND_LIST->SetComputeRootDescriptorTable(
 			8, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 		COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1412,6 +1424,8 @@ void SoftwareRasterization::_drawOpaqueWG()
 		11, Descriptors::SV.GetGPUHandle(SWRRenderTargetUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		12, Descriptors::SV.GetGPUHandle(BigTrianglesOpaqueUAV));
+	COMMAND_LIST->SetComputeRootUnorderedAccessView(
+		15, _bigTrianglesOpaqueCounter->GetGPUVirtualAddress());
 	COMMAND_LIST->SetComputeRootDescriptorTable(
 		13, Descriptors::SV.GetGPUHandle(SWRStatsUAV));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1773,8 +1787,9 @@ void SoftwareRasterization::_createResetBuffer()
 
 void SoftwareRasterization::_createTriangleDepthPSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[9] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[10] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
+	computeRootParameters[9].InitAsUnorderedAccessView(4);
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[8] = {};
 
 	ranges[0].Init(
@@ -1899,8 +1914,9 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 
 void SoftwareRasterization::_createTriangleOpaquePSO()
 {
-	CD3DX12_ROOT_PARAMETER1 computeRootParameters[14] = {};
+	CD3DX12_ROOT_PARAMETER1 computeRootParameters[15] = {};
 	computeRootParameters[0].InitAsConstantBufferView(0);
+	computeRootParameters[14].InitAsUnorderedAccessView(4);
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[13] = {};
 
 	ranges[0].Init(

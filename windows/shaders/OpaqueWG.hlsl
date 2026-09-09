@@ -66,8 +66,9 @@ Texture2D Depth : register(t23);
 Texture2DArray ShadowMap : register(t24);
 
 RWTexture2D<float4> RenderTarget : register(u0);
-AppendStructuredBuffer<BigTriangleOpaque> BigTriangles : register(u1);
+RWStructuredBuffer<BigTriangleOpaque> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
+RWByteAddressBuffer BigTrianglesCounter : register(u4);
 RWTexture2D<uint> FragmentOverdraw : register(u3);
 
 groupshared IndirectCommand Command;
@@ -330,16 +331,8 @@ void TriangleRasterizationNode(
 					result.packedUV2 = 0;
 
 					float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
-					float totalTiles = tilesCount.x * tilesCount.y;
-					for (float offset = 0.0; offset < totalTiles; offset += 1.0)
-					{
-						result.tileOffset = offset;
-
-						// seemingly vastly inefficient way to write out that data,
-						// but the more reasonable/parallel approach isn't faster, and is in fact slower
-						// see the same code in the "experimental" branch
-						BigTriangles.Append(result);
-					}
+					uint firstHalfTiles = uint(tilesCount.x * tilesCount.y);
+					uint secondHalfTiles = 0;
 
 					if (quadrilateral)
 					{
@@ -367,12 +360,28 @@ void TriangleRasterizationNode(
 						dimensions = maxP.xy - minP.xy;
 
 						tilesCount = ceil(dimensions / BigTriangleTileSize);
-						totalTiles = tilesCount.x * tilesCount.y;
-						for (float offset = 0.0; offset < totalTiles; offset += 1.0)
+						secondHalfTiles = uint(tilesCount.x * tilesCount.y);
+					}
+
+					uint totalTiles = firstHalfTiles + secondHalfTiles;
+					if (totalTiles > 0)
+					{
+						uint writeIndex;
+						BigTrianglesCounter.InterlockedAdd(0, totalTiles, writeIndex);
+
+						// seemingly vastly inefficient way to write out that data,
+						// but the more reasonable/parallel approach isn't faster, and is in fact slower
+						// see the same code in the "experimental" branch
+						for (uint offset = 0; offset < firstHalfTiles; offset++)
 						{
-							// the sign bit selects the second triangle produced from the clipped quad
-							result.tileOffset = asfloat(asuint(offset) | 0x80000000);
-							BigTriangles.Append(result);
+							result.tileOffset = float(offset);
+							BigTriangles[writeIndex + offset] = result;
+						}
+
+						for (uint secondOffset = 0; secondOffset < secondHalfTiles; secondOffset++)
+						{
+							result.tileOffset = asfloat(asuint(float(secondOffset)) | 0x80000000);
+							BigTriangles[writeIndex + firstHalfTiles + secondOffset] = result;
 						}
 					}
 
