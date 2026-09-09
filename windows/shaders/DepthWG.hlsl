@@ -117,6 +117,15 @@ void TriangleRasterizationNode(
 					instance, p0, p1, p2,
 					p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
+				// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/ (section 5.2)
+				// backface culling before clipping and division by w
+				// reverse the cross product because screen y points down
+				[branch]
+				if (dot(p0CS.xyw, cross(p2CS.xyw, p1CS.xyw)) <= 0.0)
+				{
+					continue;
+				}
+
 				bool p0Behind = NearPlaneClippingEnabled && p0CS.z > CameraNear;
 				bool p1Behind = NearPlaneClippingEnabled && p1CS.z > CameraNear;
 				bool p2Behind = NearPlaneClippingEnabled && p2CS.z > CameraNear;
@@ -222,15 +231,6 @@ void TriangleRasterizationNode(
 
 				float2 p0SS, p1SS, p2SS;
 				GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, p0SS, p1SS, p2SS);
-
-				float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
-
-				// backface if negative
-				[branch]
-				if (area <= 0.0)
-				{
-					continue;
-				}
 
 				float z0NDC = p0CS.z * invW0;
 				float z1NDC = p1CS.z * invW1;
@@ -346,6 +346,15 @@ void TriangleRasterizationNode(
 						}
 					}
 
+					continue;
+				}
+
+				float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
+
+				// skip zero-area triangles produced by clipping or screen-space rounding before dividing by area
+				[branch]
+				if (area == 0.0)
+				{
 					continue;
 				}
 

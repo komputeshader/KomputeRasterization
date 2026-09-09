@@ -167,6 +167,15 @@ static inline bool SetupTriangle(
 	thread float2& maxP)
 {
 	GetCSPositions(instance, p0, p1, p2, VP, p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+
+	// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/ (section 5.2)
+	// backface culling before division by w
+	// reverse the cross product because screen y points down
+	if (dot(p0CS.xyw, cross(p2CS.xyw, p1CS.xyw)) <= 0.0f)
+	{
+		return false;
+	}
+
 	if (p0CS.w <= 0.0f || p1CS.w <= 0.0f || p2CS.w <= 0.0f)
 	{
 		return false;
@@ -189,7 +198,8 @@ static inline bool SetupTriangle(
 		p2SS);
 
 	area = Area(p0SS, p1SS, p2SS);
-	if (area <= 0.0f)
+	// skip zero-area triangles produced by screen-space rounding before dividing by area
+	if (area == 0.0f)
 	{
 		return false;
 	}
