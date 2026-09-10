@@ -299,9 +299,8 @@ void Culler::_createClearPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\ClearCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _clearRS.Get();
@@ -363,9 +362,8 @@ void Culler::_createCullingPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\CullingCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _cullingRS.Get();
@@ -410,9 +408,8 @@ void Culler::_createGenerateCommandsPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\GenerateCommandsCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _generateHWRCommandsRS.Get();

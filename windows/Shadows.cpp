@@ -294,9 +294,8 @@ void Shadows::_createPSO()
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawDepthVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{

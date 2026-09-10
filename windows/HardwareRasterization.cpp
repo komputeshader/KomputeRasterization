@@ -675,9 +675,8 @@ void HardwareRasterization::_createDepthPassPSO()
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawDepthVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
 	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 	SUCCESS(DX::Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&_depthPSO)));
@@ -688,16 +687,16 @@ void HardwareRasterization::_createOpaquePassPSO()
 {
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOpaqueVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
-	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	const DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOpaquePS.hlsl",
+		L"main",
+		L"ps_6_0",
 		defines,
-		"main",
-		"ps_5_0");
+		_countof(defines));
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -762,22 +761,14 @@ void HardwareRasterization::_createOpaquePassPSO()
 
 void HardwareRasterization::_createOverdrawPassPSO()
 {
-	ComPtr<ID3DBlob> vertexShader;
-	Utils::CompileDXILFromFile(
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawVS.hlsl",
 		L"main",
-		L"vs_6_0",
-		nullptr,
-		0,
-		vertexShader.GetAddressOf());
-	ComPtr<ID3DBlob> pixelShader;
-	Utils::CompileDXILFromFile(
+		L"vs_6_0");
+	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawPS.hlsl",
 		L"main",
-		L"ps_6_0",
-		nullptr,
-		0,
-		pixelShader.GetAddressOf());
+		L"ps_6_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -845,14 +836,12 @@ void HardwareRasterization::_createOverdrawDisplayPSO()
 {
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawDisplayVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawDisplayPS.hlsl",
-		nullptr,
-		"main",
-		"ps_5_0");
+		L"main",
+		L"ps_6_0");
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _overdrawDisplayRS.Get();

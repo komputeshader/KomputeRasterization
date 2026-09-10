@@ -332,13 +332,10 @@ void SoftwareRasterization::_createDepthWGResources()
 	ASSERT(
 		Scene::MaxSceneMeshesMetaCount <= static_cast<size_t>(SWR_WG_MAX_COMMANDS),
 		"The scene has more mesh commands than the work graph dispatch can represent.");
-	Utils::CompileDXILFromFile(
+	_depthWGLibrary = Utils::CompileShader(
 		L"shaders\\DepthWG.hlsl",
 		L"",
-		L"lib_6_8",
-		nullptr,
-		0,
-		_depthWGLibrary.GetAddressOf());
+		L"lib_6_8");
 
 	CD3DX12_STATE_OBJECT_DESC SO(D3D12_STATE_OBJECT_TYPE_EXECUTABLE);
 
@@ -477,15 +474,14 @@ void SoftwareRasterization::_createDepthWGResources()
 
 void SoftwareRasterization::_createOpaqueWGResources()
 {
-	DxcDefine defines[] = { { L"OPAQUE", L"1" } };
+	const DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 
-	Utils::CompileDXILFromFile(
+	_opaqueWGLibrary = Utils::CompileShader(
 		L"shaders\\OpaqueWG.hlsl",
 		L"",
 		L"lib_6_8",
 		defines,
-		_countof(defines),
-		_opaqueWGLibrary.GetAddressOf());
+		_countof(defines));
 
 	CD3DX12_STATE_OBJECT_DESC SO(D3D12_STATE_OBJECT_TYPE_EXECUTABLE);
 
@@ -1852,9 +1848,8 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\TriangleDepthCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _triangleDepthRS.Get();
@@ -1898,9 +1893,8 @@ void SoftwareRasterization::_createBigTriangleDepthPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\BigTriangleDepthCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _bigTriangleDepthRS.Get();
@@ -2014,12 +2008,13 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 	Utils::CreateRS(computeRootSignatureDesc, _triangleOpaqueRS);
 	NAME_D3D12_OBJECT(_triangleOpaqueRS);
 
-	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	const DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\TriangleOpaqueCS.hlsl",
+		L"main",
+		L"cs_6_0",
 		defines,
-		"main",
-		"cs_5_0");
+		_countof(defines));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _triangleOpaqueRS.Get();
@@ -2083,12 +2078,13 @@ void SoftwareRasterization::_createBigTriangleOpaquePSO()
 	Utils::CreateRS(computeRootSignatureDesc, _bigTriangleOpaqueRS);
 	NAME_D3D12_OBJECT(_bigTriangleOpaqueRS);
 
-	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	const DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\BigTriangleOpaqueCS.hlsl",
+		L"main",
+		L"cs_6_0",
 		defines,
-		"main",
-		"cs_5_0");
+		_countof(defines));
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _bigTriangleOpaqueRS.Get();
@@ -2116,9 +2112,8 @@ void SoftwareRasterization::_createOverdrawDisplayPSO()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawDisplayCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _overdrawDisplayRS.Get();
