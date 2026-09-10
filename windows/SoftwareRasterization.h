@@ -91,10 +91,12 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _triangleDepthRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleDepthPSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleDepthWavePSO;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _bigTriangleDepthRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _bigTriangleDepthPSO;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _triangleOpaqueRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleOpaquePSO;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> _triangleOpaqueWavePSO;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> _bigTriangleOpaqueRS;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> _bigTriangleOpaquePSO;
 	Microsoft::WRL::ComPtr<ID3D12Resource> _bigTrianglesDepth[MAX_FRUSTUMS_COUNT];

@@ -751,7 +751,7 @@ void SoftwareRasterization::DrawDepths()
 {
 	bool useWorkGraphs = false;
 #ifdef USE_WORK_GRAPHS
-	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported;
+	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported && !Settings::SWRWaveEnabled;
 #endif
 
 	_beginFrame();
@@ -778,7 +778,7 @@ void SoftwareRasterization::DrawOpaque()
 {
 	bool useWorkGraphs = false;
 #ifdef USE_WORK_GRAPHS
-	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported;
+	useWorkGraphs = Settings::SWRWGEnabled && DX::WorkGraphsSupported && !Settings::SWRWaveEnabled;
 	if (useWorkGraphs)
 	{
 		_drawOpaqueWG();
@@ -934,7 +934,8 @@ void SoftwareRasterization::_drawDepth()
 	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Depth");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleDepthRS.Get());
-	COMMAND_LIST->SetPipelineState(_triangleDepthPSO.Get());
+	COMMAND_LIST->SetPipelineState(Settings::SWRWaveEnabled
+		? _triangleDepthWavePSO.Get() : _triangleDepthPSO.Get());
 	COMMAND_LIST->SetComputeRootConstantBufferView(
 		0, _depthSceneCB->GetGPUVirtualAddress() + DX::FrameIndex * _depthSceneCBFrameSize);
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -992,7 +993,8 @@ void SoftwareRasterization::_drawShadows()
 	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Shadows");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleDepthRS.Get());
-	COMMAND_LIST->SetPipelineState(_triangleDepthPSO.Get());
+	COMMAND_LIST->SetPipelineState(Settings::SWRWaveEnabled
+		? _triangleDepthWavePSO.Get() : _triangleDepthPSO.Get());
 	CD3DX12_RESOURCE_BARRIER barriers[2] = {};
 	for (int cascade = 1; cascade <= Settings::CascadesCount; cascade++)
 	{
@@ -1178,7 +1180,8 @@ void SoftwareRasterization::_drawOpaque()
 	PIXScopedEvent(COMMAND_LIST.Get(), 0, L"SWR Opaque");
 
 	COMMAND_LIST->SetComputeRootSignature(_triangleOpaqueRS.Get());
-	COMMAND_LIST->SetPipelineState(_triangleOpaquePSO.Get());
+	COMMAND_LIST->SetPipelineState(Settings::SWRWaveEnabled
+		? _triangleOpaqueWavePSO.Get() : _triangleOpaquePSO.Get());
 	COMMAND_LIST->SetComputeRootConstantBufferView(
 		0, _sceneCB->GetGPUVirtualAddress() + DX::FrameIndex * sizeof(SWRSceneCB));
 	COMMAND_LIST->SetComputeRootDescriptorTable(
@@ -1859,6 +1862,17 @@ void SoftwareRasterization::_createTriangleDepthPSO()
 		&psoDesc,
 		IID_PPV_ARGS(&_triangleDepthPSO)));
 	NAME_D3D12_OBJECT(_triangleDepthPSO);
+
+	computeShader = Utils::CompileShader(
+		L"shaders\\TriangleDepthWaveCS.hlsl",
+		L"main",
+		L"cs_6_0");
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
+
+	SUCCESS(DX::Device->CreateComputePipelineState(
+		&psoDesc,
+		IID_PPV_ARGS(&_triangleDepthWavePSO)));
+	NAME_D3D12_OBJECT(_triangleDepthWavePSO);
 }
 
 void SoftwareRasterization::_createBigTriangleDepthPSO()
@@ -2022,6 +2036,19 @@ void SoftwareRasterization::_createTriangleOpaquePSO()
 
 	SUCCESS(DX::Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&_triangleOpaquePSO)));
 	NAME_D3D12_OBJECT(_triangleOpaquePSO);
+
+	computeShader = Utils::CompileShader(
+		L"shaders\\TriangleOpaqueWaveCS.hlsl",
+		L"main",
+		L"cs_6_0",
+		defines,
+		_countof(defines));
+	psoDesc.CS = { computeShader->GetBufferPointer(), computeShader->GetBufferSize() };
+
+	SUCCESS(DX::Device->CreateComputePipelineState(
+		&psoDesc,
+		IID_PPV_ARGS(&_triangleOpaqueWavePSO)));
+	NAME_D3D12_OBJECT(_triangleOpaqueWavePSO);
 }
 
 void SoftwareRasterization::_createBigTriangleOpaquePSO()

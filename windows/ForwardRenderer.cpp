@@ -1064,15 +1064,25 @@ void ForwardRenderer::_newFrameGUI()
 
 		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
-		if (ImGui::Checkbox("Software Rasterization", &Settings::SWREnabled))
+		int rasterizerIndex = Settings::SWREnabled ? (Settings::SWRWaveEnabled ? 2 : 1) : 0;
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Rasterizer");
+		ImGui::SameLine();
+		if (ImGui::Combo("##Rasterizer", &rasterizerIndex, "Hardware\0Software\0Software (Wave)\0"))
 		{
-			if (Settings::SWREnabled)
+			Settings::SWRWaveEnabled = rasterizerIndex == 2;
+			const bool softwareRasterizationEnabled = rasterizerIndex != 0;
+			if (softwareRasterizationEnabled != Settings::SWREnabled)
 			{
-				_switchToSWR = true;
-			}
-			else
-			{
-				_switchFromSWR = true;
+				Settings::SWREnabled = softwareRasterizationEnabled;
+				if (Settings::SWREnabled)
+				{
+					_switchToSWR = true;
+				}
+				else
+				{
+					_switchFromSWR = true;
+				}
 			}
 		}
 
@@ -1082,7 +1092,13 @@ void ForwardRenderer::_newFrameGUI()
 #ifdef USE_WORK_GRAPHS
 			if (DX::WorkGraphsSupported)
 			{
+				ImGui::BeginDisabled(Settings::SWRWaveEnabled);
 				ImGui::Checkbox("Use Work Graphs", &Settings::SWRWGEnabled);
+				ImGui::EndDisabled();
+				if (Settings::SWRWaveEnabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+				{
+					ImGui::SetTooltip("Software (Wave) uses compute shaders.");
+				}
 			}
 			else
 			{

@@ -19,6 +19,7 @@ bool Settings::ShadowsHiZCullingEnabled = true;
 bool Settings::PerTriangleHiZRasterizationCullingEnabled = true;
 bool Settings::ClusterBackfaceCullingEnabled = true;
 bool Settings::SWREnabled = false;
+bool Settings::SWRWaveEnabled = false;
 bool Settings::AsyncComputeEnabled = true;
 bool Settings::SWRWGEnabled = false;
 bool Settings::ShowMeshlets = false;
