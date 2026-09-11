@@ -20,9 +20,10 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 * Windows DirectX 12 and macOS Metal versions.
 
 ## System requirements
-* Windows 10, 64-bit.
-* DirectX 12 compatible GPU.
-* The Work Graphs codepath requires shader model 6.8 and a GPU/driver reporting D3D12 Work Graphs support. Unsupported systems automatically use the compute-shader rasterizer.
+
+* **Windows:** Windows 10/11 64-bit, DirectX 12 GPU and driver supporting Shader Model 6.0.
+* **macOS:** macOS 14 or newer, Metal-capable GPU.
+* **Optional Work Graphs (Windows):** Shader Model 6.8 and GPU/driver support for Work Graphs.
 
 ## How to build and run
 * `git clone --recursive https://github.com/komputeshader/KomputeRasterization.git`

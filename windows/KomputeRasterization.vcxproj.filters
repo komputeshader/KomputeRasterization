@@ -283,7 +283,13 @@
     <FxCompile Include="shaders\TriangleDepthCS.hlsl">
       <Filter>windows\shaders</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\TriangleDepthWaveCS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
     <FxCompile Include="shaders\TriangleOpaqueCS.hlsl">
+      <Filter>windows\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\TriangleOpaqueWaveCS.hlsl">
       <Filter>windows\shaders</Filter>
     </FxCompile>
   </ItemGroup>

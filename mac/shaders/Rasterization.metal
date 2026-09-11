@@ -3,62 +3,6 @@
 
 #include "CullingCommon.metal"
 
-static inline bool EnqueueBigTriangle(
-	BigTriangleDepth triangle,
-	device BigTriangleDepth* triangles,
-	device DispatchArguments& arguments,
-	uint capacity)
-{
-	uint expected = atomic_load_explicit(&arguments.x, memory_order_relaxed);
-	for (;;)
-	{
-		if (expected >= capacity)
-		{
-			atomic_fetch_add_explicit(&arguments.overflow, 1, memory_order_relaxed);
-			return false;
-		}
-
-		if (atomic_compare_exchange_weak_explicit(
-				&arguments.x,
-				&expected,
-				expected + 1,
-				memory_order_relaxed,
-				memory_order_relaxed))
-		{
-			triangles[expected] = triangle;
-			return true;
-		}
-	}
-}
-
-static inline bool EnqueueBigTriangle(
-	BigTriangleOpaque triangle,
-	device BigTriangleOpaque* triangles,
-	device DispatchArguments& arguments,
-	uint capacity)
-{
-	uint expected = atomic_load_explicit(&arguments.x, memory_order_relaxed);
-	for (;;)
-	{
-		if (expected >= capacity)
-		{
-			atomic_fetch_add_explicit(&arguments.overflow, 1, memory_order_relaxed);
-			return false;
-		}
-
-		if (atomic_compare_exchange_weak_explicit(
-				&arguments.x,
-				&expected,
-				expected + 1,
-				memory_order_relaxed,
-				memory_order_relaxed))
-		{
-			triangles[expected] = triangle;
-			return true;
-		}
-	}
-}
-
 static inline float Area(float2 v0, float2 v1, float2 v2)
 {
 	float2 e0 = v1 - v0;

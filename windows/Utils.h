@@ -131,17 +131,10 @@ void GetFrustumPlanes(DirectX::FXMMATRIX m, Frustum& f);
 
 Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
 	const std::wstring& filename,
-	const D3D_SHADER_MACRO* defines,
-	const std::string& entrypoint,
-	const std::string& target);
-
-void CompileDXILFromFile(
-	const std::wstring& filename,
 	const std::wstring& entrypoint,
 	const std::wstring& target,
-	DxcDefine* defines,
-	unsigned int definesCount,
-	ID3DBlob** ppCode);
+	const DxcDefine* defines = nullptr,
+	unsigned int definesCount = 0);
 
 void CreateDefaultHeapBuffer(
 	ID3D12GraphicsCommandList* commandList,

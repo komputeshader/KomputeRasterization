@@ -24,7 +24,6 @@ void main(
 
 	uint2 xyInput = 2 * dispatchThreadID.xy;
 
-	// TODO: account for non-reversed Z depth buffers
 	float result = 1.0;
 	result = min(result, Input[xyInput + uint2(0, 0)].r);
 	result = min(result, Input[xyInput + uint2(1, 0)].r);

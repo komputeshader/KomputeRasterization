@@ -260,7 +260,7 @@ void ReportDeviceRemoved()
 	PrintToOutput(
 		"D3D12 device removed: reason=0x%08X, frame=%d, SWR=%d, work graphs=%d\n",
 		static_cast<unsigned int>(reason), FrameNumber,
-		Settings::SWREnabled, Settings::SWRWGEnabled && WorkGraphsSupported);
+		Settings::SWREnabled, Settings::SWRWGEnabled && WorkGraphsSupported && !Settings::SWRWaveEnabled);
 	PrintToOutput(
 		"D3D12 settings: resolution=%ux%u, culling=%d, per-triangle Hi-Z=%d, cascades=%d\n",
 		Settings::RenderWidth, Settings::RenderHeight, Settings::CullingEnabled,

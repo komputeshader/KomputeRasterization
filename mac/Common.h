@@ -141,7 +141,6 @@ struct DispatchArguments
 	uint32_t x = 0;
 	uint32_t y = 1;
 	uint32_t z = 1;
-	uint32_t overflow = 0;
 };
 
 struct BigTriangleDepth
@@ -204,7 +203,6 @@ struct DepthSceneCB
 	uint32_t totalTriangles = 0;
 	uint32_t perTriangleHiZCullingEnabled = 0;
 	uint32_t frustumIndex = 0;
-	uint32_t maxBigTriangles = 0;
 	uint32_t maxSceneMeshes = 0;
 	uint32_t maxSceneInstances = 0;
 	uint32_t hasHiZHistory = 0;
@@ -232,7 +230,6 @@ struct SceneCB
 	float shadowsDistance = 5000.0f;
 	uint32_t totalTriangles = 0;
 	uint32_t perTriangleHiZCullingEnabled = 0;
-	uint32_t maxBigTriangles = 0;
 	uint32_t hasHiZHistory = 0;
 	uint32_t showOverdraw = 0;
 	float cameraNear = 0.0f;
@@ -250,7 +247,8 @@ static_assert(sizeof(VertexPosition) == 12);
 static_assert(sizeof(AABB) == 32);
 static_assert(sizeof(MeshMeta) == 80);
 static_assert(sizeof(Instance) == 80);
+static_assert(sizeof(DispatchArguments) == 12);
 static_assert(sizeof(BigTriangleDepth) == 40);
 static_assert(sizeof(BigTriangleOpaque) == 88);
-static_assert(sizeof(DepthSceneCB) == 144);
+static_assert(sizeof(DepthSceneCB) == 128);
 static_assert(sizeof(SceneCB) == 736);

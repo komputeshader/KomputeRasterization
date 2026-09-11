@@ -6,6 +6,7 @@ kernel void ClearCounters(
 	device ICBExecutionRange* commandRanges [[buffer(2)]],
 	constant uint& commandRangeCount [[buffer(3)]],
 	device DispatchArguments* dispatchArguments [[buffer(4)]],
+	constant uint& maxMeshes [[buffer(5)]],
 	uint index [[thread_position_in_grid]])
 {
 	if (index < count)
@@ -15,12 +16,11 @@ kernel void ClearCounters(
 
 	if (index < commandRangeCount)
 	{
-		commandRanges[index].location = 0;
+		commandRanges[index].location = index * maxMeshes;
 		atomic_store_explicit(&commandRanges[index].length, 0, memory_order_relaxed);
 		atomic_store_explicit(&dispatchArguments[index].x, 0, memory_order_relaxed);
 		dispatchArguments[index].y = SWR_THREAD_GROUPS_Y;
 		dispatchArguments[index].z = 1;
-		atomic_store_explicit(&dispatchArguments[index].overflow, 0, memory_order_relaxed);
 	}
 }
 

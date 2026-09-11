@@ -6,9 +6,9 @@
 #include "Rasterization.metal"
 
 #ifdef SHADOWS
-kernel void TriangleShadowCS(
+kernel void TriangleShadowWaveCS(
 #else
-kernel void TriangleDepthCS(
+kernel void TriangleDepthWaveCS(
 #endif
 	device const VertexPosition* positions [[buffer(0)]],
 	device const uint* indices [[buffer(4)]],

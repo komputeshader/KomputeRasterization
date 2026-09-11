@@ -66,7 +66,7 @@ void HardwareRasterization::_createDepthBufferResources()
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 	auto optimizedClear = CD3DX12_CLEAR_VALUE(
 		_depthFormat,
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
+		0.0f,
 		0);
 	auto prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	SUCCESS(DX::Device->CreateCommittedResource(
@@ -274,7 +274,7 @@ void HardwareRasterization::_drawDepth()
 	COMMAND_LIST->ClearDepthStencilView(
 		DSVHandle,
 		D3D12_CLEAR_FLAG_DEPTH,
-		Scene::CurrentScene->camera.ReverseZ() ? 0.0f : 1.0f,
+		0.0f,
 		0,
 		0,
 		nullptr);
@@ -284,10 +284,10 @@ void HardwareRasterization::_drawDepth()
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{
@@ -358,10 +358,10 @@ void HardwareRasterization::_drawShadows()
 			COMMAND_LIST->ExecuteIndirect(
 				_commandSignature.Get(),
 				static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-				_renderer->GetCulledCommands(DX::FrameIndex, cascade),
-				0,
-				_renderer->GetCulledCommandsCounter(DX::FrameIndex, cascade),
-				0);
+				_renderer->GetCulledCommands(DX::FrameIndex),
+				_renderer->GetCulledCommandsOffset(cascade),
+				_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+				_renderer->GetCulledCommandsCountersOffset(cascade));
 		}
 		else
 		{
@@ -443,10 +443,10 @@ void HardwareRasterization::_drawOpaque(ID3D12Resource* renderTarget)
 		COMMAND_LIST->ExecuteIndirect(
 			_commandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{
@@ -508,10 +508,10 @@ void HardwareRasterization::_drawOverdraw(ID3D12Resource* renderTarget)
 		COMMAND_LIST->ExecuteIndirect(
 			_overdrawCommandSignature.Get(),
 			static_cast<unsigned int>(Scene::CurrentScene->meshesMetaCPU.size()),
-			_renderer->GetCulledCommands(DX::FrameIndex, 0),
-			0,
-			_renderer->GetCulledCommandsCounter(DX::FrameIndex, 0),
-			0);
+			_renderer->GetCulledCommands(DX::FrameIndex),
+			_renderer->GetCulledCommandsOffset(0),
+			_renderer->GetCulledCommandsCounters(DX::FrameIndex),
+			_renderer->GetCulledCommandsCountersOffset(0));
 	}
 	else
 	{
@@ -666,9 +666,7 @@ void HardwareRasterization::_createDepthPassPSO()
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState.DepthFunc = Scene::CurrentScene->camera.ReverseZ()
-		? D3D12_COMPARISON_FUNC_GREATER
-		: D3D12_COMPARISON_FUNC_LESS;
+	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
 	psoDesc.DSVFormat = _depthFormat;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -677,9 +675,8 @@ void HardwareRasterization::_createDepthPassPSO()
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawDepthVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
 	psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
 	SUCCESS(DX::Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&_depthPSO)));
@@ -690,16 +687,16 @@ void HardwareRasterization::_createOpaquePassPSO()
 {
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOpaqueVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
-	const D3D_SHADER_MACRO defines[] = { { "OPAQUE", "1" }, { nullptr, nullptr } };
+	const DxcDefine defines[] = { { L"OPAQUE", L"1" } };
 	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOpaquePS.hlsl",
+		L"main",
+		L"ps_6_0",
 		defines,
-		"main",
-		"ps_5_0");
+		_countof(defines));
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -764,22 +761,14 @@ void HardwareRasterization::_createOpaquePassPSO()
 
 void HardwareRasterization::_createOverdrawPassPSO()
 {
-	ComPtr<ID3DBlob> vertexShader;
-	Utils::CompileDXILFromFile(
+	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawVS.hlsl",
 		L"main",
-		L"vs_6_0",
-		nullptr,
-		0,
-		vertexShader.GetAddressOf());
-	ComPtr<ID3DBlob> pixelShader;
-	Utils::CompileDXILFromFile(
+		L"vs_6_0");
+	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawPS.hlsl",
 		L"main",
-		L"ps_6_0",
-		nullptr,
-		0,
-		pixelShader.GetAddressOf());
+		L"ps_6_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -847,14 +836,12 @@ void HardwareRasterization::_createOverdrawDisplayPSO()
 {
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawDisplayVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 	ComPtr<ID3DBlob> pixelShader = Utils::CompileShader(
 		L"shaders\\DrawOverdrawDisplayPS.hlsl",
-		nullptr,
-		"main",
-		"ps_5_0");
+		L"main",
+		L"ps_6_0");
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = _overdrawDisplayRS.Get();

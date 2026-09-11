@@ -5,34 +5,27 @@
 #include "Common.metal"
 #include "Rasterization.metal"
 
-#ifdef SHADOWS
-kernel void TriangleShadowCS(
-#else
-kernel void TriangleDepthCS(
-#endif
+kernel void TriangleOpaqueWaveCS(
 	device const VertexPosition* positions [[buffer(0)]],
+	device const VertexNormal* normals [[buffer(1)]],
+	device const VertexColor* colors [[buffer(2)]],
+	device const VertexUV* texcoords [[buffer(3)]],
 	device const uint* indices [[buffer(4)]],
 	device const Instance* instances [[buffer(5)]],
-	constant DepthSceneCB& constants [[buffer(7)]],
+	constant SceneCB& constants [[buffer(7)]],
 	device const IndirectCommand* commands [[buffer(9)]],
 	device atomic_uint* statistics [[buffer(10)]],
-	device BigTriangleDepth* bigTriangles [[buffer(11)]],
+	device BigTriangleOpaque* bigTriangles [[buffer(11)]],
 	device DispatchArguments& arguments [[buffer(12)]],
-	device atomic_uint* depthBuffer [[buffer(6)]],
-#ifdef SHADOWS
-	texture2d_array<float> previousShadows [[texture(3)]],
-#else
-	texture2d<float> previousDepth [[texture(2)]],
-#endif
+	device const uint* depthBuffer [[buffer(6)]],
+	device const uint* shadowMap [[buffer(8)]],
+	device atomic_uint* fragmentOverdraw [[buffer(13)]],
+	texture2d<float, access::write> output [[texture(2)]],
+	texture2d<float> previousDepth [[texture(3)]],
 	uint3 groupID [[threadgroup_position_in_grid]],
 	uint3 groupThreadID [[thread_position_in_threadgroup]],
 	uint groupIndex [[thread_index_in_threadgroup]])
 {
-#ifdef SHADOWS
-	depthBuffer += (constants.frustumIndex - 1) *
-		uint(constants.outputResolution.x) * uint(constants.outputResolution.y);
-#endif
-
 	threadgroup IndirectCommand command;
 	threadgroup atomic_uint statisticsSM[2];
 
@@ -65,6 +58,15 @@ kernel void TriangleDepthCS(
 			positions, i0, i1, i2, command.args.baseVertexLocation,
 			p0, p1, p2);
 
+		VertexNormal n0P, n1P, n2P;
+		GetPackedVertexNormals(
+			normals, i0, i1, i2, command.args.baseVertexLocation,
+			n0P, n1P, n2P);
+		VertexColor c0P, c1P, c2P;
+		GetPackedVertexColors(
+			colors, i0, i1, i2, command.args.baseVertexLocation,
+			c0P, c1P, c2P);
+
 		for (uint instanceID = 0; instanceID < command.args.instanceCount; instanceID++)
 		{
 			// one more triangle attempted to be rendered
@@ -91,104 +93,96 @@ kernel void TriangleDepthCS(
 			// the near plane, at the culling stage
 			// however, that's an optimization for the concrete renderer architecture,
 			// and isn't the general rasterizer optimization
-			bool p0Behind = false;
-			bool p1Behind = false;
-			bool p2Behind = false;
+			bool p0Behind = p0CS.z > constants.cameraNear;
+			bool p1Behind = p1CS.z > constants.cameraNear;
+			bool p2Behind = p2CS.z > constants.cameraNear;
 			float4 p3Helper = float4(0.0f, 0.0f, 0.0f, 0.0f);
 			bool quadrilateral = false;
 
-			if (constants.nearPlaneClippingEnabled)
+			if (p0Behind || p1Behind || p2Behind)
 			{
-				p0Behind = p0CS.z > constants.cameraNear;
-				p1Behind = p1CS.z > constants.cameraNear;
-				p2Behind = p2CS.z > constants.cameraNear;
-
-				if (p0Behind || p1Behind || p2Behind)
+				if (p0Behind && p1Behind && p2Behind)
 				{
-					if (p0Behind && p1Behind && p2Behind)
-					{
-						continue;
-					}
-
-					//        p2                             p2
-					//        /\                             /\
-					//       /  \            =====>         /  \
-					//      /    \                         /    \
-					// ----x------x------- near plane ----x------x-----
-					//    /________\                     p0      p1
-					//   p0        p1
-					if (p0Behind && p1Behind)
-					{
-						p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
-						p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
-					}
-					//        p0                             p0
-					//        /\                             /\
-					//       /  \            =====>         /  \
-					//      /    \                         /    \
-					// ----x------x------- near plane ----x------x-----
-					//    /________\                     p2      p1
-					//   p2        p1
-					else if (p1Behind && p2Behind)
-					{
-						p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
-						p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
-					}
-					//        p1                             p1
-					//        /\                             /\
-					//       /  \            =====>         /  \
-					//      /    \                         /    \
-					// ----x------x------- near plane ----x------x-----
-					//    /________\                     p0      p2
-					//   p0        p2
-					else if (p2Behind && p0Behind)
-					{
-						p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
-						p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
-					}
-					//  p1________p2                p1________p2
-					//    \      /        =====>      \⟍     /
-					//     \    /                      \ ⟍  /
-					// -----x--x------- near plane -----x--x----
-					//       \/                        p3  p0
-					//       p0
-					else if (p0Behind)
-					{
-						p3Helper = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
-						p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
-						quadrilateral = true;
-					}
-					//  p2________p0                p2________p0
-					//    \      /        =====>      \⟍     /
-					//     \    /                      \ ⟍  /
-					// -----x--x------- near plane -----x--x----
-					//       \/                        p3  p1
-					//       p1
-					else if (p1Behind)
-					{
-						p3Helper = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
-						p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
-						quadrilateral = true;
-					}
-					//  p0________p1                p0________p1
-					//    \      /        =====>      \⟍     /
-					//     \    /                      \ ⟍  /
-					// -----x--x------- near plane -----x--x----
-					//       \/                        p3  p2
-					//       p2
-					else if (p2Behind)
-					{
-						p3Helper = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
-						p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
-						quadrilateral = true;
-					}
+					continue;
 				}
-			}
-			// crude method - just drop the triangle entirely
-			// however, that path should work only for shadows, and such a situation is not possible in that case
-			else if (p0CS.w <= 0.0f || p1CS.w <= 0.0f || p2CS.w <= 0.0f)
-			{
-				continue;
+
+				//        p2                             p2
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p1
+				//   p0        p1
+				if (p0Behind && p1Behind)
+				{
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
+					p1CS = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
+				}
+
+				//        p0                             p0
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p2      p1
+				//   p2        p1
+				else if (p1Behind && p2Behind)
+				{
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
+					p2CS = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
+				}
+
+				//        p1                             p1
+				//        /\                             /\
+				//       /  \            =====>         /  \
+				//      /    \                         /    \
+				// ----x------x------- near plane ----x------x-----
+				//    /________\                     p0      p2
+				//   p0        p2
+				else if (p2Behind && p0Behind)
+				{
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
+					p0CS = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
+				}
+
+				//  p1________p2                p1________p2
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p0
+				//       p0
+				else if (p0Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p1CS.xyz, p0CS.xyz, constants.cameraNear);
+					p0CS = EdgeNearPlaneIntersection(p2CS.xyz, p0CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
+
+				//  p2________p0                p2________p0
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p1
+				//       p1
+				else if (p1Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p2CS.xyz, p1CS.xyz, constants.cameraNear);
+					p1CS = EdgeNearPlaneIntersection(p0CS.xyz, p1CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
+
+				//  p0________p1                p0________p1
+				//    \      /        =====>      \⟍     /
+				//     \    /                      \ ⟍  /
+				// -----x--x------- near plane -----x--x----
+				//       \/                        p3  p2
+				//       p2
+				else if (p2Behind)
+				{
+					p3Helper = EdgeNearPlaneIntersection(p0CS.xyz, p2CS.xyz, constants.cameraNear);
+					p2CS = EdgeNearPlaneIntersection(p1CS.xyz, p2CS.xyz, constants.cameraNear);
+					quadrilateral = true;
+				}
 			}
 
 			// 1 / z for each vertex (z in VS)
@@ -231,11 +225,7 @@ kernel void TriangleDepthCS(
 				const float maximumDepth = maxP.z;
 				const bool visible = TriangleVsHiZ(
 					minP.xy, maxP.xy, maximumDepth, constants.inverseOutputResolution,
-#ifdef SHADOWS
-					previousShadows, constants.frustumIndex - 1);
-#else
 					previousDepth);
-#endif
 
 				if (!visible)
 				{
@@ -246,12 +236,9 @@ kernel void TriangleDepthCS(
 			// one more triangle was rendered
 			// not precise, though, since it still could miss any pixel centers
 			atomic_fetch_add_explicit(&statisticsSM[1], 1u, memory_order_relaxed);
-
-			// TODO: thin triangles area vs box area
-			// TODO: thread local
 			if (dimensions.x * dimensions.y >= constants.bigTriangleThreshold || quadrilateral)
 			{
-				BigTriangleDepth result;
+				BigTriangleOpaque result;
 				result.p0WSX = p0WS.x;
 				result.p0WSY = p0WS.y;
 				result.p0WSZ = p0WS.z;
@@ -261,6 +248,19 @@ kernel void TriangleDepthCS(
 				result.p2WSX = p2WS.x;
 				result.p2WSY = p2WS.y;
 				result.p2WSZ = p2WS.z;
+				result.packedNormal0 = n0P.packedNormal;
+				result.packedNormal1 = n1P.packedNormal;
+				result.packedNormal2 = n2P.packedNormal;
+				result.packedColor0X = c0P.packedColor.x;
+				result.packedColor0Y = c0P.packedColor.y;
+				result.packedColor1X = c1P.packedColor.x;
+				result.packedColor1Y = c1P.packedColor.y;
+				result.packedColor2X = c2P.packedColor.x;
+				result.packedColor2Y = c2P.packedColor.y;
+				// TODO: add this
+				result.packedUV0 = 0;
+				result.packedUV1 = 0;
+				result.packedUV2 = 0;
 
 				float2 tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
 				uint firstHalfTiles = uint(tilesCount.x * tilesCount.y);
@@ -318,6 +318,13 @@ kernel void TriangleDepthCS(
 
 				continue;
 			}
+
+			float3 n0 = UnpackNormal(n0P);
+			float3 n1 = UnpackNormal(n1P);
+			float3 n2 = UnpackNormal(n2P);
+			float4 c0 = UnpackColor(c0P);
+			float4 c1 = UnpackColor(c1P);
+			float4 c2 = UnpackColor(c2P);
 
 			float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
 
@@ -385,8 +392,42 @@ kernel void TriangleDepthCS(
 
 						float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-						// TODO: account for non-reversed Z
-						atomic_fetch_max_explicit(&depthBuffer[uint(y) * uint(constants.outputResolution.x) + uint(x)], as_type<uint>(depth), memory_order_relaxed);
+						uint2 pixelCoord = uint2(x, y);
+						if (constants.showOverdraw)
+						{
+							atomic_fetch_add_explicit(&fragmentOverdraw[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x], 1u, memory_order_relaxed);
+						}
+						// early z test
+						else if (as_type<float>(depthBuffer[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x]) == depth)
+						{
+							// for perspective-correct interpolation
+							float denom = 1.0f / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
+
+							float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+							N = normalize(N);
+
+							float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+							if (constants.showMeshlets)
+							{
+								color = float3(instance.color);
+							}
+
+							float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+							float NdotL = saturate(dot(constants.sunDirection.xyz, N));
+							float viewDepth = denom;
+							float shadow = GetShadow(viewDepth, positionWS, constants, shadowMap);
+							float3 ambient = 0.2f * SkyColor.rgb;
+
+							float3 result = color * (NdotL * shadow + ambient);
+							if (constants.showCascades)
+							{
+								result = GetCascadeColor(viewDepth, constants);
+								result *= (NdotL * shadow + ambient);
+							}
+
+							output.write(float4(result, 1.0f), pixelCoord);
+						}
 
 						// E(x + a, y + b) = E(x, y) - a * dy + b * dx
 						area0tmp -= dxdy0.y;
@@ -428,8 +469,42 @@ kernel void TriangleDepthCS(
 
 							float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-							// TODO: account for non-reversed Z
-							atomic_fetch_max_explicit(&depthBuffer[uint(y) * uint(constants.outputResolution.x) + uint(x)], as_type<uint>(depth), memory_order_relaxed);
+							uint2 pixelCoord = uint2(x, y);
+							if (constants.showOverdraw)
+							{
+								atomic_fetch_add_explicit(&fragmentOverdraw[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x], 1u, memory_order_relaxed);
+							}
+							// early z test
+							else if (as_type<float>(depthBuffer[pixelCoord.y * uint(constants.outputResolution.x) + pixelCoord.x]) == depth)
+							{
+								// for perspective-correct interpolation
+								float denom = 1.0f / (weight0 * invW0 + weight1 * invW1 + weight2 * invW2);
+
+								float3 N = denom * (weight0 * n0 * invW0 + weight1 * n1 * invW1 + weight2 * n2 * invW2);
+								N = normalize(N);
+
+								float3 color = denom * (weight0 * c0.rgb * invW0 + weight1 * c1.rgb * invW1 + weight2 * c2.rgb * invW2);
+								if (constants.showMeshlets)
+								{
+									color = float3(instance.color);
+								}
+
+								float3 positionWS = denom * (weight0 * p0WS * invW0 + weight1 * p1WS * invW1 + weight2 * p2WS * invW2);
+
+								float NdotL = saturate(dot(constants.sunDirection.xyz, N));
+								float viewDepth = denom;
+								float shadow = GetShadow(viewDepth, positionWS, constants, shadowMap);
+								float3 ambient = 0.2f * SkyColor.rgb;
+
+								float3 result = color * (NdotL * shadow + ambient);
+								if (constants.showCascades)
+								{
+									result = GetCascadeColor(viewDepth, constants);
+									result *= (NdotL * shadow + ambient);
+								}
+
+								output.write(float4(result, 1.0f), pixelCoord);
+							}
 						}
 
 						// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -459,4 +534,6 @@ kernel void TriangleDepthCS(
 			atomic_load_explicit(&statisticsSM[1], memory_order_relaxed),
 			memory_order_relaxed);
 	}
+
+	(void)texcoords;
 }

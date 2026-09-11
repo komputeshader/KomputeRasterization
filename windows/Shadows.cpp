@@ -294,9 +294,8 @@ void Shadows::_createPSO()
 
 	ComPtr<ID3DBlob> vertexShader = Utils::CompileShader(
 		L"shaders\\DrawDepthVS.hlsl",
-		nullptr,
-		"main",
-		"vs_5_0");
+		L"main",
+		L"vs_6_0");
 
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
@@ -696,9 +695,6 @@ void Shadows::_updateFrustumPlanes()
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
 	{
 		Utils::GetFrustumPlanes(XMLoadFloat4x4(&_cascadeVP[cascade]), _cascadeFrustums[cascade]);
-
-		// reverse Z is used
-		std::swap(_cascadeFrustums[cascade].n, _cascadeFrustums[cascade].f);
 	}
 }
 

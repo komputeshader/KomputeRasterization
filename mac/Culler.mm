@@ -12,8 +12,8 @@ namespace
 	{
 		id<MTLBuffer> counters = nil;
 		id<MTLBuffer> visibleInstances = nil;
-		id<MTLIndirectCommandBuffer> commands[MAX_FRUSTUMS_COUNT] = {};
-		id<MTLBuffer> commandArguments[MAX_FRUSTUMS_COUNT] = {};
+		id<MTLIndirectCommandBuffer> commands = nil;
+		id<MTLBuffer> commandArguments = nil;
 		id<MTLBuffer> commandRanges = nil;
 		id<MTLBuffer> softwareCommands = nil;
 		id<MTLBuffer> softwareDispatchArguments = nil;
@@ -92,19 +92,15 @@ void Culler::Initialize()
 			MTLResourceStorageModePrivate,
 			@"Software rasterization dispatch arguments");
 
-		for (uint32_t frustum = 0; frustum < MAX_FRUSTUMS_COUNT; frustum++)
-		{
-			resources.commands[frustum] = [Context::Device
-				newIndirectCommandBufferWithDescriptor:descriptor
-				maxCommandCount:_maxMeshes
-				options:MTLResourceStorageModePrivate];
-			resources.commands[frustum].label = [NSString
-				stringWithFormat:@"Frustum %u indirect draws", frustum];
-			resources.commandArguments[frustum] = Context::CreateBuffer(
-				nullptr, _resources->argumentEncoder.encodedLength, MTLResourceStorageModeShared, @"Indirect command argument buffer");
-			[_resources->argumentEncoder setArgumentBuffer:resources.commandArguments[frustum] offset:0];
-			[_resources->argumentEncoder setIndirectCommandBuffer:resources.commands[frustum] atIndex:0];
-		}
+		resources.commands = [Context::Device
+			newIndirectCommandBufferWithDescriptor:descriptor
+			maxCommandCount:static_cast<NSUInteger>(MAX_FRUSTUMS_COUNT) * _maxMeshes
+			options:MTLResourceStorageModePrivate];
+		resources.commands.label = @"Culled indirect draws";
+		resources.commandArguments = Context::CreateBuffer(
+			nullptr, _resources->argumentEncoder.encodedLength, MTLResourceStorageModeShared, @"Indirect command argument buffer");
+		[_resources->argumentEncoder setArgumentBuffer:resources.commandArguments offset:0];
+		[_resources->argumentEncoder setIndirectCommandBuffer:resources.commands atIndex:0];
 	}
 }
 
@@ -134,6 +130,7 @@ void Culler::Cull(
 	const uint32_t commandRangeCount = Settings::FrustumsCount;
 	[encoder setBytes:&commandRangeCount length:sizeof(commandRangeCount) atIndex:3];
 	[encoder setBuffer:resources.softwareDispatchArguments offset:0 atIndex:4];
+	[encoder setBytes:&_maxMeshes length:sizeof(_maxMeshes) atIndex:5];
 	[encoder dispatchThreads:MTLSizeMake(counterCount, 1, 1)
 		threadsPerThreadgroup:MTLSizeMake(CULLING_THREADS_X, 1, 1)];
 	[encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
@@ -189,28 +186,23 @@ void Culler::Cull(
 	[encoder setBuffer:scene.GetMeshesBuffer() offset:0 atIndex:0];
 	[encoder setBuffer:resources.counters offset:0 atIndex:1];
 	[encoder setBuffer:scene.GetIndicesBuffer() offset:0 atIndex:2];
-	for (uint32_t frustum = 0;
-		frustum < static_cast<uint32_t>(Settings::FrustumsCount);
-		frustum++)
+	struct Parameters
 	{
-		struct Parameters
-		{
-			uint32_t frustum;
-			uint32_t meshCount;
-			uint32_t maxMeshes;
-			uint32_t maxInstances;
-		} parameters = { frustum, scene.GetMeshCount(), _maxMeshes, _maxInstances };
+		uint32_t frustumsCount;
+		uint32_t meshCount;
+		uint32_t maxMeshes;
+		uint32_t maxInstances;
+	} parameters = { static_cast<uint32_t>(Settings::FrustumsCount), scene.GetMeshCount(), _maxMeshes, _maxInstances };
 
-		[encoder setBytes:&parameters length:sizeof(parameters) atIndex:3];
-		[encoder setBuffer:resources.commandArguments[frustum] offset:0 atIndex:4];
-		[encoder setBuffer:resources.commandRanges offset:0 atIndex:5];
-		[encoder setBuffer:resources.softwareCommands offset:0 atIndex:6];
-		[encoder setBuffer:resources.softwareDispatchArguments offset:0 atIndex:7];
-		[encoder useResource:scene.GetIndicesBuffer() usage:MTLResourceUsageRead];
-		[encoder useResource:resources.commands[frustum] usage:MTLResourceUsageWrite];
-		[encoder dispatchThreads:MTLSizeMake(scene.GetMeshCount(), 1, 1)
-			threadsPerThreadgroup:MTLSizeMake(CULLING_THREADS_X, 1, 1)];
-	}
+	[encoder setBytes:&parameters length:sizeof(parameters) atIndex:3];
+	[encoder setBuffer:resources.commandArguments offset:0 atIndex:4];
+	[encoder setBuffer:resources.commandRanges offset:0 atIndex:5];
+	[encoder setBuffer:resources.softwareCommands offset:0 atIndex:6];
+	[encoder setBuffer:resources.softwareDispatchArguments offset:0 atIndex:7];
+	[encoder useResource:scene.GetIndicesBuffer() usage:MTLResourceUsageRead];
+	[encoder useResource:resources.commands usage:MTLResourceUsageWrite];
+	[encoder dispatchThreads:MTLSizeMake(scene.GetMeshCount(), 1, 1)
+		threadsPerThreadgroup:MTLSizeMake(CULLING_THREADS_X, 1, 1)];
 
 	[encoder endEncoding];
 }
@@ -225,9 +217,9 @@ id<MTLBuffer> Culler::GetInstanceCounters() const
 	return _resources->frames[_frameIndex].counters;
 }
 
-id<MTLIndirectCommandBuffer> Culler::GetCommands(uint32_t frustum) const
+id<MTLIndirectCommandBuffer> Culler::GetCommands() const
 {
-	return _resources->frames[_frameIndex].commands[frustum];
+	return _resources->frames[_frameIndex].commands;
 }
 
 id<MTLBuffer> Culler::GetCommandRanges() const

@@ -118,7 +118,7 @@ float GetShadow(in float viewDepth, in float3 positionWS)
 		PointClampSampler,
 		float3(smuv, cascadeIdx),
 		0.0).x;
-	// TODO: account for non-reversed Z
+	// Reverse Z: a lit receiver has greater depth than the biased shadow depth.
 	float shadow = (positionLCS.z > (depthSM - cascadeBias[cascadeIdx])) ? 1.0 : 0.0;
 
 	return shadow;

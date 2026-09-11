@@ -351,7 +351,16 @@ void ForwardRenderer::_newFrameGUI()
 		ImGui::TextColored(frameColor, "%.1f ms", frameTime);
 
 		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
-		ImGui::Checkbox("Software Rasterization", &Settings::SWREnabled);
+		int rasterizerIndex = Settings::SWREnabled ? (Settings::SWRWaveEnabled ? 2 : 1) : 0;
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Rasterizer");
+		ImGui::SameLine();
+		if (ImGui::Combo("##Rasterizer", &rasterizerIndex, "Hardware\0Software\0Software (Wave)\0"))
+		{
+			Settings::SWRWaveEnabled = rasterizerIndex == 2;
+			Settings::SWREnabled = rasterizerIndex != 0;
+		}
+
 		ImGui::Checkbox("Show Overdraw", &Settings::ShowOverdraw);
 		if (!Settings::SWREnabled)
 		{

@@ -27,10 +27,13 @@ struct SoftwareRasterization::Resources
 	id<MTLComputePipelineState> clearStatistics = nil;
 	id<MTLComputePipelineState> resetDispatch = nil;
 	id<MTLComputePipelineState> triangleDepth = nil;
+	id<MTLComputePipelineState> triangleDepthWave = nil;
 	id<MTLComputePipelineState> bigTriangleDepth = nil;
 	id<MTLComputePipelineState> triangleShadow = nil;
+	id<MTLComputePipelineState> triangleShadowWave = nil;
 	id<MTLComputePipelineState> bigTriangleShadow = nil;
 	id<MTLComputePipelineState> triangleOpaque = nil;
+	id<MTLComputePipelineState> triangleOpaqueWave = nil;
 	id<MTLComputePipelineState> bigTriangleOpaque = nil;
 	id<MTLComputePipelineState> overdrawDisplay = nil;
 };
@@ -69,10 +72,13 @@ void SoftwareRasterization::Initialize(uint32_t width, uint32_t height)
 	_resources->clearStatistics = Context::CreateComputePipeline("ClearStatistics");
 	_resources->resetDispatch = Context::CreateComputePipeline("ResetDispatchArguments");
 	_resources->triangleDepth = Context::CreateComputePipeline("TriangleDepthCS");
+	_resources->triangleDepthWave = Context::CreateComputePipeline("TriangleDepthWaveCS");
 	_resources->bigTriangleDepth = Context::CreateComputePipeline("BigTriangleDepthCS");
 	_resources->triangleShadow = Context::CreateComputePipeline("TriangleShadowCS");
+	_resources->triangleShadowWave = Context::CreateComputePipeline("TriangleShadowWaveCS");
 	_resources->bigTriangleShadow = Context::CreateComputePipeline("BigTriangleShadowCS");
 	_resources->triangleOpaque = Context::CreateComputePipeline("TriangleOpaqueCS");
+	_resources->triangleOpaqueWave = Context::CreateComputePipeline("TriangleOpaqueWaveCS");
 	_resources->bigTriangleOpaque = Context::CreateComputePipeline("BigTriangleOpaqueCS");
 	_resources->overdrawDisplay = Context::CreateComputePipeline("DrawOverdrawDisplayCS");
 
@@ -213,7 +219,6 @@ void SoftwareRasterization::_drawDepth(
 	constants.perTriangleHiZCullingEnabled =
 		Settings::PerTriangleHiZRasterizationCullingEnabled;
 	constants.frustumIndex = frustum;
-	constants.maxBigTriangles = _maxBigTrianglesDepth[frustum];
 	constants.maxSceneMeshes = culler.GetMaxMeshes();
 	constants.maxSceneInstances = culler.GetMaxInstances();
 	constants.hasHiZHistory = frustum == 0 ? hasCameraHistory : shadows.HasHistory();
@@ -221,8 +226,8 @@ void SoftwareRasterization::_drawDepth(
 	constants.nearPlaneClippingEnabled = frustum == 0;
 
 	[encoder setComputePipelineState:frustum == 0
-		? _resources->triangleDepth
-		: _resources->triangleShadow];
+		? (Settings::SWRWaveEnabled ? _resources->triangleDepthWave : _resources->triangleDepth)
+		: (Settings::SWRWaveEnabled ? _resources->triangleShadowWave : _resources->triangleShadow)];
 	[encoder setBuffer:scene.GetPositionsBuffer() offset:0 atIndex:Bindings::Positions];
 	[encoder setBuffer:scene.GetIndicesSOABuffer() offset:0 atIndex:Bindings::Indices];
 	[encoder setBuffer:culler.GetVisibleInstances() offset:0 atIndex:Bindings::Instances];
@@ -256,7 +261,6 @@ void SoftwareRasterization::_drawDepthBigTriangles(
 	constants.inverseOutputResolution = { 1.0f / width, 1.0f / height };
 	constants.bigTriangleTileSize = static_cast<float>(_bigTriangleTileSize);
 	constants.frustumIndex = frustum;
-	constants.maxBigTriangles = _maxBigTrianglesDepth[frustum];
 	constants.cameraNear = scene.camera.GetNearZ();
 	constants.nearPlaneClippingEnabled = frustum == 0;
 
@@ -380,7 +384,6 @@ void SoftwareRasterization::DrawOpaque(
 	constants.totalTriangles = scene.GetTrianglesCount();
 	constants.perTriangleHiZCullingEnabled =
 		Settings::PerTriangleHiZRasterizationCullingEnabled;
-	constants.maxBigTriangles = _maxBigTrianglesOpaque;
 	constants.hasHiZHistory = hasCameraHistory;
 	constants.cameraNear = scene.camera.GetNearZ();
 	for (int cascade = 0; cascade < Settings::CascadesCount; cascade++)
@@ -390,7 +393,8 @@ void SoftwareRasterization::DrawOpaque(
 		reinterpret_cast<float*>(&constants.cascadeSplits)[cascade] = shadows.GetCascadeSplit(cascade);
 	}
 
-	[encoder setComputePipelineState:_resources->triangleOpaque];
+	[encoder setComputePipelineState:Settings::SWRWaveEnabled
+		? _resources->triangleOpaqueWave : _resources->triangleOpaque];
 	[encoder setBuffer:scene.GetPositionsBuffer() offset:0 atIndex:Bindings::Positions];
 	[encoder setBuffer:scene.GetNormalsBuffer() offset:0 atIndex:Bindings::Normals];
 	[encoder setBuffer:scene.GetColorsBuffer() offset:0 atIndex:Bindings::Colors];

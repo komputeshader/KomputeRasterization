@@ -53,8 +53,9 @@ StructuredBuffer<Instance> Instances : register(t22);
 Texture2D HiZ : register(t23);
 
 RWTexture2D<uint> Depth : register(u0);
-AppendStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
+RWStructuredBuffer<BigTriangleDepth> BigTriangles : register(u1);
 RWStructuredBuffer<uint> Statistics : register(u2);
+RWByteAddressBuffer BigTrianglesCounter : register(u4);
 
 groupshared IndirectCommand Command;
 groupshared uint2 StatisticsSM;
@@ -116,6 +117,16 @@ void TriangleRasterizationNode(
 				GetCSPositions(
 					instance, p0, p1, p2,
 					p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
+
+				// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/ (section 5.2)
+				// backface culling before clipping and division by w
+				// reverse the cross product because screen y points down
+				// NOTE: not actually faster (or even lil bit slower) than standard backface culling
+				[branch]
+				if (dot(p0CS.xyw, cross(p2CS.xyw, p1CS.xyw)) <= 0.0)
+				{
+					continue;
+				}
 
 				bool p0Behind = NearPlaneClippingEnabled && p0CS.z > CameraNear;
 				bool p1Behind = NearPlaneClippingEnabled && p1CS.z > CameraNear;
@@ -223,15 +234,6 @@ void TriangleRasterizationNode(
 				float2 p0SS, p1SS, p2SS;
 				GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, p0SS, p1SS, p2SS);
 
-				float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
-
-				// backface if negative
-				[branch]
-				if (area <= 0.0)
-				{
-					continue;
-				}
-
 				float z0NDC = p0CS.z * invW0;
 				float z1NDC = p1CS.z * invW1;
 				float z2NDC = p2CS.z * invW2;
@@ -299,16 +301,8 @@ void TriangleRasterizationNode(
 					result.p2WSZ = p2WS.z;
 
 					float2 tilesCount = ceil(dimensions / BigTriangleTileSize);
-					float totalTiles = tilesCount.x * tilesCount.y;
-					for (float offset = 0.0; offset < totalTiles; offset += 1.0)
-					{
-						result.tileOffset = offset;
-
-						// seemingly vastly inefficient way to write out that data,
-						// but the more reasonable/parallel approach isn't faster, and is in fact slower
-						// see the same code in the "experimental" branch
-						BigTriangles.Append(result);
-					}
+					uint firstHalfTiles = uint(tilesCount.x * tilesCount.y);
+					uint secondHalfTiles = 0;
 
 					if (quadrilateral)
 					{
@@ -337,15 +331,40 @@ void TriangleRasterizationNode(
 						dimensions = maxP.xy - minP.xy;
 
 						tilesCount = ceil(dimensions / BigTriangleTileSize);
-						totalTiles = tilesCount.x * tilesCount.y;
-						for (float offset = 0.0; offset < totalTiles; offset += 1.0)
+						secondHalfTiles = uint(tilesCount.x * tilesCount.y);
+					}
+
+					uint totalTiles = firstHalfTiles + secondHalfTiles;
+					if (totalTiles > 0)
+					{
+						uint writeIndex;
+						BigTrianglesCounter.InterlockedAdd(0, totalTiles, writeIndex);
+
+						// seemingly vastly inefficient way to write out that data,
+						// but the more reasonable/parallel approach isn't faster, and is in fact slower
+						// see the same code in the "experimental" branch
+						for (uint offset = 0; offset < firstHalfTiles; offset++)
 						{
-							// the sign bit selects the second triangle produced from the clipped quad
-							result.tileOffset = asfloat(asuint(offset) | 0x80000000);
-							BigTriangles.Append(result);
+							result.tileOffset = float(offset);
+							BigTriangles[writeIndex + offset] = result;
+						}
+
+						for (uint secondOffset = 0; secondOffset < secondHalfTiles; secondOffset++)
+						{
+							result.tileOffset = asfloat(asuint(float(secondOffset)) | 0x80000000);
+							BigTriangles[writeIndex + firstHalfTiles + secondOffset] = result;
 						}
 					}
 
+					continue;
+				}
+
+				float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
+
+				// skip zero-area triangles produced by clipping or screen-space rounding before dividing by area
+				[branch]
+				if (area == 0.0)
+				{
 					continue;
 				}
 
@@ -413,7 +432,6 @@ void TriangleRasterizationNode(
 
 							precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-							// TODO: account for non-reversed Z
 							InterlockedMax(Depth[uint2(x, y)], asuint(depth));
 
 							// E(x + a, y + b) = E(x, y) - a * dy + b * dx
@@ -458,7 +476,6 @@ void TriangleRasterizationNode(
 
 								precise float depth = weight0 * z0NDC + weight1 * z1NDC + weight2 * z2NDC;
 
-								// TODO: account for non-reversed Z
 								InterlockedMax(Depth[uint2(x, y)], asuint(depth));
 							}
 

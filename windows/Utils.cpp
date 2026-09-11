@@ -54,9 +54,8 @@ void InitializeResources()
 
 	ComPtr<ID3DBlob> computeShader = Utils::CompileShader(
 		L"shaders\\GenerateHiZMipCS.hlsl",
-		nullptr,
-		"main",
-		"cs_5_0");
+		L"main",
+		L"cs_6_0");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = HiZRS.Get();
@@ -139,52 +138,12 @@ AABB TransformAABB(
 
 ComPtr<ID3DBlob> CompileShader(
 	const std::wstring& filename,
-	const D3D_SHADER_MACRO* defines,
-	const std::string& entrypoint,
-	const std::string& target)
-{
-	unsigned int compileFlags = 0;
-
-#if defined(DEBUG) || defined(_DEBUG)
-	compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-	HRESULT hr = S_OK;
-
-	ComPtr<ID3DBlob> byteCode = nullptr;
-	ComPtr<ID3DBlob> errors = nullptr;
-
-	hr = D3DCompileFromFile(
-		filename.c_str(),
-		defines,
-		D3D_COMPILE_STANDARD_FILE_INCLUDE,
-		entrypoint.c_str(),
-		target.c_str(),
-		compileFlags,
-		0,
-		&byteCode,
-		&errors);
-
-	if (errors)
-	{
-		OutputDebugStringA((char*)errors->GetBufferPointer());
-	}
-
-	SUCCESS(hr);
-
-	return byteCode;
-}
-
-void CompileDXILFromFile(
-	const std::wstring& filename,
 	const std::wstring& entrypoint,
 	const std::wstring& target,
-	DxcDefine* defines,
-	unsigned int definesCount,
-	ID3DBlob** ppCode)
+	const DxcDefine* defines,
+	unsigned int definesCount)
 {
 	HRESULT hr = S_OK;
-	*ppCode = nullptr;
 
 	static HMODULE hmod = 0;
 	static HMODULE hmodDxil = 0;
@@ -230,7 +189,11 @@ void CompileDXILFromFile(
 	ASSERT(SUCCEEDED(hr), "Failed to instantiate compiler.")
 
 	ComPtr<IDxcOperationResult> operationResult;
-	LPCWSTR args[] = { L"-I", L"shaders" };
+#if defined(DEBUG) || defined(_DEBUG)
+	LPCWSTR args[] = { L"-I", L"shaders", L"-Zi", L"-Qembed_debug", L"-Od" };
+#else
+	LPCWSTR args[] = { L"-I", L"shaders", L"-O3" };
+#endif
 	UINT cArgs = _countof(args);
 	hr = compiler->Compile(
 		source.Get(),
@@ -257,7 +220,9 @@ void CompileDXILFromFile(
 	}
 
 	SUCCESS(compileStatus);
-	SUCCESS(operationResult->GetResult(reinterpret_cast<IDxcBlob**>(ppCode)));
+	ComPtr<ID3DBlob> byteCode;
+	SUCCESS(operationResult->GetResult(reinterpret_cast<IDxcBlob**>(byteCode.GetAddressOf())));
+	return byteCode;
 }
 
 void CreateDefaultHeapBuffer(
@@ -385,9 +350,8 @@ void GetFrustumPlanes(XMMATRIX m, Frustum& f)
 	XMStoreFloat4(&f.r, XMPlaneNormalize(XMVectorAdd(r4, -r1)));
 	XMStoreFloat4(&f.b, XMPlaneNormalize(XMVectorAdd(r4, r2)));
 	XMStoreFloat4(&f.t, XMPlaneNormalize(XMVectorAdd(r4, -r2)));
-	XMStoreFloat4(&f.n, XMPlaneNormalize(r3));
-	// TODO: wtf is with far value?
-	XMStoreFloat4(&f.f, XMPlaneNormalize(XMVectorAdd(r4, -r3)));
+	XMStoreFloat4(&f.n, XMPlaneNormalize(XMVectorAdd(r4, -r3)));
+	XMStoreFloat4(&f.f, XMPlaneNormalize(r3));
 }
 
 unsigned int MipsCount(unsigned int width, unsigned int height)

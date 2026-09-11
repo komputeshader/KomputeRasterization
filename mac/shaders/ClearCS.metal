@@ -37,6 +37,5 @@ kernel void ResetDispatchArguments(
 	atomic_store_explicit(&arguments.x, 0, memory_order_relaxed);
 	arguments.y = 1;
 	arguments.z = 1;
-	atomic_store_explicit(&arguments.overflow, 0, memory_order_relaxed);
 }
 

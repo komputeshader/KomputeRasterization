@@ -66,8 +66,6 @@ public:
 	float GetNearWindowWidth() const { return _aspect * _nearWindowHeight; }
 	float GetFarWindowWidth() const { return _aspect * _farWindowHeight; }
 
-	bool ReverseZ() const { return _reverseZ; }
-
 private:
 
 	void _updateFrustumPlanes();
@@ -90,6 +88,4 @@ private:
 	float _fovY = 0.0f;
 	float _nearWindowHeight = 0.0f;
 	float _farWindowHeight = 0.0f;
-
-	bool _reverseZ = true;
 };

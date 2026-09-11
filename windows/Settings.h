@@ -29,6 +29,7 @@ public:
 	static bool PerTriangleHiZRasterizationCullingEnabled;
 	static bool ClusterBackfaceCullingEnabled;
 	static bool SWREnabled;
+	static bool SWRWaveEnabled;
 	static bool AsyncComputeEnabled;
 	static bool SWRWGEnabled;
 	static bool ShowMeshlets;

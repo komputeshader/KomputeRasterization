@@ -91,6 +91,7 @@ inline float GetShadow(
 	const float stored = shadowMap.sample(pointSampler, uv, cascade).r;
 	const float bias = constants.cascadeBias[cascade / 4][cascade % 4];
 
+	// Reverse Z: a lit receiver has greater depth than the biased shadow depth.
 	return lightClip.z > stored - bias ? 1.0f : 0.0f;
 }
 
@@ -122,6 +123,7 @@ inline float GetShadow(
 
 	const float bias = constants.cascadeBias[cascade / 4][cascade % 4];
 
+	// Reverse Z: a lit receiver has greater depth than the biased shadow depth.
 	return lightClip.z > stored - bias ? 1.0f : 0.0f;
 }
 

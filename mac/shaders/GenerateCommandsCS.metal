@@ -7,7 +7,7 @@ struct ICBContainer
 
 struct GenerateParameters
 {
-	uint frustum;
+	uint frustumsCount;
 	uint meshCount;
 	uint maxMeshes;
 	uint maxInstances;
@@ -30,38 +30,37 @@ kernel void GenerateCommandsCS(
 	}
 
 	const MeshMeta mesh = meshes[meshIndex];
-	const uint count = atomic_load_explicit(
-		&counters[parameters.frustum * parameters.maxMeshes + meshIndex],
-		memory_order_relaxed);
+	IndirectCommand result;
+	result.args.indexCountPerInstance = mesh.indexCountPerInstance;
+	result.args.startIndexLocation = mesh.startIndexLocation;
+	result.args.baseVertexLocation = mesh.baseVertexLocation;
+	result.args.startInstanceLocation = 0;
 
-	if (count > 0)
+	for (uint frustum = 0; frustum < parameters.frustumsCount; frustum++)
 	{
-		const uint commandIndex = atomic_fetch_add_explicit(
-			&commandRanges[parameters.frustum].length,
-			1,
-			memory_order_relaxed);
-		render_command command(container->commandBuffer, commandIndex);
-		command.draw_indexed_primitives(
-			primitive_type::triangle,
-			mesh.indexCountPerInstance,
-			indices + mesh.startIndexLocation,
-			count,
-			mesh.baseVertexLocation,
-			parameters.frustum * parameters.maxInstances + mesh.startInstanceLocation);
-
-		const uint softwareCommandIndex = atomic_fetch_add_explicit(
-			&dispatchArguments[parameters.frustum].x,
-			1,
+		const uint instanceCount = atomic_load_explicit(
+			&counters[frustum * parameters.maxMeshes + meshIndex],
 			memory_order_relaxed);
 
-		IndirectCommand result;
-		result.startInstanceLocation = parameters.frustum * parameters.maxInstances + mesh.startInstanceLocation;
-		result.args.indexCountPerInstance = mesh.indexCountPerInstance;
-		result.args.instanceCount = count;
-		result.args.startIndexLocation = mesh.startIndexLocation;
-		result.args.baseVertexLocation = mesh.baseVertexLocation;
-		result.args.startInstanceLocation = 0;
+		if (instanceCount > 0)
+		{
+			const uint writeIndex = atomic_fetch_add_explicit(
+				&dispatchArguments[frustum].x,
+				1,
+				memory_order_relaxed);
+			result.startInstanceLocation = frustum * parameters.maxInstances + mesh.startInstanceLocation;
+			result.args.instanceCount = instanceCount;
+			softwareCommands[frustum * parameters.maxMeshes + writeIndex] = result;
 
-		softwareCommands[parameters.frustum * parameters.maxMeshes + softwareCommandIndex] = result;
+			render_command command(container->commandBuffer, frustum * parameters.maxMeshes + writeIndex);
+			command.draw_indexed_primitives(
+				primitive_type::triangle,
+				mesh.indexCountPerInstance,
+				indices + mesh.startIndexLocation,
+				instanceCount,
+				mesh.baseVertexLocation,
+				result.startInstanceLocation);
+			atomic_fetch_add_explicit(&commandRanges[frustum].length, 1, memory_order_relaxed);
+		}
 	}
 }

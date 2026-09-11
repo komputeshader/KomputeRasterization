@@ -79,6 +79,15 @@ kernel void TriangleOpaqueCS(
 				instance, p0, p1, p2, constants.vp,
 				p0WS, p1WS, p2WS, p0CS, p1CS, p2CS);
 
+			// https://userpages.cs.umbc.edu/olano/papers/2dh-tri/ (section 5.2)
+			// backface culling before clipping and division by w
+			// reverse the cross product because screen y points down
+			// NOTE: not actually faster (or even lil bit slower) than standard backface culling
+			if (dot(p0CS.xyw, cross(p2CS.xyw, p1CS.xyw)) <= 0.0f)
+			{
+				continue;
+			}
+
 			// near plane clipping handling adds to register pressure and processing costs,
 			// and could be avoided for most triangles by tagging meshlets, as crossing
 			// the near plane, at the culling stage
@@ -184,14 +193,6 @@ kernel void TriangleOpaqueCS(
 			float2 p0SS, p1SS, p2SS;
 			GetSSPositions(p0CS.xy, p1CS.xy, p2CS.xy, invW0, invW1, invW2, constants.outputResolution, p0SS, p1SS, p2SS);
 
-			float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
-
-			// backface if negative
-			if (area <= 0.0f)
-			{
-				continue;
-			}
-
 			float z0NDC = p0CS.z * invW0;
 			float z1NDC = p1CS.z * invW1;
 			float z2NDC = p2CS.z * invW2;
@@ -262,16 +263,8 @@ kernel void TriangleOpaqueCS(
 				result.packedUV2 = 0;
 
 				float2 tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
-				float totalTiles = tilesCount.x * tilesCount.y;
-				for (float offset = 0.0f; offset < totalTiles; offset += 1.0f)
-				{
-					result.tileOffset = offset;
-
-					// seemingly vastly inefficient way to write out that data,
-					// but the more reasonable/parallel approach isn't faster, and is in fact slower
-					// see the same code in the "experimental" branch
-					EnqueueBigTriangle(result, bigTriangles, arguments, constants.maxBigTriangles);
-				}
+				uint firstHalfTiles = uint(tilesCount.x * tilesCount.y);
+				uint secondHalfTiles = 0;
 
 				if (quadrilateral)
 				{
@@ -299,12 +292,27 @@ kernel void TriangleOpaqueCS(
 					dimensions = maxP.xy - minP.xy;
 
 					tilesCount = ceil(dimensions / constants.bigTriangleTileSize);
-					totalTiles = tilesCount.x * tilesCount.y;
-					for (float offset = 0.0f; offset < totalTiles; offset += 1.0f)
+					secondHalfTiles = uint(tilesCount.x * tilesCount.y);
+				}
+
+				uint totalTiles = firstHalfTiles + secondHalfTiles;
+				if (totalTiles > 0)
+				{
+					uint writeIndex = atomic_fetch_add_explicit(&arguments.x, totalTiles, memory_order_relaxed);
+
+					// seemingly vastly inefficient way to write out that data,
+					// but the more reasonable/parallel approach isn't faster, and is in fact slower
+					// see the same code in the "experimental" branch
+					for (uint offset = 0; offset < firstHalfTiles; offset++)
 					{
-						// the sign bit selects the second triangle produced from the clipped quad
-						result.tileOffset = as_type<float>(as_type<uint>(offset) | 0x80000000);
-						EnqueueBigTriangle(result, bigTriangles, arguments, constants.maxBigTriangles);
+						result.tileOffset = float(offset);
+						bigTriangles[writeIndex + offset] = result;
+					}
+
+					for (uint secondOffset = 0; secondOffset < secondHalfTiles; secondOffset++)
+					{
+						result.tileOffset = as_type<float>(as_type<uint>(float(secondOffset)) | 0x80000000);
+						bigTriangles[writeIndex + firstHalfTiles + secondOffset] = result;
 					}
 				}
 
@@ -317,6 +325,14 @@ kernel void TriangleOpaqueCS(
 			float4 c0 = UnpackColor(c0P);
 			float4 c1 = UnpackColor(c1P);
 			float4 c2 = UnpackColor(c2P);
+
+			float area = Area(p0SS.xy, p1SS.xy, p2SS.xy);
+
+			// skip zero-area triangles produced by clipping or screen-space rounding before dividing by area
+			if (area == 0.0f)
+			{
+				continue;
+			}
 
 			float invArea = 1.0f / area;
 

@@ -131,7 +131,7 @@ namespace
 	{
 		if (Settings::CullingEnabled)
 		{
-			id<MTLIndirectCommandBuffer> commands = culler.GetCommands(frustum);
+			id<MTLIndirectCommandBuffer> commands = culler.GetCommands();
 			[encoder useResource:commands usage:MTLResourceUsageRead stages:MTLRenderStageVertex];
 			[encoder executeCommandsInBuffer:commands
 				indirectBuffer:culler.GetCommandRanges()

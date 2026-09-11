@@ -127,7 +127,6 @@ struct DepthSceneCB
 	uint totalTriangles;
 	uint perTriangleHiZCullingEnabled;
 	uint frustumIndex;
-	uint maxBigTriangles;
 	uint maxSceneMeshes;
 	uint maxSceneInstances;
 	uint hasHiZHistory;
@@ -156,7 +155,6 @@ struct SceneCB
 	float shadowsDistance;
 	uint totalTriangles;
 	uint perTriangleHiZCullingEnabled;
-	uint maxBigTriangles;
 	uint hasHiZHistory;
 
 	uint showOverdraw;
@@ -205,7 +203,7 @@ struct BigTriangleOpaque
 
 static_assert(sizeof(BigTriangleDepth) == 40, "BigTriangleDepth must match the CPU layout");
 static_assert(sizeof(BigTriangleOpaque) == 88, "BigTriangleOpaque must match the CPU layout");
-static_assert(sizeof(DepthSceneCB) == 144, "DepthSceneCB must match the CPU layout");
+static_assert(sizeof(DepthSceneCB) == 128, "DepthSceneCB must match the CPU layout");
 static_assert(sizeof(SceneCB) == 736, "SceneCB must match the CPU layout");
 
 struct DispatchArguments
@@ -213,8 +211,9 @@ struct DispatchArguments
 	atomic_uint x;
 	uint y;
 	uint z;
-	atomic_uint overflow;
 };
+
+static_assert(sizeof(DispatchArguments) == 12, "DispatchArguments must match the CPU layout");
 
 struct ICBExecutionRange
 {

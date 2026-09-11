@@ -28,7 +28,7 @@ public:
 
 	id<MTLBuffer> GetVisibleInstances() const;
 	id<MTLBuffer> GetInstanceCounters() const;
-	id<MTLIndirectCommandBuffer> GetCommands(uint32_t frustum) const;
+	id<MTLIndirectCommandBuffer> GetCommands() const;
 	id<MTLBuffer> GetCommandRanges() const;
 	id<MTLBuffer> GetSoftwareCommands() const;
 	id<MTLBuffer> GetSoftwareDispatchArguments() const;
