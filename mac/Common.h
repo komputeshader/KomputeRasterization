@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -143,6 +144,13 @@ struct DispatchArguments
 	uint32_t z = 1;
 };
 
+// dispatch.x is also the hardware indirect command range length.
+struct CullingCommandArguments
+{
+	uint32_t location = 0;
+	DispatchArguments dispatch;
+};
+
 struct BigTriangleDepth
 {
 	float tileOffset = 0.0f;
@@ -248,6 +256,8 @@ static_assert(sizeof(AABB) == 32);
 static_assert(sizeof(MeshMeta) == 80);
 static_assert(sizeof(Instance) == 80);
 static_assert(sizeof(DispatchArguments) == 12);
+static_assert(sizeof(CullingCommandArguments) == 16);
+static_assert(offsetof(CullingCommandArguments, dispatch) == 4);
 static_assert(sizeof(BigTriangleDepth) == 40);
 static_assert(sizeof(BigTriangleOpaque) == 88);
 static_assert(sizeof(DepthSceneCB) == 128);

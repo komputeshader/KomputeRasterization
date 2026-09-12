@@ -208,18 +208,21 @@ static_assert(sizeof(SceneCB) == 736, "SceneCB must match the CPU layout");
 
 struct DispatchArguments
 {
-	atomic_uint x;
+	uint x;
 	uint y;
 	uint z;
 };
 
 static_assert(sizeof(DispatchArguments) == 12, "DispatchArguments must match the CPU layout");
 
-struct ICBExecutionRange
+// dispatch.x is also the hardware indirect command range length.
+struct CullingCommandArguments
 {
 	uint location;
-	atomic_uint length;
+	DispatchArguments dispatch;
 };
+
+static_assert(sizeof(CullingCommandArguments) == 16, "CullingCommandArguments must match the CPU layout");
 
 struct DepthVSInput
 {

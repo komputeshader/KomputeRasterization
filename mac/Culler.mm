@@ -14,9 +14,8 @@ namespace
 		id<MTLBuffer> visibleInstances = nil;
 		id<MTLIndirectCommandBuffer> commands = nil;
 		id<MTLBuffer> commandArguments = nil;
-		id<MTLBuffer> commandRanges = nil;
+		id<MTLBuffer> commandCounters = nil;
 		id<MTLBuffer> softwareCommands = nil;
-		id<MTLBuffer> softwareDispatchArguments = nil;
 	};
 }
 
@@ -76,21 +75,16 @@ void Culler::Initialize()
 			nullptr, counterLength, MTLResourceStorageModePrivate, @"Visible instance counters");
 		resources.visibleInstances = Context::CreateBuffer(
 			nullptr, visibleLength, MTLResourceStorageModePrivate, @"Visible instances");
-		resources.commandRanges = Context::CreateBuffer(
+		resources.commandCounters = Context::CreateBuffer(
 			nullptr,
-			MAX_FRUSTUMS_COUNT * sizeof(MTLIndirectCommandBufferExecutionRange),
+			MAX_FRUSTUMS_COUNT * sizeof(CullingCommandArguments),
 			MTLResourceStorageModePrivate,
-			@"Indirect command ranges");
+			@"Indirect command counters");
 		resources.softwareCommands = Context::CreateBuffer(
 			nullptr,
 			static_cast<NSUInteger>(MAX_FRUSTUMS_COUNT) * _maxMeshes * sizeof(IndirectCommand),
 			MTLResourceStorageModePrivate,
 			@"Software rasterization commands");
-		resources.softwareDispatchArguments = Context::CreateBuffer(
-			nullptr,
-			MAX_FRUSTUMS_COUNT * sizeof(DispatchArguments),
-			MTLResourceStorageModePrivate,
-			@"Software rasterization dispatch arguments");
 
 		resources.commands = [Context::Device
 			newIndirectCommandBufferWithDescriptor:descriptor
@@ -126,11 +120,10 @@ void Culler::Cull(
 	[encoder setComputePipelineState:_resources->clearPipeline];
 	[encoder setBuffer:resources.counters offset:0 atIndex:0];
 	[encoder setBytes:&counterCount length:sizeof(counterCount) atIndex:1];
-	[encoder setBuffer:resources.commandRanges offset:0 atIndex:2];
-	const uint32_t commandRangeCount = Settings::FrustumsCount;
-	[encoder setBytes:&commandRangeCount length:sizeof(commandRangeCount) atIndex:3];
-	[encoder setBuffer:resources.softwareDispatchArguments offset:0 atIndex:4];
-	[encoder setBytes:&_maxMeshes length:sizeof(_maxMeshes) atIndex:5];
+	[encoder setBuffer:resources.commandCounters offset:0 atIndex:2];
+	const uint32_t frustumsCount = Settings::FrustumsCount;
+	[encoder setBytes:&frustumsCount length:sizeof(frustumsCount) atIndex:3];
+	[encoder setBytes:&_maxMeshes length:sizeof(_maxMeshes) atIndex:4];
 	[encoder dispatchThreads:MTLSizeMake(counterCount, 1, 1)
 		threadsPerThreadgroup:MTLSizeMake(CULLING_THREADS_X, 1, 1)];
 	[encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
@@ -196,9 +189,8 @@ void Culler::Cull(
 
 	[encoder setBytes:&parameters length:sizeof(parameters) atIndex:3];
 	[encoder setBuffer:resources.commandArguments offset:0 atIndex:4];
-	[encoder setBuffer:resources.commandRanges offset:0 atIndex:5];
+	[encoder setBuffer:resources.commandCounters offset:0 atIndex:5];
 	[encoder setBuffer:resources.softwareCommands offset:0 atIndex:6];
-	[encoder setBuffer:resources.softwareDispatchArguments offset:0 atIndex:7];
 	[encoder useResource:scene.GetIndicesBuffer() usage:MTLResourceUsageRead];
 	[encoder useResource:resources.commands usage:MTLResourceUsageWrite];
 	[encoder dispatchThreads:MTLSizeMake(scene.GetMeshCount(), 1, 1)
@@ -222,17 +214,12 @@ id<MTLIndirectCommandBuffer> Culler::GetCommands() const
 	return _resources->frames[_frameIndex].commands;
 }
 
-id<MTLBuffer> Culler::GetCommandRanges() const
+id<MTLBuffer> Culler::GetCommandCounters() const
 {
-	return _resources->frames[_frameIndex].commandRanges;
+	return _resources->frames[_frameIndex].commandCounters;
 }
 
 id<MTLBuffer> Culler::GetSoftwareCommands() const
 {
 	return _resources->frames[_frameIndex].softwareCommands;
-}
-
-id<MTLBuffer> Culler::GetSoftwareDispatchArguments() const
-{
-	return _resources->frames[_frameIndex].softwareDispatchArguments;
 }

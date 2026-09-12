@@ -22,19 +22,19 @@ kernel void ClearColorTexture(
 }
 
 kernel void ClearStatistics(
-	device atomic_uint* statistics [[buffer(0)]],
+	device uint* statistics [[buffer(0)]],
 	uint index [[thread_position_in_grid]])
 {
 	if (index < 2)
 	{
-		atomic_store_explicit(&statistics[index], 0, memory_order_relaxed);
+		statistics[index] = 0;
 	}
 }
 
 kernel void ResetDispatchArguments(
 	device DispatchArguments& arguments [[buffer(0)]])
 {
-	atomic_store_explicit(&arguments.x, 0, memory_order_relaxed);
+	arguments.x = 0;
 	arguments.y = 1;
 	arguments.z = 1;
 }

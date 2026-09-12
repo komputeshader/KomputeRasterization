@@ -353,7 +353,7 @@ void Scene::_loadObj(
 	{
 		for (;;)
 		{
-			const size_t job = nextJob.fetch_add(1);
+			const size_t job = nextJob.fetch_add(1, std::memory_order_relaxed);
 			if (job >= jobs.size())
 			{
 				break;

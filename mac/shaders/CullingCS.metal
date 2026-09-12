@@ -1,26 +1,24 @@
 #include "CullingCommon.metal"
 
 kernel void ClearCounters(
-	device atomic_uint* counters [[buffer(0)]],
+	device uint* counters [[buffer(0)]],
 	constant uint& count [[buffer(1)]],
-	device ICBExecutionRange* commandRanges [[buffer(2)]],
-	constant uint& commandRangeCount [[buffer(3)]],
-	device DispatchArguments* dispatchArguments [[buffer(4)]],
-	constant uint& maxMeshes [[buffer(5)]],
+	device CullingCommandArguments* commandCounters [[buffer(2)]],
+	constant uint& frustumsCount [[buffer(3)]],
+	constant uint& maxMeshes [[buffer(4)]],
 	uint index [[thread_position_in_grid]])
 {
 	if (index < count)
 	{
-		atomic_store_explicit(&counters[index], 0, memory_order_relaxed);
+		counters[index] = 0;
 	}
 
-	if (index < commandRangeCount)
+	if (index < frustumsCount)
 	{
-		commandRanges[index].location = index * maxMeshes;
-		atomic_store_explicit(&commandRanges[index].length, 0, memory_order_relaxed);
-		atomic_store_explicit(&dispatchArguments[index].x, 0, memory_order_relaxed);
-		dispatchArguments[index].y = SWR_THREAD_GROUPS_Y;
-		dispatchArguments[index].z = 1;
+		commandCounters[index].location = index * maxMeshes;
+		commandCounters[index].dispatch.x = 0;
+		commandCounters[index].dispatch.y = SWR_THREAD_GROUPS_Y;
+		commandCounters[index].dispatch.z = 1;
 	}
 }
 

@@ -242,8 +242,8 @@ void SoftwareRasterization::_drawDepth(
 		offset:0 atIndex:6];
 	[encoder setTexture:previousCameraHiZ atIndex:2];
 	[encoder setTexture:shadows.GetPrevFrameShadowMapMips() atIndex:3];
-	[encoder dispatchThreadgroupsWithIndirectBuffer:culler.GetSoftwareDispatchArguments()
-		indirectBufferOffset:frustum * sizeof(DispatchArguments)
+	[encoder dispatchThreadgroupsWithIndirectBuffer:culler.GetCommandCounters()
+		indirectBufferOffset:Culler::GetDispatchArgumentsOffset(frustum)
 		threadsPerThreadgroup:MTLSizeMake(SWR_TRIANGLE_THREADS_X, 1, 1)];
 }
 
@@ -411,8 +411,8 @@ void SoftwareRasterization::DrawOpaque(
 	[encoder setBuffer:_resources->overdrawBuffer offset:0 atIndex:Bindings::FragmentOverdraw];
 	[encoder setTexture:_resources->renderTarget atIndex:2];
 	[encoder setTexture:previousCameraHiZ atIndex:3];
-	[encoder dispatchThreadgroupsWithIndirectBuffer:culler.GetSoftwareDispatchArguments()
-		indirectBufferOffset:0
+	[encoder dispatchThreadgroupsWithIndirectBuffer:culler.GetCommandCounters()
+		indirectBufferOffset:Culler::GetDispatchArgumentsOffset(0)
 		threadsPerThreadgroup:MTLSizeMake(SWR_TRIANGLE_THREADS_X, 1, 1)];
 	[encoder memoryBarrierWithScope:MTLBarrierScopeBuffers | MTLBarrierScopeTextures];
 	[encoder setComputePipelineState:_resources->bigTriangleOpaque];

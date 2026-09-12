@@ -134,8 +134,8 @@ namespace
 			id<MTLIndirectCommandBuffer> commands = culler.GetCommands();
 			[encoder useResource:commands usage:MTLResourceUsageRead stages:MTLRenderStageVertex];
 			[encoder executeCommandsInBuffer:commands
-				indirectBuffer:culler.GetCommandRanges()
-				indirectBufferOffset:frustum * sizeof(MTLIndirectCommandBufferExecutionRange)];
+				indirectBuffer:culler.GetCommandCounters()
+				indirectBufferOffset:Culler::GetCommandRangeOffset(frustum)];
 		}
 		else
 		{

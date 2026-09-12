@@ -34,13 +34,13 @@ kernel void TriangleDepthWaveCS(
 #endif
 
 	threadgroup IndirectCommand command;
-	threadgroup atomic_uint statisticsSM[2];
+	threadgroup uint statisticsSM[2];
 
 	if (groupIndex == 0)
 	{
 		command = commands[groupID.x];
-		atomic_store_explicit(&statisticsSM[0], 0, memory_order_relaxed);
-		atomic_store_explicit(&statisticsSM[1], 0, memory_order_relaxed);
+		statisticsSM[0] = 0;
+		statisticsSM[1] = 0;
 	}
 
 	threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -68,7 +68,7 @@ kernel void TriangleDepthWaveCS(
 		for (uint instanceID = 0; instanceID < command.args.instanceCount; instanceID++)
 		{
 			// one more triangle attempted to be rendered
-			atomic_fetch_add_explicit(&statisticsSM[0], 1u, memory_order_relaxed);
+			atomic_fetch_add_explicit(reinterpret_cast<threadgroup atomic_uint*>(&statisticsSM[0]), 1u, memory_order_relaxed);
 
 			float3 p0WS, p1WS, p2WS;
 			float4 p0CS, p1CS, p2CS;
@@ -245,7 +245,7 @@ kernel void TriangleDepthWaveCS(
 
 			// one more triangle was rendered
 			// not precise, though, since it still could miss any pixel centers
-			atomic_fetch_add_explicit(&statisticsSM[1], 1u, memory_order_relaxed);
+			atomic_fetch_add_explicit(reinterpret_cast<threadgroup atomic_uint*>(&statisticsSM[1]), 1u, memory_order_relaxed);
 
 			// TODO: thin triangles area vs box area
 			// TODO: thread local
@@ -298,7 +298,7 @@ kernel void TriangleDepthWaveCS(
 				uint totalTiles = firstHalfTiles + secondHalfTiles;
 				if (totalTiles > 0)
 				{
-					uint writeIndex = atomic_fetch_add_explicit(&arguments.x, totalTiles, memory_order_relaxed);
+					uint writeIndex = atomic_fetch_add_explicit(reinterpret_cast<device atomic_uint*>(&arguments.x), totalTiles, memory_order_relaxed);
 
 					// seemingly vastly inefficient way to write out that data,
 					// but the more reasonable/parallel approach isn't faster, and is in fact slower
@@ -452,11 +452,11 @@ kernel void TriangleDepthWaveCS(
 	{
 		atomic_fetch_add_explicit(
 			&statistics[0],
-			atomic_load_explicit(&statisticsSM[0], memory_order_relaxed),
+			statisticsSM[0],
 			memory_order_relaxed);
 		atomic_fetch_add_explicit(
 			&statistics[1],
-			atomic_load_explicit(&statisticsSM[1], memory_order_relaxed),
+			statisticsSM[1],
 			memory_order_relaxed);
 	}
 }
