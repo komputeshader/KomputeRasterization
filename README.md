@@ -31,13 +31,13 @@ Demo attemps to distribute load over threads  with the notion of a big triangle 
 * Download https://casual-effects.com/g3d/data10/index.html#mesh3 and place it into the `assets/buddha/` folder.
 * Download https://casual-effects.com/g3d/data10/index.html#mesh25 and place it into the `assets/powerplant/` folder.
 
-Windows:
+**Windows**:
 
 * Open `windows/KomputeRasterization.sln` with Visual Studio.
 * Right-click the solution and select **Restore NuGet Packages**. The required packages and versions are declared in `packages.config`.
 * Build and run.
 
-Mac:
+**Mac**:
 
 * Open `mac/KomputeRasterization.xcodeproj` with Xcode.
 * Select the `KomputeRasterization` scheme.
