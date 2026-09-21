@@ -63,12 +63,15 @@ inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, unsigned int ind
 	}
 
 #define SUCCESS(hr, ...) \
-	if (FAILED(hr)) { \
-		PrintToOutput("\nHRESULT hr = 0x%08X failed in file %s, line %d\n", static_cast<unsigned int>(hr), __FILE__, __LINE__); \
-		PrintToOutput(__VA_ARGS__); \
-		PrintToOutput("\n"); \
-		__debugbreak(); \
-	}
+	do { \
+		const HRESULT successHr_ = (hr); \
+		if (FAILED(successHr_)) { \
+			PrintToOutput("\nHRESULT hr = 0x%08X failed in file %s, line %d\n", static_cast<unsigned int>(successHr_), __FILE__, __LINE__); \
+			PrintToOutput(__VA_ARGS__); \
+			PrintToOutput("\n"); \
+			__debugbreak(); \
+		} \
+	} while (0)
 
 namespace Utils
 {
