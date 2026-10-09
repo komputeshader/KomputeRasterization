@@ -1,3 +1,5 @@
+![overdraw_cmp](overdraw_cmp.png)
+
 ## KomputeRasterizer
 This demo attempts to render scenes with a big amount of triangles in a GPU-driven fashion using the compute shader rasterization, both via vanilla compute shaders, and the work graphs. It also attempts to simulate game engine geometry load with cascaded shadows and culling.
 
