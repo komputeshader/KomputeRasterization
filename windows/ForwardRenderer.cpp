@@ -1064,13 +1064,14 @@ void ForwardRenderer::_newFrameGUI()
 
 		ImGui::Dummy(ImVec2(0.0f, guiSpacing));
 
-		int rasterizerIndex = Settings::SWREnabled ? (Settings::SWRWaveEnabled ? 2 : 1) : 0;
+		// Temporarily hide the Wave rasterizer from the dropdown.
+		int rasterizerIndex = Settings::SWREnabled ? 1 : 0;
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("Rasterizer");
 		ImGui::SameLine();
-		if (ImGui::Combo("##Rasterizer", &rasterizerIndex, "Hardware\0Software\0Software (Wave)\0"))
+		if (ImGui::Combo("##Rasterizer", &rasterizerIndex, "Hardware\0Software\0"))
 		{
-			Settings::SWRWaveEnabled = rasterizerIndex == 2;
+			Settings::SWRWaveEnabled = false;
 			const bool softwareRasterizationEnabled = rasterizerIndex != 0;
 			if (softwareRasterizationEnabled != Settings::SWREnabled)
 			{
